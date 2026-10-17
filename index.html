@@ -93,6 +93,7 @@ body.noui #player{opacity:0;pointer-events:none}
 #showUi{position:fixed;top:calc(12px + env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));z-index:7;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;opacity:0;transition:opacity .4s}
 body.locked #showUi:hover,body.locked #showUi:focus-visible{opacity:1}
 body:not(.locked) #showUi{display:none}
+@media (hover:none){body.locked #showUi{opacity:.7}}
 
 .chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;cursor:pointer}
 .chk input{accent-color:var(--gold);width:16px;height:16px}
@@ -117,6 +118,7 @@ body:not(.locked) #showUi{display:none}
 #screenList .btn{text-align:left;padding:10px 12px;font-size:14px}
 #toast{position:fixed;top:calc(16px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 16px;z-index:9;max-width:calc(100% - 32px);font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none}
 #toast.on{opacity:1}
+@media (max-width:700px) and (hover:none){#hud{max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch}}
 @media (prefers-reduced-motion:reduce){#hud,#toast{transition:none}}
 </style>
 </head>
@@ -130,7 +132,7 @@ body:not(.locked) #showUi{display:none}
 
 <div id="start">
   <div class="card">
-    <button id="closeStart" hidden>Close</button>
+    <button id="closeStart">Close</button>
     <h1>Fibwave</h1>
     <div class="ratio">φ = 1.6180339887…</div>
     <p>Golden-ratio patterns, GPU fractals and galaxies, oceans, mountains, deserts, forests and alien worlds, classic MilkDrop presets, the real night sky, and flights through space. They follow the beat, the bass and the treble of your music. Select a sound source to start.</p>
@@ -429,8 +431,11 @@ function openLink(e){
   pFrame.src=L.src;
   player.hidden=false;player.classList.remove('mini');pMin.textContent='Hide video';
   if(stream&&srcLabel===playerLabel){toast('Now playing your new link.');hideStart();return}
+  hideStart();                                             // always close the start card, so the visuals are visible
+  if(!CAN_SHARE){toast('Phones and tablets cannot share tab sound. Fibwave listens with the microphone instead: turn the volume up.');useMic();phoneClear();return}
   useTab(true); // ask Chrome to share this tab's own sound
 }
+function phoneClear(){if(TOUCH){clearTimeout(idleT);idleT=setTimeout(()=>{if(!uiLocked&&start.hidden){hud.classList.add('hide');document.body.classList.add('noui')}},2500)}}
 document.getElementById('linkForm').addEventListener('submit',openLink);
 // YouTube only plays inside pages that come from a web address (it shows Error 153 in a file opened from the computer)
 if(/^https?:$/.test(location.protocol)&&!/(^|\.)claude\.ai$|claudeusercontent/.test(location.hostname))document.getElementById('linkForm').hidden=false;
@@ -438,7 +443,9 @@ function showConnect(){pConnect.hidden=false;hideStart()}
 function closePlayer(){pFrame.src='about:blank';player.hidden=true}
 const pMin=document.getElementById('pMin');
 pMin.parentNode.insertBefore(pConnect,pMin);pConnect.after(document.createTextNode(' '));
-pConnect.onclick=()=>useTab(true);
+const CAN_SHARE=!!(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia);
+if(!CAN_SHARE)pConnect.textContent='Use microphone';
+pConnect.onclick=()=>CAN_SHARE?useTab(true):useMic();
 pMin.onclick=()=>{player.classList.toggle('mini');pMin.textContent=player.classList.contains('mini')?'Show video':'Hide video'};
 document.getElementById('pClose').onclick=()=>{closePlayer();if(srcLabel===playerLabel)stopSource(),srcLabel='NO SOURCE'};
 async function useMic(){
@@ -4540,6 +4547,7 @@ document.getElementById('tvMode').onclick=tvMode;
 
 /* ---------- hiding the controls ---------- */
 let uiLocked=false,idleT=0;
+const TOUCH=matchMedia('(hover: none)').matches; // on phones a tapped item stays in :hover, so do not use :hover there
 function setLocked(on){
   uiLocked=on;document.body.classList.toggle('locked',on);
   if(on){hud.classList.add('hide');document.body.classList.add('noui');toast('Controls hidden. Double-click the screen or press H to show them.')}
@@ -4554,7 +4562,7 @@ function poke(){
   if(uiLocked)return;
   hud.classList.remove('hide');document.body.classList.remove('noui');
   clearTimeout(idleT);
-  idleT=setTimeout(()=>{if(start.hidden&&castEl.hidden&&screensEl.hidden&&!hud.matches(':hover')&&!player.matches(':hover')){hud.classList.add('hide');document.body.classList.add('noui')}},3500);
+  idleT=setTimeout(()=>{if(start.hidden&&castEl.hidden&&screensEl.hidden&&(TOUCH||(!hud.matches(':hover')&&!player.matches(':hover')))){hud.classList.add('hide');document.body.classList.add('noui')}},3500);
 }
 addEventListener('mousemove',poke);addEventListener('touchstart',poke,{passive:true});
 
