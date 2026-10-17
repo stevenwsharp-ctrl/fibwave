@@ -409,6 +409,7 @@ const pConnect=document.createElement('button');pConnect.textContent='Connect so
 let playerLabel='LINK';
 function parseLink(u){
   u=(u||'').trim();
+  const lh=u.lastIndexOf('http');if(lh>0)u=u.slice(lh);           // a new link pasted after an old one: use the newest (last) link
   let m=u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/))([\w-]{11})/i);
   const list=(u.match(/[?&]list=([\w-]+)/)||[])[1];
   if(m)return {kind:'yt',src:'https://www.youtube.com/embed/'+m[1]+'?autoplay=1&playsinline=1&rel=0'+(list?'&list='+list:''),label:'YOUTUBE'};
@@ -428,7 +429,8 @@ function openLink(e){
   playerLabel=L.label;
   document.getElementById('playerName').textContent=L.kind==='yt'?'YouTube':'Spotify';
   pFrame.style.height=L.kind==='sp'?'152px':'';
-  pFrame.src=L.src;
+  pFrame.src='about:blank';setTimeout(()=>{pFrame.src=L.src},60);   // always load the new video, never keep the old one
+  const li=document.getElementById('linkIn');li.value='';li.placeholder='Now playing. Paste a new link to change it';
   player.hidden=false;player.classList.remove('mini');pMin.textContent='Hide video';
   if(stream&&srcLabel===playerLabel){toast('Now playing your new link.');hideStart();return}
   hideStart();                                             // always close the start card, so the visuals are visible
@@ -437,6 +439,7 @@ function openLink(e){
 }
 function phoneClear(){if(TOUCH){clearTimeout(idleT);idleT=setTimeout(()=>{if(!uiLocked&&start.hidden){hud.classList.add('hide');document.body.classList.add('noui')}},2500)}}
 document.getElementById('linkForm').addEventListener('submit',openLink);
+document.getElementById('linkIn').addEventListener('focus',e=>e.target.select());
 // YouTube only plays inside pages that come from a web address (it shows Error 153 in a file opened from the computer)
 if(/^https?:$/.test(location.protocol)&&!/(^|\.)claude\.ai$|claudeusercontent/.test(location.hostname))document.getElementById('linkForm').hidden=false;
 function showConnect(){pConnect.hidden=false;hideStart()}
@@ -3949,6 +3952,213 @@ function harmonicStrings(c,a){
   if(S.names){label(18*DPR,26*DPR,'Harmonic strings · one string for each of the 12 notes (key '+NOTE[A.keyRoot]+(A.keyMinor?' minor':' major')+' at the top) · a string vibrates when its note sounds','info');
     label(18*DPR,48*DPR,'Each string’s shape is the real mix of its first 6 harmonics, measured from the music: that mix is the timbre, the reason a piano and a flute sound different','info')}
 }
+/* ---------- Spinning ball in 5 media: space, air, water, thick liquid, plasma ----------
+   One shared spin rate follows the music (bass, tempo, kicks). Each scene uses the real physics of its medium:
+   space  – no friction: L = Iω is constant, equatorial bulge, free precession, frame dragging (Lense–Thirring)
+   air    – potential flow with circulation (Kutta–Joukowski / Magnus), boundary-layer wake, von Kármán vortex street
+   water  – same flow law, 800× denser: strong Magnus push, dye streaklines, cavitation on the low-pressure side
+   honey  – Stokes flow (Re ≪ 1): fluid angular speed Ω(r) = ω(R/r)³, dye winds into spirals and unwinds when the spin reverses
+   plasma – rotating magnetic dipole: corotation, gyration along field lines, mirror bounce, ring current, aurora, pulsar beams, Parker spiral */
+const SPB={ang:0,w:2,dir:1,last:-1,parts:[],vort:[],shedN:0,beat:-1,bub:[],dye:0,honey:{th:0,dir:1,max:TAU*3,specks:[]},pl:[],stars:[],ripples:[],seed:7};
+function spRand(){SPB.seed=(SPB.seed*16807)%2147483647;return SPB.seed/2147483647}
+function spinStep(a){
+  const bpm=A.bpm>0?A.bpm:110,tgt=(0.9+2.6*a.bass+0.8*a.mid+1.5*a.kick)*(bpm/120)*(S.timbre&&live?TB.tempo:1);
+  SPB.w+=(tgt-SPB.w)*Math.min(1,st.dtReal*2.2);
+  if(A.beats!==SPB.beat){SPB.beat=A.beats;if(A.beats%32===0&&A.beats>0)SPB.dir*=-1}   // spin direction turns over every 32 beats
+}
+// a ball with turning meridians; pitch tips the spin axis toward the viewer; flat squashes the poles
+function spinBall(c,cx,cy,R,ang,pitch,roll,flat,hueT,glow){
+  c.save();c.globalCompositeOperation='source-over';
+  const g=c.createRadialGradient(cx-R*0.35,cy-R*0.4,R*0.05,cx,cy,R*1.02);
+  g.addColorStop(0,col(hueT,70,1));g.addColorStop(0.55,col(hueT,45,1));g.addColorStop(1,col(hueT,12,1));
+  c.fillStyle=g;c.beginPath();c.ellipse(cx,cy,R,R,0,0,TAU);c.fill();
+  const cp=Math.cos(pitch),sp=Math.sin(pitch),cr=Math.cos(roll),sr=Math.sin(roll);
+  const P=(lat,lon)=>{let x=Math.cos(lat)*Math.cos(lon),y=Math.sin(lat)*flat,z=Math.cos(lat)*Math.sin(lon);
+    const y2=y*cp-z*sp,z2=y*sp+z*cp;return [cx+(x*cr-y2*sr)*R,cy-(x*sr+y2*cr)*R,z2]};
+  c.lineCap='round';
+  for(let m=0;m<12;m++){const lon=ang+m*TAU/12;c.lineWidth=DPR*(m%3===0?2.6:1.2);c.beginPath();let on=false;
+    for(let j=0;j<=24;j++){const p=P(-Math.PI/2+Math.PI*j/24,lon);if(p[2]>0){c.strokeStyle=col(hueT+(m%3===0?0.5:0.25),88,0.25+0.6*p[2]);on?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]);on=true}else on=false}
+    c.stroke()}
+  for(const lat of [0,0.6,-0.6]){c.lineWidth=DPR*(lat?1:2);c.strokeStyle=col(hueT+0.5,85,0.55);c.beginPath();let on=false;
+    for(let j=0;j<=48;j++){const p=P(lat,ang+TAU*j/48);if(p[2]>0){on?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]);on=true}else on=false}c.stroke()}
+  const h=c.createRadialGradient(cx-R*0.4,cy-R*0.45,0,cx-R*0.4,cy-R*0.45,R*0.5);h.addColorStop(0,'rgba(255,255,255,0.16)');h.addColorStop(1,'rgba(255,255,255,0)');
+  c.fillStyle=h;c.beginPath();c.arc(cx,cy,R,0,TAU);c.fill();
+  c.restore();
+  if(glow)softDot(c,cx,cy,R*1.6,col(hueT,60,glow));
+}
+function spArrow(c,x0,y0,x1,y1,css,w){const an=Math.atan2(y1-y0,x1-x0),hl=DPR*12;c.strokeStyle=css;c.fillStyle=css;c.lineWidth=DPR*(w||2.5);
+  c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();c.beginPath();c.moveTo(x1,y1);c.lineTo(x1-hl*Math.cos(an-0.4),y1-hl*Math.sin(an-0.4));c.lineTo(x1-hl*Math.cos(an+0.4),y1-hl*Math.sin(an+0.4));c.closePath();c.fill()}
+
+/* ---- shared flow: uniform stream U past a spinning ball (radius 1) + circulation Γ + shed wake vortices ---- */
+function spFlow(x,y,U,G){
+  const r2=x*x+y*y;if(r2<1)return [0,0];
+  const z2x=x*x-y*y,z2y=2*x*y,r4=r2*r2,ax=z2x/r4,ay=-z2y/r4;          // 1/z²
+  let u=U*(1-ax)-G*y/(TAU*r2),v=-U*ay+G*x/(TAU*r2);                   // Γ>0 = anticlockwise circulation
+  if(x>0){const yw=SPB.wakeY*Math.min(1,x*0.4),def=0.6*Math.exp(-((y-yw)*(y-yw))/(0.55+0.09*x))*Math.min(1,x*1.2)*Math.exp(-x/9);u*=1-def}
+  for(const o of SPB.vort){const dx=x-o.x,dy=y-o.y,d2=dx*dx+dy*dy+1e-4,f=o.G/(TAU*d2)*(1-Math.exp(-d2/(o.rc*o.rc)));u-=dy*f;v+=dx*f}
+  return [u,v];
+}
+function spFlowScene(c,a,water){
+  if(SPB.mode!==water){SPB.mode=water;SPB.parts=[];SPB.vort=[];SPB.bub=[]}
+  spinStep(a);const dt=Math.min(0.1,st.dt);
+  const k=Math.min(W,H)*(water?0.15:0.14),cx=W*0.36,cy=H*0.5,X0=-cx/k,X1=(W-cx)/k,Y1=(H/2)/k;
+  const U=(water?1.2:1.6)*(0.8+0.5*a.mid),spin=SPB.w*SPB.dir;                       // spin>0: anticlockwise on screen
+  SPB.ang-=spin*dt;
+  const G=Math.max(-3.4*Math.PI*U,Math.min(3.4*Math.PI*U,TAU*spin*0.55));            // surface drags air: Γ ≈ 2πR²ω (part of it)
+  const lift=-G*U;                                                                    // Kutta–Joukowski: force ⟂ flow, toward the fast side
+  SPB.wakeY=(SPB.wakeY||0)+((G>0?0.5:-0.5)*Math.min(1,Math.abs(G)/(3*U))-(SPB.wakeY||0))*dt*2;  // wake goes the opposite way to the force
+  // vortex street: one swirl breaks off each beat (more with strong kicks), top and bottom in turn
+  if((A.beats!==SPB.last||st.t-(SPB.lk||0)>0.9||a.kick>0.85)&&SPB.vort.length<18&&(SPB.lk||0)<st.t-0.25){SPB.last=A.beats;SPB.lk=st.t;const s=(SPB.shedN++%2)?1:-1;
+    SPB.vort.push({x:1.15,y:0.75*s+SPB.wakeY*0.5,G:-s*(water?2.6:2)*U*(0.7+a.bass),rc:0.28})}
+  for(const o of SPB.vort){o.x+=U*0.78*dt;o.y+=SPB.wakeY*0.05*dt;o.rc+=dt*0.05;o.G*=Math.pow(0.8,dt)}
+  SPB.vort=SPB.vort.filter(o=>o.x<X1+1);
+  // tracer particles (air) or dye from 11 nozzles (water)
+  const P=SPB.parts,N=water?1300:950,fill=P.length===0;
+  while(P.length<N){const y=water?(Math.floor(spRand()*11)-5)*0.42+(spRand()-0.5)*0.03:(spRand()*2-1)*Y1;P.push({x:fill?X0+spRand()*(X1-X0+0.2):X0-spRand()*(water?0.2:2),y,y0:y,px:null})}
+  c.lineCap='round';
+  for(const p of P){
+    const v=spFlow(p.x,p.y,U,G),sp=Math.hypot(v[0],v[1]);
+    p.px=p.x;p.py=p.y;p.x+=v[0]*dt;p.y+=v[1]*dt;
+    if(p.x>X1+0.3||Math.abs(p.y)>Y1+0.5||p.x*p.x+p.y*p.y<0.98){p.x=X0-spRand()*(water?0.15:0.4);p.y=water?p.y0:(spRand()*2-1)*Y1;p.y0=p.y;p.px=null;continue}
+    if(p.px===null)continue;
+    const t=water?(Math.round(p.y0/0.42)+5)/11:(p.y0/Y1+1)/2,L=40+28*Math.min(1.6,sp/U)+20*a.hat;
+    c.strokeStyle=col(t,L,water?0.55:0.22+0.4*Math.min(1,sp/(2*U)));c.lineWidth=DPR*(water?1.8:1.3);
+    c.beginPath();c.moveTo(cx+p.px*k,cy-p.py*k);c.lineTo(cx+p.x*k,cy-p.y*k);c.stroke()}
+  // swirls
+  for(const o of SPB.vort){const rr=o.rc*k*2.2;softDot(c,cx+o.x*k,cy-o.y*k,rr,col(o.G>0?0.15:0.65,60,0.10+0.08*a.bass))}
+  if(water){ // light from the surface + rising bubbles + cavitation on the low-pressure side
+    for(let i=0;i<5;i++){const x=W*(0.1+0.2*i)+Math.sin(st.t*0.4+i*1.7)*W*0.05;const g=c.createLinearGradient(x,0,x+W*0.06,H);g.addColorStop(0,'rgba(140,200,255,0.06)');g.addColorStop(1,'rgba(140,200,255,0)');
+      c.fillStyle=g;c.beginPath();c.moveTo(x-W*0.02,0);c.lineTo(x+W*0.04,0);c.lineTo(x+W*0.16,H);c.lineTo(x+W*0.02,H);c.closePath();c.fill()}
+    const fastSide=G>0?-1:1;                                         // anticlockwise spin: the bottom moves with the water and is fast
+    if(SPB.bub.length<160&&(Math.abs(spin)>2.2||a.kick>0.6)){for(let i=0;i<3;i++){const th=fastSide*(Math.PI/2)+(spRand()-0.3)*1.2;SPB.bub.push({x:Math.cos(th)*1.05,y:Math.sin(th)*1.05,r:0.02+spRand()*0.05,life:1.6+spRand()})}}
+    if(SPB.bub.length<160&&spRand()<0.3)SPB.bub.push({x:X0+spRand()*(X1-X0),y:-Y1,r:0.03+spRand()*0.08,life:9});
+    c.save();c.globalCompositeOperation='source-over';
+    for(const b of SPB.bub){const v=spFlow(b.x,b.y,U,G);b.x+=v[0]*dt*0.8;b.y+=(v[1]*0.8+0.35)*dt;b.x+=Math.sin(st.t*3+b.r*90)*dt*0.1;b.life-=dt;
+      c.strokeStyle='rgba(200,235,255,'+Math.min(0.7,b.life)+')';c.lineWidth=DPR;c.beginPath();c.arc(cx+b.x*k,cy-b.y*k,b.r*k,0,TAU);c.stroke()}
+    c.restore();SPB.bub=SPB.bub.filter(b=>b.life>0&&b.y<Y1)}
+  spinBall(c,cx,cy,k*0.98,SPB.ang,1.45,0.15,1,0.08,water?0.06:0.1);
+  // the Magnus force
+  const fl=Math.max(-1,Math.min(1,lift/(10*U*U)));
+  spArrow(c,cx,cy,cx,cy-fl*k*2.1,col(0.6,80,0.9),3);
+  spArrow(c,cx-k*3.2,cy+Y1*k*0.82,cx-k*1.8,cy+Y1*k*0.82,'rgba(220,230,255,0.6)',2);
+  if(S.names){const sp=(spin>0?'anticlockwise':'clockwise'),SP=Math.abs(spin)/(U*1.0);
+    if(!water){label(18*DPR,26*DPR,'Spinning ball in AIR · the ball drags a thin skin of air (the boundary layer) round with it. The side that turns WITH the airflow is faster, so its pressure is lower (Bernoulli)','info');
+      label(18*DPR,48*DPR,'Magnus force F ≈ ½ρCₗAv² pushes the ball to the fast side (arrow) · the wake leaves the other way · swirls break off in turn: a von Kármán vortex street · spin '+sp+', spin ratio Rω/v = '+SP.toFixed(2),'info');
+      label(18*DPR,70*DPR,'Backspin floats a golf ball (dimples make the lift stronger) · topspin dives in tennis · sidespin bends a free kick · near Re ≈ 2×10⁵ the drag suddenly falls (the drag crisis)','info')}
+    else{label(18*DPR,26*DPR,'Spinning ball in WATER · water is about 800× denser than air: the same spin gives a far stronger Magnus push, but drag also stops the ball far sooner','info');
+      label(18*DPR,48*DPR,'Coloured dye lines show the flow wrapping round the turning ball · on the fast side the pressure can fall below the vapour pressure, and cavitation bubbles appear','info');
+      label(18*DPR,70*DPR,'Swirls that break off behind the ball push it from side to side: this is why a spinning or falling ball in water wobbles and spirals','info')}}
+}
+function spinAir(c,a){spFlowScene(c,a,false)}
+function spinWater(c,a){spFlowScene(c,a,true)}
+
+/* ---- space: nothing to push against ---- */
+function spinSpace(c,a){
+  spinStep(a);const dt=Math.min(0.1,st.dt);
+  if(!SPB.stars.length)for(let i=0;i<320;i++)SPB.stars.push([spRand(),spRand(),spRand()]);
+  for(const s of SPB.stars){const tw=0.4+0.6*Math.abs(Math.sin(st.t*(0.5+s[2]*2)+s[2]*40));c.fillStyle='rgba(235,240,255,'+(0.2+0.6*s[2]*tw).toFixed(3)+')';c.fillRect(s[0]*W,s[1]*H,DPR*(1+s[2]*1.4),DPR*(1+s[2]*1.4))}
+  const R=Math.min(W,H)*0.17,cx=W/2,cy=H*0.52,spin=SPB.w*SPB.dir;SPB.ang+=spin*dt;
+  const flat=1-Math.min(0.16,0.012*spin*spin);                        // faster spin: more bulge at the equator
+  const prec=st.t*0.18,tilt=0.32+0.06*Math.sin(st.t*0.9);              // the axis wobbles in a cone round L (free precession)
+  const roll=tilt*Math.cos(prec),pitch=0.38+tilt*Math.sin(prec)*0.5;
+  // space-time grid in the equatorial plane, twisted by frame dragging: twist ∝ spin / r³ (made larger so you can see it)
+  const ce=Math.cos(pitch),grid=(r,th)=>{const tw=th+5*spin/(r*r*r);return [cx+Math.cos(tw)*r*R,cy+Math.sin(tw)*r*R*ce*0.55]};
+  c.lineWidth=DPR;
+  for(let s=0;s<36;s++){c.strokeStyle=col(s/36,55,0.18);c.beginPath();for(let j=0;j<=40;j++){const r=1.05+j*0.12,p=grid(r,s*TAU/36);j?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1])}c.stroke()}
+  for(let j=1;j<=9;j++){const r=1.05+j*0.5;c.strokeStyle=col(0.55,50,0.12+0.1*a.mid);c.beginPath();for(let s=0;s<=72;s++){const p=grid(r,s*TAU/72);s?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1])}c.stroke()}
+  if(a.kick>0.7&&(SPB.rk||0)<st.t-0.3){SPB.rk=st.t;SPB.ripples.push({r:1.1,a:1})}
+  for(const q of SPB.ripples){q.r+=dt*3;q.a-=dt*0.35;c.strokeStyle=col(0.1,75,Math.max(0,q.a)*0.6);c.lineWidth=DPR*2;c.beginPath();c.ellipse(cx,cy,q.r*R,q.r*R*ce*0.55,0,0,TAU);c.stroke()}
+  SPB.ripples=SPB.ripples.filter(q=>q.a>0);
+  // dust ring: Kepler speeds, inner grains faster
+  for(let i=0;i<140;i++){const r=1.5+(i%35)*0.06+Math.floor(i/35)*0.03,th=i*2.39996+st.t*1.4/Math.pow(r,1.5)*Math.sign(spin||1),y=Math.sin(th)*r*R*ce*0.55;
+    if(y<0)softDot(c,cx+Math.cos(th)*r*R,cy+y,DPR*3,col(i/140,70,0.5))}
+  spinBall(c,cx,cy,R,SPB.ang,pitch,roll,flat,0.55,0.12+0.1*a.bass);
+  for(let i=0;i<140;i++){const r=1.5+(i%35)*0.06+Math.floor(i/35)*0.03,th=i*2.39996+st.t*1.4/Math.pow(r,1.5)*Math.sign(spin||1),y=Math.sin(th)*r*R*ce*0.55;
+    if(y>=0)softDot(c,cx+Math.cos(th)*r*R,cy+y,DPR*3,col(i/140,70,0.5))}
+  // angular momentum L along the spin axis
+  const ax=-Math.sin(roll)*Math.cos(pitch),ay=Math.cos(roll)*Math.cos(pitch),sg=spin>=0?1:-1,Ln=1.25+0.5*Math.min(1,Math.abs(spin)/5);
+  spArrow(c,cx+ax*R*sg,cy-ay*R*sg,cx+ax*R*Ln*1.6*sg,cy-ay*R*Ln*1.6*sg,col(0.1,85,0.95),3);
+  c.strokeStyle=col(0.1,70,0.25);c.lineWidth=DPR;c.beginPath();c.ellipse(cx,cy-R*1.75*sg,R*tilt*1.8,R*tilt*0.5,0,0,TAU);c.stroke();
+  if(S.names){label(18*DPR,26*DPR,'Spinning ball in SPACE · no air, so nothing slows it: angular momentum L = Iω stays the same for ever (I = ⅖MR² for a solid ball) · the arrow is L','info');
+    label(18*DPR,48*DPR,'Spin flattens the ball at the poles (Earth is 43 km wider at the equator) · a slightly flat ball lets its axis wobble in a cone round L (free precession, the Chandler wobble)','info');
+    label(18*DPR,70*DPR,'In Einstein’s gravity a spinning mass drags space-time round with it (frame dragging, ∝ 1/r³, measured by Gravity Probe B) · the grid shows it, made larger so you can see it','info')}
+}
+
+/* ---- thick liquid (honey): Stokes flow ---- */
+function spinHoney(c,a){
+  spinStep(a);const dt=Math.min(0.1,st.dt),Hn=SPB.honey;
+  // turn 3 turns one way, then the same 3 turns back: the dye lines straighten again (reversible slow flow)
+  const sp=SPB.w*0.55;Hn.th+=Hn.dir*sp*dt;if(Hn.th>Hn.max){Hn.th=Hn.max;Hn.dir=-1}if(Hn.th<0){Hn.th=0;Hn.dir=1}
+  const R=Math.min(W,H)*0.15,cx=W/2,cy=H*0.5,pit=0.5,cp=Math.cos(pit),sp2=Math.sin(pit),F=9;
+  const pr=(x,y,z)=>{const Y=y*cp-z*sp2,Z=y*sp2+z*cp,kk=F/(F-Z);return [cx+x*R*kk,cy-Y*R*kk,Z]};
+  const hidden=p=>p[2]<0&&Math.hypot(p[0]-cx,p[1]-cy)<R*1.0;
+  const g=c.createRadialGradient(cx,cy,R,cx,cy,Math.max(W,H)*0.7);g.addColorStop(0,'rgba(120,70,10,0.10)');g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.fillRect(0,0,W,H);
+  const planes=[[-0.75,0.62],[0,0.1],[0.75,0.36]];
+  const lines=(front)=>{for(const [yy,hue] of planes)for(let l=0;l<14;l++){const ph0=l*TAU/14;c.beginPath();let on=false;
+      for(let j=0;j<=60;j++){const rho=(yy?0.05:1.02)+j*0.075,r=Math.hypot(rho,yy);if(r<1.02){on=false;continue}
+        const th=ph0+Hn.th*Math.pow(1/r,3),p=pr(Math.cos(th)*rho,yy,Math.sin(th)*rho);
+        if((p[2]>=0)!==front||hidden(p)){on=false;continue}on?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]);on=true}
+      c.strokeStyle=col(hue+l*0.012,60+20*a.hat,front?0.75:0.35);c.lineWidth=DPR*(front?2.2:1.4);c.stroke()}};
+  lines(false);
+  if(!Hn.specks.length)for(let i=0;i<260;i++){const r=1.1+spRand()*3.8,ct=spRand()*2-1;Hn.specks.push({r,ct,ph:spRand()*TAU})}
+  for(const s of Hn.specks){const st2=Math.sqrt(1-s.ct*s.ct),th=s.ph+Hn.th*Math.pow(1/s.r,3),p=pr(Math.cos(th)*s.r*st2,s.r*s.ct,Math.sin(th)*s.r*st2);
+    if(p[2]<0&&!hidden(p))softDot(c,p[0],p[1],DPR*2.5,'rgba(255,200,120,0.35)')}
+  spinBall(c,cx,cy,R,-Hn.th,pit,0,1,0.12,0.08+0.08*a.bass);
+  lines(true);
+  for(const s of Hn.specks){const st2=Math.sqrt(1-s.ct*s.ct),th=s.ph+Hn.th*Math.pow(1/s.r,3),p=pr(Math.cos(th)*s.r*st2,s.r*s.ct,Math.sin(th)*s.r*st2);
+    if(p[2]>=0)softDot(c,p[0],p[1],DPR*3,'rgba(255,215,140,0.55)')}
+  // speed profile: v = ωR³/r²
+  const bx=W*0.78,by=H*0.86,bw=W*0.17,bh=H*0.1;c.strokeStyle='rgba(255,220,160,0.5)';c.lineWidth=DPR;c.beginPath();c.moveTo(bx,by-bh);c.lineTo(bx,by);c.lineTo(bx+bw,by);c.stroke();
+  c.strokeStyle=col(0.12,75,0.9);c.lineWidth=DPR*2;c.beginPath();for(let j=0;j<=40;j++){const r=1+j*0.1,x=bx+bw*j/40,y=by-bh/(r*r);j?c.lineTo(x,y):c.moveTo(x,y)}c.stroke();
+  label(bx,by+14*DPR,'liquid speed v = ωR³/r²','info');
+  if(S.names){label(18*DPR,26*DPR,'Spinning ball in a THICK LIQUID (honey, oil) · here stickiness (viscosity) wins over momentum: Reynolds number Re = ρvR/μ ≪ 1, so the flow is Stokes flow','info');
+    label(18*DPR,48*DPR,'The liquid turns with the ball, but slower further out: Ω(r) = ω(R/r)³ · near layers pass far layers, so straight dye lines wind into spirals · drag torque T = 8πμR³ω','info');
+    label(18*DPR,70*DPR,'No wake, almost no Magnus push · slow flow is REVERSIBLE: the ball turns 3 times, then turns back 3 times, and the dye lines straighten again (G. I. Taylor’s famous film) · now '+(Hn.th/TAU).toFixed(1)+' turns','info')}
+}
+
+/* ---- plasma: a spinning magnet in a gas of charged particles ---- */
+function spinPlasma(c,a){
+  spinStep(a);const dt=Math.min(0.1,st.dt),spin=SPB.w*SPB.dir*0.6;SPB.ang+=spin*dt;
+  const R=Math.min(W,H)*0.11,cx=W/2,cy=H*0.5,pit=0.35,cp=Math.cos(pit),sp=Math.sin(pit),F=14,al=0.4;   // al: magnet tilted from the spin axis
+  const ca=Math.cos(al),sa=Math.sin(al),cs=Math.cos(SPB.ang),ss=Math.sin(SPB.ang);
+  const toW=(x,y,z)=>{const x1=x*ca-y*sa,y1=x*sa+y*ca;return [x1*cs+z*ss,y1,-x1*ss+z*cs]};          // magnet frame → world
+  const pr=(x,y,z)=>{const Y=y*cp-z*sp,Z=y*sp+z*cp,kk=F/(F-Z);return [cx+x*R*kk,cy-Y*R*kk,Z]};
+  const hidden=p=>p[2]<0&&Math.hypot(p[0]-cx,p[1]-cy)<R;
+  // Parker spiral: far out the plasma cannot keep up, and the field winds back
+  for(let arm=0;arm<4;arm++){c.strokeStyle=col(0.75+arm*0.05,45,0.18);c.lineWidth=DPR*1.4;c.beginPath();
+    for(let j=0;j<=80;j++){const r=4+j*0.18,th=arm*TAU/4+SPB.ang-(r-4)*0.35*Math.sign(spin||1),p=pr(Math.cos(th)*r,0,Math.sin(th)*r);j?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1])}c.stroke()}
+  // light cylinder r = c/Ω (where corotation would reach light speed), shown as a ring
+  {c.setLineDash([DPR*6,DPR*8]);c.strokeStyle='rgba(200,180,255,0.25)';c.lineWidth=DPR;c.beginPath();for(let j=0;j<=90;j++){const th=j*TAU/90,p=pr(Math.cos(th)*7.5,0,Math.sin(th)*7.5);j?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1])}c.stroke();c.setLineDash([])}
+  // dipole field lines r = L sin²θ, turning with the star
+  const fieldLine=(L,phi,front)=>{const t0=Math.asin(Math.sqrt(1/L));c.beginPath();let on=false;
+    for(let j=0;j<=50;j++){const th=t0+(Math.PI-2*t0)*j/50,r=L*Math.sin(th)*Math.sin(th),w=toW(r*Math.sin(th)*Math.cos(phi),r*Math.cos(th),r*Math.sin(th)*Math.sin(phi)),p=pr(w[0],w[1],w[2]);
+      if((p[2]>=0)!==front||hidden(p)){on=false;continue}on?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]);on=true}c.stroke()};
+  const Ls=[1.6,2.4,3.4,4.8];
+  const field=front=>{for(let i=0;i<Ls.length;i++)for(let m=0;m<8;m++){c.strokeStyle=col(0.55+i*0.08,55+15*a.mid,front?0.5:0.22);c.lineWidth=DPR*(front?1.6:1);fieldLine(Ls[i],m*TAU/8,front)}};
+  field(false);
+  // charged particles: gyrate round a field line, bounce between mirror points, drift round the star (ions one way, electrons the other: the ring current)
+  if(!SPB.pl.length)for(let i=0;i<90;i++)SPB.pl.push({L:1.8+spRand()*3,phi:spRand()*TAU,b:spRand()*TAU,g:spRand()*TAU,q:i%2?1:-1,A:0.35+spRand()*0.5});
+  const drawP=front=>{for(const q of SPB.pl){const th=Math.PI/2+q.A*Math.sin(q.b),r=q.L*Math.sin(th)*Math.sin(th),rg=0.06+0.04*a.treb,
+      x=r*Math.sin(th)*Math.cos(q.phi),y=r*Math.cos(th),z=r*Math.sin(th)*Math.sin(q.phi),gx=Math.cos(q.phi)*rg*Math.cos(q.g),gz=Math.sin(q.phi)*rg*Math.cos(q.g),gy=rg*Math.sin(q.g),
+      w=toW(x+gx-Math.sin(q.phi)*rg*Math.sin(q.g)*0.5,y+gy,z+gz+Math.cos(q.phi)*rg*Math.sin(q.g)*0.5),p=pr(w[0],w[1],w[2]);
+      if((p[2]>=0)!==front||hidden(p))continue;softDot(c,p[0],p[1],DPR*(front?7:5),q.q>0?'rgba(255,170,90,0.8)':'rgba(120,200,255,0.8)')}};
+  for(const q of SPB.pl){q.b+=dt*(2.2+a.bass*3)/Math.sqrt(q.L);q.g+=dt*(18+a.hat*20)/q.L;q.phi+=dt*0.25*q.q/q.L}
+  drawP(false);
+  // the star (hot surface)
+  spinBall(c,cx,cy,R,SPB.ang,pit,0,1,0.02,0.25+0.25*a.bass);
+  // aurora rings round the magnetic poles, and pulsar beams along the magnetic axis
+  for(const pole of [1,-1]){const t0=Math.asin(Math.sqrt(1/4.8))*(pole>0?1:-1)+(pole>0?0:Math.PI);
+    c.beginPath();let on=false;for(let j=0;j<=48;j++){const ph=j*TAU/48,th=pole>0?Math.asin(Math.sqrt(1/4.8)):Math.PI-Math.asin(Math.sqrt(1/4.8)),w=toW(1.02*Math.sin(th)*Math.cos(ph),1.02*Math.cos(th),1.02*Math.sin(th)*Math.sin(ph)),p=pr(w[0],w[1],w[2]);
+      if(p[2]<0){on=false;continue}on?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]);on=true}
+    c.strokeStyle='rgba(90,255,160,'+(0.35+0.5*a.hat).toFixed(3)+')';c.lineWidth=DPR*(3+4*a.hat);c.stroke();
+    const b0=toW(0,pole*1,0),b1=toW(0,pole*7,0),p0=pr(b0[0],b0[1],b0[2]),p1=pr(b1[0],b1[1],b1[2]),wd=R*(0.6+0.5*a.kick),an=Math.atan2(p1[1]-p0[1],p1[0]-p0[0])+Math.PI/2;
+    const gr=c.createLinearGradient(p0[0],p0[1],p1[0],p1[1]);gr.addColorStop(0,'rgba(220,210,255,'+(0.35+0.5*a.kick).toFixed(3)+')');gr.addColorStop(1,'rgba(160,140,255,0)');c.fillStyle=gr;
+    c.beginPath();c.moveTo(p0[0],p0[1]);c.lineTo(p1[0]+Math.cos(an)*wd,p1[1]+Math.sin(an)*wd);c.lineTo(p1[0]-Math.cos(an)*wd,p1[1]-Math.sin(an)*wd);c.closePath();c.fill()}
+  field(true);drawP(true);
+  if(S.names){label(18*DPR,26*DPR,'Spinning ball in PLASMA (a gas of charged particles) · a spinning magnetised ball – a planet, a star, a pulsar – drags the plasma round with it (corotation)','info');
+    label(18*DPR,48*DPR,'Charges spiral round the field lines (gyration) and bounce between the poles (magnetic mirrors) · ions (orange) and electrons (blue) drift round in opposite directions: the ring current','info');
+    label(18*DPR,70*DPR,'Where they hit the air near the poles, aurora rings glow · far out the plasma cannot keep up, so the field winds into a spiral (the Parker spiral) · a tilted magnet sweeps beams like a lighthouse: a pulsar','info')}
+}
 /* Möbius flow (GPU): z → (z − p)/(z − q) sends one point to 0 and another to infinity; in log-polar form the picture streams
    out of one point and spirals into the other (a loxodromic Möbius transformation, as in the book "Indra's Pearls") */
 const FS_MOBFLOW=GLSL_HEAD+`
@@ -4005,6 +4215,11 @@ const SCENES=[
   {name:'Möbius Wave',draw:mobiusWave,fb:{zoom:1.0,rot:0,trail:0.25},dwell:2},
   {name:'Pendulum Wave',draw:pendulumWave,fb:{zoom:1.0,rot:0,trail:0.55},dwell:2.4},
   {name:'Harmonic Strings',draw:harmonicStrings,fb:{zoom:1.0,rot:0,trail:0.4},dwell:1.8},
+  {name:'Spin in Space',draw:spinSpace,fb:{zoom:1.0,rot:0,trail:0.15},dwell:2},
+  {name:'Spin in Air',draw:spinAir,fb:{zoom:1.0,rot:0,trail:0.6},dwell:2},
+  {name:'Spin in Water',draw:spinWater,fb:{zoom:1.0,rot:0,trail:0.75},dwell:2},
+  {name:'Spin in Honey',draw:spinHoney,fb:{zoom:1.0,rot:0,trail:0.2},dwell:2.4},
+  {name:'Spin in Plasma',draw:spinPlasma,fb:{zoom:1.0,rot:0,trail:0.35},dwell:2},
   ...(GLOK?[...GLSCENES,{name:'Möbius Flow',kind:'gl',fs:FS_MOBFLOW,rs0:0.8,rsMax:1,th:0.8,dwell:1.6,
    step(a){this.b=(this.b||0)+st.dt*(0.25+a.bass*0.9+a.kick*0.5)*(S.timbre&&live?TB.tempo:1);this.a=0.35+0.25*Math.sin(st.t*0.05)+a.mid*0.3;this.c=0.55+0.15*Math.sin(st.t*0.03)+a.kick*0.06;this.d=[5,6,8,12][Math.floor(A.beats/32)%4];
      if(S.names){label(18*DPR,26*DPR,'Möbius flow · z → (z − p)/(z − q): the pattern streams out of one point and spirals into another (a loxodromic Möbius map, as in the book \u201cIndra\u2019s Pearls\u201d)','info')}}},{name:'Holographic Universe',kind:'gl',fs:FS_HOLO,rs0:0.75,rsMax:1,th:0.8,dwell:1.6,
@@ -4020,21 +4235,21 @@ SCENES.forEach(s=>{if(!s.dwell)s.dwell=DWELL[s.name]||(s.kind==='gl'?1.5:s.kind?
 /* ---------- music style: a best guess from tempo, drums, bass weight, distortion and tonality ---------- */
 const STYLES={
  ambient:{name:'Ambient / chill',pal:['Aurora','Glacier','Moonlight','Deep Sea','Nebula'],react:0.9,auto:55,trail:0.9,glow:0.9,
-   scenes:['Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration','NASA Gallery']},
+   scenes:['Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration','NASA Gallery']},
  edm:{name:'EDM / house / techno',pal:['Synthwave','Full Spectrum','Infrared','Golden Drift'],react:2.2,auto:21,trail:0.8,glow:1.0,
-   scenes:['Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
+   scenes:['Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
  bass:{name:'Bass music / dubstep / DnB',pal:['Infrared','Ember','Synthwave','Cosmic Dust'],react:2.7,auto:13,trail:0.7,glow:1.2,
-   scenes:['Möbius Wave','Burning Ship','Mandelbox 3D','Entropy & Order','Holographic Universe','MilkDrop Classics','Golden Tunnel','Starfield','Strange Attractors','Fractal Bloom','Video Synth','Deep Space','Hypercube 4D','Alien World','Clifford Torus']},
+   scenes:['Spin in Plasma','Spin in Water','Möbius Wave','Burning Ship','Mandelbox 3D','Entropy & Order','Holographic Universe','MilkDrop Classics','Golden Tunnel','Starfield','Strange Attractors','Fractal Bloom','Video Synth','Deep Space','Hypercube 4D','Alien World','Clifford Torus']},
  hiphop:{name:'Hip-hop / R&B',pal:['Gold Leaf','Red Rock','Rose Quartz','Cosmic Dust'],react:1.8,auto:34,trail:0.75,glow:0.8,
-   scenes:['Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','NASA Gallery','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
+   scenes:['Spin in Air','Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','NASA Gallery','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
  rock:{name:'Rock / metal',pal:['Ember','Solar Flare','Red Rock','Infrared'],react:2.2,auto:21,trail:0.7,glow:0.9,
-   scenes:['Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
+   scenes:['Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
  pop:{name:'Pop',pal:['Rose Quartz','Golden Drift','Synthwave','Emerald'],react:1.6,auto:21,trail:0.8,glow:0.9,
-   scenes:['Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','NASA Gallery','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
+   scenes:['Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','NASA Gallery','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
  classical:{name:'Classical / acoustic',pal:['Moonlight','Gold Leaf','Glacier','Deep Sea'],react:0.8,auto:55,trail:0.88,glow:0.8,
-   scenes:['Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
+   scenes:['Spin in Honey','Spin in Space','Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
  jazz:{name:'Jazz / lo-fi / soul',pal:['Cosmic Dust','Rose Quartz','Emerald','Gold Leaf'],react:1.1,auto:34,trail:0.85,glow:0.8,
-   scenes:['Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
+   scenes:['Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
 };
 const STY={cur:null,cand:null,candT:0,score:{},f:{sub:0,mid:0,high:0,tot:1e-6,ev:0,em:0},kicks:[],snares:[],alls:[],next:0,applied:null};
 for(const k in STYLES)STY.score[k]=0;
@@ -4547,7 +4762,7 @@ document.getElementById('tvMode').onclick=tvMode;
 
 /* ---------- hiding the controls ---------- */
 let uiLocked=false,idleT=0;
-const TOUCH=matchMedia('(hover: none)').matches; // on phones a tapped item stays in :hover, so do not use :hover there
+const TOUCH=typeof matchMedia==='function'&&matchMedia('(hover: none)').matches; // on phones a tapped item stays in :hover, so do not use :hover there
 function setLocked(on){
   uiLocked=on;document.body.classList.toggle('locked',on);
   if(on){hud.classList.add('hide');document.body.classList.add('noui');toast('Controls hidden. Double-click the screen or press H to show them.')}
