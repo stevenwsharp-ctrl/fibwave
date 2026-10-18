@@ -94,6 +94,11 @@ input[type=range]{accent-color:var(--gold);width:90px}
 #riffs canvas{display:block;width:100%;height:150px;margin-top:6px}
 #riffs p{margin:4px 0 0;color:var(--dim);line-height:1.4}
 @media (max-width:700px) and (hover:none){#riffs{top:auto;bottom:calc(12px + env(safe-area-inset-bottom))}}
+#wordState{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:3;font-size:12px;color:rgba(240,235,220,.8);background:rgba(10,12,18,.55);padding:4px 10px;border-radius:999px;pointer-events:none;max-width:80%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body:not(.noui) #wordState{bottom:auto;top:calc(12px + env(safe-area-inset-top))}
+.tipline{background:rgba(240,190,90,.1);border:1px solid rgba(240,190,90,.35);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.5}
+#startHint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:8;background:rgba(10,12,18,.82);border:1px solid var(--line);border-radius:14px;padding:18px 22px;max-width:min(460px,86vw);text-align:center;font-size:15px;line-height:1.6;transition:opacity .8s;pointer-events:none}
+#startHint kbd{font-size:13px}
 #player .bar{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;font-size:12px;color:var(--dim);gap:8px}
 #player .bar button{background:none;border:1px solid var(--line);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px}
 #player iframe{display:block;width:100%;height:190px;border:0}
@@ -145,6 +150,7 @@ body:not(.locked) #showUi{display:none}
     <h1>Fibwave</h1>
     <div class="ratio">φ = 1.6180339887…</div>
     <p>Golden-ratio patterns, GPU fractals and galaxies, oceans, mountains, deserts, forests and alien worlds, classic MilkDrop presets, the real night sky, and flights through space. They follow the beat, the bass and the treble of your music. Select a sound source to start.</p>
+    <p class="tipline"><b>Tip:</b> double-click the screen (or press <kbd>H</kbd>) to hide the controls and see only the visuals. Double-click again to show them. <kbd>←</kbd> <kbd>→</kbd> change the scene, <kbd>↑</kbd> <kbd>↓</kbd> change the colours.</p>
     <form class="linkrow" id="linkForm" hidden>
       <label for="linkIn" class="ctl">Paste a YouTube or Spotify link</label>
       <div class="linkline">
@@ -182,6 +188,7 @@ body:not(.locked) #showUi{display:none}
     <label class="ctl" for="scene">Scene <select id="scene"></select></label>
     <button class="btn" id="bRnd">Random</button>
     <label class="chk" for="names"><input type="checkbox" id="names"> Names</label>
+    <label class="chk" for="wordChk" title="Listen for sung words (coffee, moon, fire, ocean, love and about 200 more) and show a picture of each one. Runs only in this browser."><input type="checkbox" id="wordChk"> Sung words</label>
     <label class="chk" for="verseChk" title="Show Bible verses (KJV) in Mirror Lake EQ and Eternal Voyage"><input type="checkbox" id="verseChk" checked> Verses</label>
     <label class="chk" for="stylechk"><input type="checkbox" id="stylechk" checked> Match style</label>
     <label class="chk" for="timbrechk" title="Follow tempo changes, flow, brightness, warmth and harshness of the sound"><input type="checkbox" id="timbrechk" checked> Tone mood</label>
@@ -234,6 +241,8 @@ body:not(.locked) #showUi{display:none}
     <button class="btn" id="bHide">Hide</button>
   </div>
 </div>
+<div id="wordState" hidden></div>
+<div id="startHint" hidden><b>Double-click the screen</b> to hide the controls.<br>Double-click again to show them.<br><kbd>←</kbd> <kbd>→</kbd> scene &nbsp;·&nbsp; <kbd>↑</kbd> <kbd>↓</kbd> colours</div>
 <div id="player" hidden>
   <div class="bar"><span id="playerName">Player</span><span><button id="pMin">Hide video</button> <button id="pClose">Close</button></span></div>
   <iframe id="pFrame" allow="autoplay; encrypted-media; clipboard-write; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" title="Music player"></iframe>
@@ -4854,6 +4863,48 @@ const NATURE3=[
   step(a){this.a=(this.a||0)+st.dt*(0.4+a.mid*0.5+a.kick*0.3);this.b=(this.b||0)+st.dt*(0.3+a.bass*0.8);
     if(S.names)label(18*DPR,26*DPR,'Prism light · glass bends each colour by a slightly different amount (dispersion), so white beams split into the spectrum · the mids widen the split','info')}}];
 
+/* ---------- Fire & Smoke (GPU): flames and smoke bent by the wind, lit by the fire and the sky, in changing weather ---------- */
+const FS_FIRE=GLSL_HEAD+`
+uniform float uE,uF;
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*uRes)/uRes.y;float hw=.5*uRes.x/uRes.y,t=uB,wind=uA;
+  float wx=uE;                                        // weather: 0 clear night, 1 rain and lightning, 2 dawn, 3 snow
+  vec3 sky=wx>1.5&&wx<2.5?mix(vec3(.55,.32,.25),vec3(.12,.15,.32),smoothstep(-.3,.5,uv.y)):mix(vec3(.04,.04,.07),vec3(.0,.01,.03),smoothstep(-.3,.5,uv.y));
+  sky+=stars(uv*.7,.06,1.)*(wx<.5?1.:0.);
+  vec3 col=sky;
+  // smoke: rises, spreads and drifts with the wind; lit from below by the fire
+  vec2 sp=uv;sp.x-=wind*(uv.y+.45)*(uv.y+.45)*.6;
+  float sm=fbm(vec2(sp.x*2.2,sp.y*1.4-t*.35)+fbm(sp*1.5-vec2(0.,t*.2))*1.4);
+  float smMask=smoothstep(-.25,.15,uv.y)*smoothstep(.9,.2,abs(sp.x)*1.3-uv.y*.4+.25);
+  float smoke=smoothstep(.38,.8,sm)*smMask;
+  vec3 smokeC=mix(vec3(.12,.12,.13),vec3(.45,.42,.4),sm)*(1.+(1.-smoothstep(-.3,.3,uv.y))*vec3(1.2,.55,.2)*1.5);
+  col=mix(col,smokeC,smoke*.85);
+  // flames: rising turbulence, bent by the wind, hottest at the base
+  vec2 fp=uv-vec2(0.,-.42);fp.x-=wind*fp.y*fp.y*1.2+.04*sin(t*1.7+fp.y*6.);
+  float n=fbm(vec2(fp.x*4.,fp.y*3.-t*2.2))*.6+fbm(vec2(fp.x*9.,fp.y*7.-t*4.))*.4;
+  float h=.42+.3*uBass+.15*uKick;float shape=1.-fp.y/h-abs(fp.x)*(2.6-fp.y*1.5);
+  shape-=.22*abs(sin(fp.x*7.+n*4.+t*.6))*smoothstep(0.,.25,fp.y);                         // separate tongues of flame
+  float flame=clamp(shape+n*1.25-.78,0.,1.)*step(-.02,fp.y);
+  vec3 fire=mix(vec3(.6,.05,0.),vec3(1.,.45,.05),smoothstep(.0,.35,flame));fire=mix(fire,vec3(1.,.9,.6),smoothstep(.45,.9,flame));
+  fire=mix(fire,pal(.08)*1.2,.15);
+  col=col*(1.-smoothstep(0.,.2,flame))+fire*smoothstep(0.,.12,flame)*1.15;
+  // embers carried up by the hot air and the wind
+  for(int i=0;i<3;i++){float fi=float(i);vec2 g=vec2(uv.x-wind*(uv.y+.4)*.5,uv.y-t*(.25+fi*.08))*vec2(18.+fi*8.,10.+fi*5.);vec2 id=floor(g),f=fract(g)-.5;float r=hash(id+fi*13.);
+    if(r>.9){vec2 o=vec2(hash(id+3.1),hash(id+7.3))-.5;float d=length(f-o*.6);col+=vec3(1.,.55,.15)*smoothstep(.07,0.,d)*(1.-smoothstep(-.2,.6,uv.y))*(.6+uHat);}}
+  // the ground, lit by the fire
+  if(uv.y<-.43){float g=fbm(vec2(uv.x*6.,uv.y*20.));col=vec3(.05,.04,.035)*(.5+g)+vec3(1.,.45,.12)*exp(-length(uv-vec2(0.,-.43))*5.)*(.6+uBass*.6);}
+  // weather
+  if(wx>.5&&wx<1.5){col*=.8;col+=vec3(.6)*step(.97,hash(floor(vec2(uv.x*140.+uv.y*35.,uv.y*25.+uTime*30.))))*.18;col+=vec3(.55,.6,.8)*step(.8,uKick)*.25*smoothstep(-.2,.5,uv.y);}
+  if(wx>2.5){vec2 g=vec2(uv.x*30.+sin(uv.y*10.+uTime)*.5-wind*uv.y*8.,uv.y*30.+uTime*3.);vec2 id=floor(g),f=fract(g)-.5;if(hash(id)>.93)col+=vec3(.85)*smoothstep(.12,0.,length(f))*.6;}
+  col+=vec3(1.,.5,.15)*exp(-length(uv-vec2(0.,-.3))*2.5)*.12*(1.+uBass);       // warm glow lights the air
+  o=vec4(col,1.);
+}`;
+const FIRE_SCENE={name:'Fire & Smoke',kind:'gl',fs:FS_FIRE,rs0:0.7,rsMax:1,th:0.8,dwell:2,
+  step(a){this.b=(this.b||0)+st.dt*(0.8+a.energy*1.2+a.kick*0.6);const tw=0.35*Math.sin(st.t*0.13)+0.25*Math.sin(st.t*0.31)+a.bass*0.3*Math.sign(Math.sin(st.t*0.13)||1);this.a=(this.a||0)+(tw-(this.a||0))*Math.min(1,st.dtReal*1.2);
+    const wb=Math.floor(A.beats/16)+Math.floor(st.t/20);if(this.wb!==wb){this.wb=wb;this.e=Math.floor(hh(wb*4.3)*4)}
+    if(S.names)label(18*DPR,26*DPR,'Fire & smoke · '+['a clear night','rain, with lightning on the kicks','dawn','snow'][this.e||0]+' · the wind bends the flames and carries the smoke and embers · the bass makes the fire taller','info')}};
+
+
 // fb: per-frame feedback zoom/rotation (the old MilkDrop trick); trail = share of the Trails setting
 const SCENES=[
   {name:'Sunflower',draw:sunflower,fb:{zoom:1.006,rot:0.002}},
@@ -4891,6 +4942,7 @@ const SCENES=[
   {name:'Cascade EQ',draw:eqCascade,fb:{zoom:1.0,rot:0,trail:0},dwell:1.6},
   {name:'Retro LED EQ',draw:eqRetro,fb:{zoom:1.0,rot:0,trail:0.25},dwell:1.4},
   {name:'Radial Echo EQ',draw:eqRadial,fb:{zoom:1.0,rot:0,trail:0.45},dwell:1.6},
+  {name:'Symmetric Maze',draw:symMaze,fb:{zoom:1.0,rot:0,trail:0.45},dwell:2.4},
   {name:'Helix EQ',draw:helixEQ,fly:true,fb:{zoom:1.0,rot:0,trail:0.3},dwell:1.8},
   {name:'Flock',draw:flock,fb:{zoom:1.0,rot:0,trail:0.6},dwell:2},
   {name:'Aspen Grove',draw:aspenGrove,fb:{zoom:1.0,rot:0,trail:0},dwell:2.2},
@@ -4906,7 +4958,7 @@ const SCENES=[
    step(a){this.a=(this.a||0)+st.dt*(0.08+a.mid*0.35+a.kick*0.2)*st.kdirS;this.b=0.35*Math.sin(st.t*0.07)+a.bass*0.15;this.c=0.5+0.5*Math.sin(st.t*0.045+(A.beats>>4));this.d=Math.sin(st.t*0.02)*0.3;
      if(S.names){label(18*DPR,26*DPR,'Holographic universe · 9 glowing points send out light waves; with a reference wave they make this interference pattern (a hologram: every piece of it holds the whole shape)','info');label(18*DPR,48*DPR,'Dennis Gabor invented holography in 1947 · Pribram and Bohm proposed holographic models of mind and matter · the 1983 Gateway report describes the universe as a hologram','info')}}},{name:'Nature & Wonders',kind:'photo',col:'nature',dwell:1.5},{name:'Ancient & Esoteric',kind:'photo',col:'ancient',dwell:1.5},{name:'MilkDrop Classics',kind:'md'},{name:'Video Synth',kind:'hy'}]:[])
 ];
-if(GLOK)SCENES.push(...ETERNAL_SCENES,GEM_SCENE,WATER_SCENE,...NATURE2,...NATURE3);
+if(GLOK)SCENES.push(...ETERNAL_SCENES,GEM_SCENE,WATER_SCENE,...NATURE2,...NATURE3,FIRE_SCENE);
 
 // scene length factor: complex scenes stay longer under Auto, simple ones change sooner
 const DWELL={'Night Sky':2,'Solar System':1.5,'Moon Phases':1.4,'Fractal Bloom':1.8,'Particle Galaxy':1.6,'Earth from Orbit':1.8,'Lunar Earthrise':1.6,'Golden Tunnel':1.1,'Nebula Flow':1.3};
@@ -4916,21 +4968,21 @@ SCENES.forEach(s=>{if(!s.dwell)s.dwell=DWELL[s.name]||(s.kind==='gl'?1.5:s.kind?
 /* ---------- music style: a best guess from tempo, drums, bass weight, distortion and tonality ---------- */
 const STYLES={
  ambient:{name:'Ambient / chill',pal:['Aurora','Glacier','Moonlight','Deep Sea','Nebula'],react:0.9,auto:55,trail:0.9,glow:0.9,
-   scenes:['Cloudscape','Silk Tapestry','Prism Light','Waterways EQ','Brilliant Horizons','Flock','Living Water','Aspen Grove','Gemstones & Crystals','Note Patterns','Eternal Voyage','Mirror Lake EQ','Radial Echo EQ','Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration']},
+   scenes:['Fire & Smoke','Cloudscape','Silk Tapestry','Prism Light','Waterways EQ','Brilliant Horizons','Flock','Living Water','Aspen Grove','Gemstones & Crystals','Note Patterns','Eternal Voyage','Mirror Lake EQ','Radial Echo EQ','Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration']},
  edm:{name:'EDM / house / techno',pal:['Synthwave','Full Spectrum','Infrared','Golden Drift'],react:2.2,auto:21,trail:0.8,glow:1.0,
-   scenes:['Prism Light','Helix EQ','Brilliant Horizons','Gemstones & Crystals','Eternal Voyage','Cascade EQ','Radial Echo EQ','Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
+   scenes:['Symmetric Maze','Prism Light','Helix EQ','Brilliant Horizons','Gemstones & Crystals','Eternal Voyage','Cascade EQ','Radial Echo EQ','Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
  bass:{name:'Bass music / dubstep / DnB',pal:['Infrared','Ember','Synthwave','Cosmic Dust'],react:2.7,auto:13,trail:0.7,glow:1.2,
-   scenes:['Helix EQ','Retro LED EQ','Cascade EQ','Spin in Plasma','Spin in Water','Möbius Wave','Burning Ship','Mandelbox 3D','Entropy & Order','Holographic Universe','MilkDrop Classics','Golden Tunnel','Starfield','Strange Attractors','Fractal Bloom','Video Synth','Deep Space','Hypercube 4D','Alien World','Clifford Torus']},
+   scenes:['Fire & Smoke','Symmetric Maze','Helix EQ','Retro LED EQ','Cascade EQ','Spin in Plasma','Spin in Water','Möbius Wave','Burning Ship','Mandelbox 3D','Entropy & Order','Holographic Universe','MilkDrop Classics','Golden Tunnel','Starfield','Strange Attractors','Fractal Bloom','Video Synth','Deep Space','Hypercube 4D','Alien World','Clifford Torus']},
  hiphop:{name:'Hip-hop / R&B',pal:['Gold Leaf','Red Rock','Rose Quartz','Cosmic Dust'],react:1.8,auto:34,trail:0.75,glow:0.8,
-   scenes:['Helix EQ','Living Water','Retro LED EQ','Radial Echo EQ','Spin in Air','Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
+   scenes:['Symmetric Maze','Helix EQ','Living Water','Retro LED EQ','Radial Echo EQ','Spin in Air','Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
  rock:{name:'Rock / metal',pal:['Ember','Solar Flare','Red Rock','Infrared'],react:2.2,auto:21,trail:0.7,glow:0.9,
-   scenes:['Cloudscape','Brilliant Horizons','Living Water','Gemstones & Crystals','Retro LED EQ','Cascade EQ','Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
+   scenes:['Fire & Smoke','Symmetric Maze','Cloudscape','Brilliant Horizons','Living Water','Gemstones & Crystals','Retro LED EQ','Cascade EQ','Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
  pop:{name:'Pop',pal:['Rose Quartz','Golden Drift','Synthwave','Emerald'],react:1.6,auto:21,trail:0.8,glow:0.9,
    scenes:['Prism Light','Cloudscape','Flock','Helix EQ','Brilliant Horizons','Aspen Grove','Note Patterns','Mirror Lake EQ','Radial Echo EQ','Retro LED EQ','Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
  classical:{name:'Classical / acoustic',pal:['Moonlight','Gold Leaf','Glacier','Deep Sea'],react:0.8,auto:55,trail:0.88,glow:0.8,
    scenes:['Silk Tapestry','Cloudscape','Flock','Waterways EQ','Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Eternal Voyage','Mirror Lake EQ','Spin in Honey','Spin in Space','Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
  jazz:{name:'Jazz / lo-fi / soul',pal:['Cosmic Dust','Rose Quartz','Emerald','Gold Leaf'],react:1.1,auto:34,trail:0.85,glow:0.8,
-   scenes:['Silk Tapestry','Flock','Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Mirror Lake EQ','Retro LED EQ','Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
+   scenes:['Fire & Smoke','Silk Tapestry','Flock','Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Mirror Lake EQ','Retro LED EQ','Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
 };
 const STY={cur:null,cand:null,candT:0,score:{},f:{sub:0,mid:0,high:0,tot:1e-6,ev:0,em:0},kicks:[],snares:[],alls:[],next:0,applied:null};
 for(const k in STYLES)STY.score[k]=0;
@@ -5289,6 +5341,52 @@ function flock(c,a){
 }
 
 
+/* ---------- Symmetric Maze: a maze grown by a random walk in one part, then mirrored, so the whole is symmetrical ---------- */
+const MZ={seed:0,kind:0,walls:null,path:null,t:0,gen:-1};
+function mzRand(s){return ()=>{s=(s*16807)%2147483647;return s/2147483647}}
+function mzBuild(){
+  const R=mzRand(1+MZ.seed*7919),k=MZ.kind;
+  if(k===0){const n=9,vis=new Set(),open=new Set(),st0=[[0,0]],ord=[];vis.add('0,0');
+    while(st0.length){const [x,y]=st0[st0.length-1],nb=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>[x+dx,y+dy]).filter(([a,b])=>a>=0&&b>=0&&a<n&&b<n&&!vis.has(a+','+b));
+      if(!nb.length){st0.pop();continue}const [a,b]=nb[Math.floor(R()*nb.length)];vis.add(a+','+b);open.add([x,y,a,b].join(','));open.add([a,b,x,y].join(','));ord.push([a,b]);st0.push([a,b])}
+    const walls=[];const has=(x,y,a,b)=>open.has([x,y,a,b].join(','));
+    for(let x=0;x<n;x++)for(let y=0;y<n;y++){if(x<n-1&&!has(x,y,x+1,y))walls.push([x+1,y,x+1,y+1,x+y]);if(y<n-1&&!has(x,y,x,y+1))walls.push([x,y+1,x+1,y+1,x+y]);}
+    walls.push([n,0,n,n,n*2],[0,n,n,n,n*2]);
+    // the way out: from the centre cell to the far corner
+    const prev={},q=[[0,0]],seen=new Set(['0,0']);while(q.length){const [x,y]=q.shift();if(x===n-1&&y===n-1)break;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const a=x+dx,b=y+dy;if(a<0||b<0||a>=n||b>=n||seen.has(a+','+b)||!has(x,y,a,b))continue;seen.add(a+','+b);prev[a+','+b]=[x,y];q.push([a,b])}}
+    const path=[];let c=[n-1,n-1];while(c){path.unshift(c);c=prev[c[0]+','+c[1]]}MZ.walls=walls;MZ.path=path;MZ.n=n}
+  else{const rings=7,sec=4,vis=new Set(['0,0']),open=new Set(),stk=[[0,0]];
+    while(stk.length){const [r,s]=stk[stk.length-1],nb=[[1,0],[-1,0],[0,1],[0,-1]].map(([dr,ds])=>[r+dr,s+ds]).filter(([a,b])=>a>=0&&b>=0&&a<rings&&b<sec&&!vis.has(a+','+b));
+      if(!nb.length){stk.pop();continue}const [a,b]=nb[Math.floor(R()*nb.length)];vis.add(a+','+b);open.add([r,s,a,b].join(','));open.add([a,b,r,s].join(','));stk.push([a,b])}
+    const has=(r,s,a,b)=>open.has([r,s,a,b].join(',')),walls=[];
+    for(let r=0;r<rings;r++)for(let s=0;s<sec;s++){if(s<sec-1&&!has(r,s,r,s+1))walls.push(['rad',r,s+1,r]);if(r<rings-1&&!has(r,s,r+1,s))walls.push(['arc',r+1,s,r]);}
+    for(let s=0;s<sec;s++)walls.push(['arc',rings,s,rings]);
+    const prev={},q=[[0,0]],seen=new Set(['0,0']);while(q.length){const [r,s]=q.shift();for(const [dr,ds] of [[1,0],[-1,0],[0,1],[0,-1]]){const a=r+dr,b=s+ds;if(a<0||b<0||a>=rings||b>=sec||seen.has(a+','+b)||!has(r,s,a,b))continue;seen.add(a+','+b);prev[a+','+b]=[r,s];q.push([a,b])}}
+    const path=[];let c=[rings-1,sec-1];while(c){path.unshift(c);c=prev[c[0]+','+c[1]]}MZ.walls=walls;MZ.path=path;MZ.rings=rings;MZ.sec=sec}
+}
+function symMaze(c,a){
+  const g=Math.floor(A.beats/32)+Math.floor(st.t/30);if(g!==MZ.gen){MZ.gen=g;MZ.seed++;MZ.kind=g%2;MZ.t=0;mzBuild()}
+  MZ.t+=st.dtReal||0.016;const M=Math.min(W,H),cx=W/2,cy=H/2,grow=Math.min(1,MZ.t/5),rot=st.t*0.02*st.kdirS,bands=BANDV(a);
+  c.lineCap='round';
+  if(MZ.kind===0){const n=MZ.n,cs=M*0.46/n;   // 4 mirrored quarters
+    for(const [x0,y0,x1,y1,d] of MZ.walls){if(d/(n*2)>grow)continue;const v=bands[Math.min(6,Math.floor(d/(n*2)*7))],lw=DPR*(1.6+v*2.5);
+      c.strokeStyle=col(d/(n*2)+0.05,50+30*v,0.55+0.45*v);c.lineWidth=lw;c.beginPath();
+      for(const [sx,sy] of [[1,1],[-1,1],[1,-1],[-1,-1]])for(const sw of [0]){const P=(x,y)=>{const X=(sw?y:x)*sx*cs,Y=(sw?x:y)*sy*cs;return [cx+X*Math.cos(rot)-Y*Math.sin(rot),cy+X*Math.sin(rot)+Y*Math.cos(rot)]};const p=P(x0,y0),q=P(x1,y1);c.moveTo(p[0],p[1]);c.lineTo(q[0],q[1])}
+      c.stroke()}
+    if(grow>=1){const L=MZ.path.length,u=((MZ.t-5)*(A.bpm?A.bpm/60:2)*0.9)%(L+6);   // lights run out of the centre along the way out, all mirrored
+      for(let k=0;k<Math.min(L,u);k++){const fade=clamp(1-(u-k)/8,0,1);if(fade<=0)continue;const [x,y]=MZ.path[k];
+        for(const [sx,sy] of [[1,1],[-1,1],[1,-1],[-1,-1]])for(const sw of [0]){const X=((sw?y:x)+0.5)*sx*cs,Y=((sw?x:y)+0.5)*sy*cs;softDot(c,cx+X*Math.cos(rot)-Y*Math.sin(rot),cy+X*Math.sin(rot)+Y*Math.cos(rot),cs*(0.5+0.4*fade)*(1+a.kick*0.5),col(0.12+k*0.01,75,0.6*fade))}}}}
+  else{const rings=MZ.rings,sec=MZ.sec,R0=M*0.06,dr=(M*0.47-R0)/rings,wedge=TAU/12,ws=wedge/sec;   // 12 wedges, every second one mirrored
+    const ang=(w,s)=>rot+w*wedge+(w%2?(sec-s)*ws:s*ws);
+    for(const wl of MZ.walls){const r=wl[1],d=wl[3]/rings;if(d>grow)continue;const v=bands[Math.min(6,Math.floor(d*7))];c.strokeStyle=col(d+0.6,50+30*v,0.55+0.45*v);c.lineWidth=DPR*(1.6+v*2.5);c.beginPath();
+      for(let w=0;w<12;w++){if(wl[0]==='rad'){const an=ang(w,wl[2]),r0=R0+r*dr,r1=r0+dr;c.moveTo(cx+Math.cos(an)*r0,cy+Math.sin(an)*r0);c.lineTo(cx+Math.cos(an)*r1,cy+Math.sin(an)*r1)}
+        else{const rr=R0+r*dr,a0=ang(w,wl[2]),a1=ang(w,wl[2]+1);c.moveTo(cx+Math.cos(a0)*rr,cy+Math.sin(a0)*rr);c.arc(cx,cy,rr,Math.min(a0,a1),Math.max(a0,a1))}}c.stroke()}
+    if(grow>=1){const L=MZ.path.length,u=((MZ.t-5)*(A.bpm?A.bpm/60:2)*0.8)%(L+6);
+      for(let k=0;k<Math.min(L,u);k++){const fade=clamp(1-(u-k)/8,0,1);if(fade<=0)continue;const [r,s]=MZ.path[k];for(let w=0;w<12;w++){const an=ang(w,s+0.5)+(w%2?-ws:0)*0+0,rr=R0+(r+0.5)*dr;softDot(c,cx+Math.cos(an)*rr,cy+Math.sin(an)*rr,dr*(0.45+0.4*fade)*(1+a.kick*0.5),col(0.6+k*0.02,75,0.6*fade))}}}
+    softDot(c,cx,cy,R0*1.2,col(0.1,70,0.3+0.4*a.bass))}
+  if(S.names)label(18*DPR,26*DPR,'Symmetric maze · a random walk carves one part, then mirrors copy it '+(MZ.kind?'into 12 wedges':'into 4 quarters')+' · lights run from the centre along the way out · a new maze every 32 beats','info');
+}
+
 /* ---------- Equalizer scenes and the EQ overlay (the old-school spectrum bars) ---------- */
 const EQ={hist:[],acc:0,pk:[],pv:[],sparks:[],rings:[],racc:0,rot:0,opk:[],opv:[],osp:[]};
 function eqBands(n){const a=new Array(n);for(let i=0;i<n;i++)a[i]=Math.min(1,spec(i/(n-1))*1.15);return a}
@@ -5401,6 +5499,131 @@ function eqOverlay(){
     const pk=pos==='center'?val:EQ.opk[i];c.fillStyle='rgba(245,245,255,0.95)';c.fillRect(x,top?base+pk*hMax+2*DPR:base-pk*hMax-4*DPR,w,2*DPR)}
   c.restore();
 }
+
+/* ---------- Sung words → pictures ----------
+   A small speech model (Whisper base, about 75 MB, downloaded one time and kept by the browser) listens to the music
+   in this browser. Nothing is sent to a server. When it hears a word from the list below, a picture of it appears
+   with its own animation (steam over coffee, rain under clouds, petals round a rose ...). */
+const WORDVIS={
+ coffee:['☕🫘','steam'],espresso:['☕','steam'],latte:['☕','steam'],tea:['🍵🫖','steam'],cup:['☕🍵','steam'],
+ sun:['☀️🌞🌅','rays'],sunshine:['☀️🌞','rays'],sunrise:['🌅🌄','rays'],sunset:['🌇🌅','rays'],morning:['🌅☀️','rays'],day:['☀️🌤️','rays'],
+ moon:['🌙🌕🌖','sparkle'],moonlight:['🌙🌕','sparkle'],night:['🌙🌃🌌','sparkle'],midnight:['🌙🌌','sparkle'],
+ star:['⭐🌟✨','sparkle'],stars:['⭐🌟✨','sparkle'],sky:['🌌☁️🌤️','sparkle'],heaven:['🕊️✨☁️','rays'],angel:['🕊️✨','rays'],
+ galaxy:['🌌','sparkle'],space:['🌌🪐🚀','sparkle'],universe:['🌌🪐','sparkle'],planet:['🪐🌍','orbit'],world:['🌍🌎🌏','orbit'],earth:['🌍🌎','orbit'],rocket:['🚀','fire'],
+ heart:['❤️💖💗','hearts'],love:['❤️💕💞','hearts'],lover:['💞❤️','hearts'],kiss:['💋😘','hearts'],baby:['💕','hearts'],darling:['💕','hearts'],
+ fire:['🔥','fire'],flame:['🔥🕯️','fire'],burn:['🔥','fire'],burning:['🔥','fire'],hot:['🔥🌶️','fire'],candle:['🕯️','fire'],
+ rain:['🌧️☔','rain'],raining:['🌧️☔','rain'],tears:['💧😢','rain'],cry:['😢💧','rain'],crying:['😢💧','rain'],storm:['⛈️🌩️','rain'],thunder:['⛈️⚡','rain'],lightning:['⚡🌩️','rays'],
+ cloud:['☁️⛅','drift'],clouds:['☁️⛅','drift'],wind:['🌬️🍃','drift'],
+ snow:['❄️☃️🌨️','snow'],winter:['❄️☃️','snow'],cold:['❄️🧊','snow'],ice:['🧊❄️','snow'],christmas:['🎄🎁⭐','snow'],
+ ocean:['🌊🐋🐚','bubbles'],sea:['🌊🐚🐬','bubbles'],water:['💧🌊','ripple'],wave:['🌊','ripple'],waves:['🌊','ripple'],river:['🏞️🌊','ripple'],lake:['🏞️','ripple'],beach:['🏖️🐚🌴','rays'],island:['🏝️🌴','rays'],fish:['🐠🐟','bubbles'],swim:['🌊🐬','bubbles'],
+ rose:['🌹','petals'],roses:['🌹','petals'],flower:['🌸🌺🌼🌷','petals'],flowers:['💐🌸🌷','petals'],garden:['🌷🌻🌿','petals'],spring:['🌸🌷🐣','petals'],bloom:['🌸🌺','petals'],
+ tree:['🌳🌲','drift'],trees:['🌳🌲','drift'],forest:['🌲🌳','drift'],leaf:['🍃🍂','drift'],leaves:['🍂🍁🍃','drift'],autumn:['🍁🍂','drift'],fall:['🍂🍁','drift'],summer:['🌻☀️🏖️','rays'],
+ mountain:['🏔️⛰️','snow'],mountains:['🏔️⛰️','snow'],road:['🛣️🚗','drift'],highway:['🛣️🚗','drift'],car:['🚗🏎️','drift'],drive:['🚗🛣️','drift'],train:['🚂','drift'],plane:['✈️','drift'],fly:['🕊️🦋✈️','drift'],flying:['🦅🕊️','drift'],
+ bird:['🐦🕊️🦜','drift'],birds:['🐦🕊️','drift'],butterfly:['🦋','petals'],wings:['🦋🕊️','drift'],eagle:['🦅','drift'],dove:['🕊️','rays'],
+ cat:['🐈🐱','sparkle'],dog:['🐕🐶','sparkle'],horse:['🐎','drift'],wolf:['🐺','sparkle'],lion:['🦁','rays'],tiger:['🐅','fire'],bee:['🐝','sparkle'],honey:['🍯🐝','sparkle'],
+ diamond:['💎','sparkle'],diamonds:['💎','sparkle'],gold:['🏆🪙✨','sparkle'],golden:['✨🪙','sparkle'],money:['💰💵🪙','confetti'],cash:['💵💰','confetti'],rich:['💰💎','confetti'],king:['👑','sparkle'],queen:['👑','sparkle'],crown:['👑','sparkle'],
+ party:['🎉🥳','confetti'],dance:['🪩🎶','confetti'],dancing:['🪩🎶','confetti'],celebrate:['🎉🎊','confetti'],birthday:['🎂🎉','confetti'],fireworks:['🎆🎇','confetti'],
+ music:['🎵🎶🎼','orbit'],song:['🎶🎵','orbit'],sing:['🎤🎶','orbit'],guitar:['🎸','orbit'],drum:['🥁','ripple'],piano:['🎹','orbit'],radio:['📻','orbit'],
+ wine:['🍷','bubbles'],beer:['🍺','bubbles'],champagne:['🍾🥂','bubbles'],whiskey:['🥃','bubbles'],drink:['🍹🥤','bubbles'],
+ apple:['🍎','sparkle'],cherry:['🍒','petals'],peach:['🍑','petals'],strawberry:['🍓','petals'],lemon:['🍋','rays'],sugar:['🍬🍭','sparkle'],candy:['🍬🍭','confetti'],sweet:['🍯🍬','sparkle'],cake:['🎂🍰','confetti'],
+ home:['🏡','rays'],house:['🏠','rays'],city:['🌆🏙️','sparkle'],town:['🏘️','sparkle'],church:['⛪','rays'],
+ phone:['📱☎️','ripple'],call:['📞📱','ripple'],letter:['💌✉️','hearts'],
+ time:['⏳⌛🕰️','orbit'],clock:['🕰️⏰','orbit'],forever:['♾️✨','orbit'],dream:['💭🌙✨','drift'],dreams:['💭🌙✨','drift'],sleep:['😴🌙','drift'],
+ light:['💡✨','rays'],shine:['✨🌟','rays'],shining:['✨🌟','rays'],bright:['✨☀️','rays'],dark:['🌑🌌','sparkle'],shadow:['🌑','drift'],
+ rainbow:['🌈','rays'],color:['🌈🎨','confetti'],colors:['🌈🎨','confetti'],
+ god:['✝️🕊️✨','rays'],jesus:['✝️🕊️','rays'],lord:['✝️✨','rays'],pray:['🙏✨','rays'],prayer:['🙏','rays'],soul:['✨🕊️','rays'],spirit:['🕊️✨','rays'],grace:['🕊️✨','rays'],
+ eye:['👁️','sparkle'],eyes:['👀👁️','sparkle'],smile:['😊😄','sparkle'],happy:['😊😁','confetti'],
+ ghost:['👻','drift'],devil:['😈','fire'],magic:['🪄✨','sparkle'],crystal:['🔮💎','sparkle'],
+ ship:['⛵🚢','ripple'],boat:['⛵🛶','ripple'],sail:['⛵','ripple'],
+ desert:['🏜️🌵','rays'],cactus:['🌵','rays'],wild:['🐺🌲','drift'],free:['🕊️🦅','drift'],freedom:['🕊️🗽','drift']};
+const WS={on:false,worker:null,state:'off',tap:null,tapSrc:null,sink:null,buf:[],ratio:3,acc:0,frac:0,busy:false,last:{},shows:[],heard:'',heardT:0,lastSend:0,err:''};
+const WORKER_SRC=`
+let asr=null;
+const URLS=['https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2','https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/dist/transformers.min.js','https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/+esm'];
+async function load(){let T=null,err=null;for(const u of URLS){try{T=await import(u);break}catch(e){err=e}}if(!T)throw err||new Error('library');
+  T.env.allowLocalModels=false;
+  const prog=p=>{if(p&&p.status==='progress'&&p.total)postMessage({type:'progress',file:p.file,loaded:p.loaded,total:p.total})};
+  asr=await T.pipeline('automatic-speech-recognition','Xenova/whisper-base.en',{dtype:'q8',progress_callback:prog});postMessage({type:'ready',dev:'wasm'});}
+onmessage=async e=>{const m=e.data;
+  if(m.type==='load'){try{await load()}catch(err){postMessage({type:'error',msg:String(err&&err.message||err)})}return}
+  if(m.type==='audio'&&asr){try{const r=await asr(m.pcm,{language:undefined,chunk_length_s:0});postMessage({type:'text',text:(r&&r.text)||''})}catch(err){postMessage({type:'text',text:'',err:String(err)})}}};`;
+const TAP_SRC=`class Tap extends AudioWorkletProcessor{constructor(){super();this.b=new Float32Array(4096);this.n=0}
+ process(inp){const ch=inp[0];if(ch&&ch[0]){const L=ch[0],R=ch[1]||ch[0];for(let i=0;i<L.length;i++){this.b[this.n++]=(L[i]+R[i])*0.5;if(this.n===4096){this.port.postMessage(this.b.slice(0));this.n=0}}}return true}}
+registerProcessor('fw-tap',Tap);`;
+async function wordsStart(){
+  if(WS.worker)return;WS.state='loading';WS.err='';wordsUI();
+  try{
+    WS.worker=new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'text/javascript'})),{type:'module'});
+    WS.worker.onmessage=e=>{const m=e.data;
+      if(m.type==='progress'){WS.prog=m.loaded/m.total;WS.state='loading';wordsUI()}
+      else if(m.type==='ready'){WS.state='listening';WS.dev=m.dev;wordsUI();toast('Sung words: the speech model is ready ('+(m.dev==='webgpu'?'graphics card':'processor')+'). It listens for words like coffee, moon, fire, ocean, love…')}
+      else if(m.type==='error'){WS.state='error';WS.err=m.msg;wordsUI();toast('The speech model could not load. Check the internet connection, then try again.')}
+      else if(m.type==='text'){WS.busy=false;wordsText(m.text)}};
+    WS.worker.postMessage({type:'load'});
+    ensureCtx();WS.sink=actx.createGain();WS.sink.gain.value=0;WS.sink.connect(actx.destination);
+    try{await actx.audioWorklet.addModule(URL.createObjectURL(new Blob([TAP_SRC],{type:'text/javascript'})));WS.tap=new AudioWorkletNode(actx,'fw-tap');WS.tap.port.onmessage=e=>wordsAudio(e.data)}
+    catch(_){WS.tap=actx.createScriptProcessor(4096,2,1);WS.tap.onaudioprocess=e=>{const L=e.inputBuffer.getChannelData(0),R=e.inputBuffer.numberOfChannels>1?e.inputBuffer.getChannelData(1):L,m=new Float32Array(L.length);for(let i=0;i<L.length;i++)m[i]=(L[i]+R[i])*0.5;wordsAudio(m)}}   // a page opened from a file cannot load a worklet: use the older audio node
+    WS.tap.connect(WS.sink);
+  }catch(e){WS.state='error';WS.err=String(e.message||e);wordsUI()}
+}
+function wordsAudio(blk){ // down to 16 kHz mono, keep the last 5 seconds
+  if(!WS.on)return;const r=actx.sampleRate/16000;let i=WS.frac;for(;i<blk.length;i+=r){const a=i|0,b=Math.min(blk.length-1,a+1),c2=Math.min(blk.length-1,a+2);WS.buf.push((blk[a]+blk[b]+blk[c2])/3)}WS.frac=i-blk.length;
+  if(WS.buf.length>16000*5)WS.buf.splice(0,WS.buf.length-16000*5);
+  const now=performance.now();
+  if(WS.state==='listening'&&!WS.busy&&now-WS.lastSend>2500&&WS.buf.length>=16000*3&&live){let e=0;for(let i=0;i<WS.buf.length;i+=40)e+=WS.buf[i]*WS.buf[i];if(e/(WS.buf.length/40)<1e-5)return;
+    WS.busy=true;WS.lastSend=now;WS.worker.postMessage({type:'audio',pcm:Float32Array.from(WS.buf)});setTimeout(()=>{WS.busy=false},12000)}
+}
+function wordsTap(){if(WS.tap&&srcNode&&WS.tapSrc!==srcNode){try{srcNode.connect(WS.tap)}catch(e){}WS.tapSrc=srcNode}}
+function wordsText(t){
+  t=(t||'').replace(/\[[^\]]*\]|\([^)]*\)|♪/g,' ').trim();if(!t)return;WS.heard=t;WS.heardT=performance.now();wordsUI();
+  const words=t.toLowerCase().replace(/[^a-z' ]/g,' ').split(/\s+/).filter(Boolean),now=performance.now();let n=0;
+  for(let w of words){w=w.replace(/'s$/,'');let k=WORDVIS[w]?w:WORDVIS[w.replace(/s$/,'')]?w.replace(/s$/,''):WORDVIS[w.replace(/ing$/,'')]?w.replace(/ing$/,''):null;
+    if(!k||(WS.last[k]!==undefined&&now-WS.last[k]<7000)||n>=2)continue;WS.last[k]=now;n++;wordShow(k)}
+}
+function wordShow(k){const [em,fx]=WORDVIS[k];
+  const vs=em.match(/\p{Extended_Pictographic}️?/gu)||[em],glyph=vs[Math.floor(Math.random()*vs.length)];
+  WS.shows.push({k,glyph,fx,t:0,dur:4.2,x:0.25+Math.random()*0.5,y:0.3+Math.random()*0.3,rot:(Math.random()-0.5)*0.4,hue:Math.random(),p:[],var:Math.floor(Math.random()*3)});if(WS.shows.length>4)WS.shows.shift()}
+window.fibwaveWord=w=>{const k=String(w).toLowerCase();if(WORDVIS[k])wordShow(k);return !!WORDVIS[k]};   // for testing: fibwaveWord('coffee')
+function wordsDraw(){
+  if(!WS.shows.length)return;const c=octx,dt=st.dtReal||0.016,M=Math.min(W,H);
+  for(const s of WS.shows){s.t+=dt;const u=s.t/s.dur,inA=sstep(Math.min(1,s.t/0.6)),outA=1-sstep(clamp((s.t-s.dur+1.2)/1.2,0,1)),al=inA*outA,cx=s.x*W,cy=(s.y-u*0.06)*H,sz=M*(0.24+0.06*s.var)*(0.85+0.15*inA)*(1+RA.kick*0.06);
+    c.save();c.globalAlpha=al;
+    const g=c.createRadialGradient(cx,cy,0,cx,cy,sz*1.3);g.addColorStop(0,col(s.hue,70,0.35));g.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=g;c.beginPath();c.arc(cx,cy,sz*1.3,0,TAU);c.fill();
+    // the effect behind and round the picture
+    const P=s.p,R=()=>Math.random();
+    if(P.length<70&&s.t<s.dur-1)for(let i=0;i<2;i++){const f=s.fx;
+      if(f==='steam')P.push({x:cx+(R()-0.5)*sz*0.35,y:cy-sz*0.35,vx:0,vy:-M*0.06,l:2.2,s:sz*0.08,w:R()*TAU});
+      else if(f==='rain')P.push({x:cx+(R()-0.5)*sz*1.8,y:cy-sz*0.2,vx:-M*0.02,vy:M*0.5,l:0.8,s:sz*0.06});
+      else if(f==='snow')P.push({x:cx+(R()-0.5)*sz*2.2,y:cy-sz,vx:0,vy:M*0.06,l:3,s:sz*0.03,w:R()*TAU});
+      else if(f==='fire')P.push({x:cx+(R()-0.5)*sz*0.6,y:cy+sz*0.2,vx:(R()-0.5)*M*0.03,vy:-M*(0.15+R()*0.1),l:1,s:sz*0.07});
+      else if(f==='petals'||f==='drift')P.push({x:cx+(R()-0.5)*sz*2,y:cy-sz*(0.4+R()*0.5),vx:M*(f==='drift'?0.08:0.02),vy:M*0.05,l:2.6,s:sz*0.05,w:R()*TAU});
+      else if(f==='bubbles')P.push({x:cx+(R()-0.5)*sz*1.4,y:cy+sz*0.5,vx:0,vy:-M*0.09,l:2.4,s:sz*(0.02+R()*0.04),w:R()*TAU});
+      else if(f==='hearts')P.push({x:cx+(R()-0.5)*sz*1.4,y:cy+sz*0.2,vx:(R()-0.5)*M*0.02,vy:-M*0.08,l:2.4,s:sz*0.13});
+      else if(f==='confetti')P.push({x:cx+(R()-0.5)*sz*2.4,y:cy-sz,vx:(R()-0.5)*M*0.05,vy:M*0.12,l:2.5,s:sz*0.04,w:R()*TAU,h:R()});
+      else if(f==='sparkle')P.push({x:cx+(R()-0.5)*sz*2.2,y:cy+(R()-0.5)*sz*1.8,vx:0,vy:0,l:1.2,s:sz*(0.04+R()*0.05),w:R()*TAU});}
+    for(const p of P){p.l-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;const a=clamp(p.l,0,1);
+      if(s.fx==='steam'){p.x+=Math.sin(s.t*2+p.w)*M*0.02*dt;c.fillStyle='rgba(255,255,255,'+(0.18*a).toFixed(3)+')';c.beginPath();c.arc(p.x,p.y,p.s*(1+(2.2-p.l)*1.5),0,TAU);c.fill()}
+      else if(s.fx==='rain'){c.strokeStyle='rgba(170,200,255,'+(0.7*a).toFixed(3)+')';c.lineWidth=DPR*1.5;c.beginPath();c.moveTo(p.x,p.y);c.lineTo(p.x-p.s*0.4,p.y-p.s*3);c.stroke()}
+      else if(s.fx==='snow'){p.x+=Math.sin(s.t+p.w)*M*0.02*dt;c.fillStyle='rgba(255,255,255,'+(0.9*a).toFixed(3)+')';c.beginPath();c.arc(p.x,p.y,p.s,0,TAU);c.fill()}
+      else if(s.fx==='fire'){c.fillStyle='rgba(255,'+Math.round(120+120*a)+',40,'+(0.6*a).toFixed(3)+')';c.beginPath();c.arc(p.x,p.y,p.s*(0.4+a),0,TAU);c.fill()}
+      else if(s.fx==='petals'||s.fx==='drift'){p.w+=dt*2;c.save();c.translate(p.x+Math.sin(p.w)*p.s*2,p.y);c.rotate(p.w);c.fillStyle=s.fx==='petals'?'rgba(255,150,190,'+(0.85*a).toFixed(3)+')':col(s.hue+0.2,60,0.7*a);c.beginPath();c.ellipse(0,0,p.s,p.s*0.55,0,0,TAU);c.fill();c.restore()}
+      else if(s.fx==='bubbles'){p.x+=Math.sin(s.t*3+p.w)*M*0.01*dt;c.strokeStyle='rgba(200,235,255,'+(0.7*a).toFixed(3)+')';c.lineWidth=DPR;c.beginPath();c.arc(p.x,p.y,p.s,0,TAU);c.stroke()}
+      else if(s.fx==='hearts'){c.font=Math.round(p.s)+'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';c.globalAlpha=al*a;c.fillText('💗',p.x,p.y);c.globalAlpha=al}
+      else if(s.fx==='confetti'){p.w+=dt*6;c.fillStyle=col(p.h,65,0.9*a);c.save();c.translate(p.x,p.y);c.rotate(p.w);c.fillRect(-p.s,-p.s*0.4,p.s*2,p.s*0.8);c.restore()}
+      else if(s.fx==='sparkle'){const tw=Math.sin(Math.PI*clamp(p.l/1.2,0,1));c.strokeStyle='rgba(255,250,220,'+(0.9*tw).toFixed(3)+')';c.lineWidth=DPR*1.2;c.beginPath();c.moveTo(p.x-p.s,p.y);c.lineTo(p.x+p.s,p.y);c.moveTo(p.x,p.y-p.s);c.lineTo(p.x,p.y+p.s);c.stroke()}}
+    s.p=P.filter(p=>p.l>0);
+    if(s.fx==='rays'){for(let i=0;i<12;i++){const an=i*TAU/12+s.t*0.3,len=sz*1.6;c.fillStyle='rgba(255,240,200,0.12)';c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+Math.cos(an-0.08)*len,cy+Math.sin(an-0.08)*len);c.lineTo(cx+Math.cos(an+0.08)*len,cy+Math.sin(an+0.08)*len);c.closePath();c.fill()}}
+    if(s.fx==='ripple'){for(let i=0;i<4;i++){const r=((s.t*0.5+i*0.25)%1)*sz*1.6;c.strokeStyle='rgba(180,220,255,'+(0.5*(1-r/(sz*1.6))).toFixed(3)+')';c.lineWidth=DPR*2;c.beginPath();c.ellipse(cx,cy+sz*0.35,r,r*0.35,0,0,TAU);c.stroke()}}
+    if(s.fx==='orbit'){for(let i=0;i<5;i++){const an=s.t*1.2+i*TAU/5;c.font=Math.round(sz*0.25)+'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(s.glyph,cx+Math.cos(an)*sz*0.95,cy+Math.sin(an)*sz*0.45)}}
+    // the picture itself: it floats, sways and breathes with the beat
+    c.translate(cx,cy+Math.sin(s.t*1.5)*sz*0.04);c.rotate(s.rot*Math.sin(s.t*0.8));c.font=Math.round(sz)+'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';c.textAlign='center';c.textBaseline='middle';
+    c.shadowColor=col(s.hue,70,0.8);c.shadowBlur=sz*0.25;c.fillText(s.glyph,0,0);c.shadowBlur=0;
+    if(S.names||S.wordLabel){c.font='italic '+Math.round(sz*0.18)+'px Georgia,serif';c.fillStyle='rgba(250,242,222,0.9)';c.fillText(s.k,0,sz*0.72)}
+    c.restore()}
+  WS.shows=WS.shows.filter(s=>s.t<s.dur);
+}
+function wordsUI(){const el=document.getElementById('wordState');if(!el)return;el.hidden=!WS.on;
+  el.textContent=WS.state==='loading'?'Loading the speech model… '+(WS.prog?Math.round(WS.prog*100)+'%':'')+' (about 75 MB, first time only)':WS.state==='error'?'Speech model error: '+WS.err.slice(0,80):WS.state==='listening'?(performance.now()-WS.heardT<8000&&WS.heard?'Heard: “'+WS.heard.slice(0,80)+'”':'Listening for words…'):''}
 
 function lightsFrame(now,dt){
   if(!LT.on)return;
@@ -5575,6 +5798,7 @@ function render(){
   else{render2D(sc);if(GLOK)glPost(glUploadCanvas(work),0.55);else display2D()}
   bgFrame();
   eqOverlay();
+  wordsDraw();
   drawLabels();
 }
 
@@ -5604,7 +5828,7 @@ function frame(now){
   st.dtReal=dt;st.dt=dt*speed;st.t+=st.dt;st.kdirS+=(st.kdir-st.kdirS)*Math.min(1,dt*1.4);   // direction changes ease in, never snapif(dt>0)fps=fps*0.95+(1/dt)*0.05;
   const gwOn=GW.on&&SCENES[S.scene].name==='Gateway'&&actx;if(gwOn)binauralStart();else if(GW.bin)binauralStop();
   render();if(GLOK)glAdapt(SCENES[S.scene],dt);
-  lightsFrame(now,dt);guitarFrame(now,dt);
+  lightsFrame(now,dt);guitarFrame(now,dt);if(WS.on){wordsTap();if(((WS.uiT=(WS.uiT||0)+1))%30===0)wordsUI()}
   if(!hud.classList.contains('hide')){
     drawMini();
     if(++hudTick%10===0){lcdMood.textContent=live&&S.timbre?(moodWords().replace(/\s+/g,' ').trim()||'BALANCED')+(LT.on?' · LIGHTS':''):'';bpmEl.textContent=A.bpm?Math.round(A.bpm):'---';lcdTxt.textContent=srcLabel+' · '+SCENES[S.scene].name.toUpperCase()+(S.focus!=='all'?' · FOCUS '+FOCUS[S.focus].name.toUpperCase():'');
@@ -5627,6 +5851,7 @@ palSel.textContent='';
 PALS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.name;palSel.appendChild(o)});
 {const o=document.createElement('option');o.value='rnd';o.textContent='🎲 Random (new each scene)';palSel.insertBefore(o,palSel.firstChild)}
 function palRandomPick(){if(PALS.length<2)return;let n;do n=Math.floor(Math.random()*PALS.length);while(n===S.pal);S.pal=n}
+palSel.value=String(S.pal);
 palSel.onchange=()=>{if(palSel.value==='rnd'){S.palRandom=true;palRandomPick()}else{S.palRandom=false;S.pal=+palSel.value}try{localStorage.setItem('fibwave.pal',palSel.value)}catch(_){}};
 try{if(localStorage.getItem('fibwave.pal')==='rnd'){palSel.value='rnd';S.palRandom=true}}catch(_){}
 function nextScene(){
@@ -5682,6 +5907,7 @@ document.getElementById('dynchk').onchange=e=>{S.dyn=e.target.checked;try{localS
  try{const a=localStorage.getItem('fibwave.motion'),b=localStorage.getItem('fibwave.pshape');if(a){S.motion=a;ms.value=a}if(b){S.pshape=b;ss.value=b}}catch(_){}
  ms.onchange=()=>{S.motion=ms.value;try{localStorage.setItem('fibwave.motion',S.motion)}catch(_){}};
  ss.onchange=()=>{S.pshape=ss.value;try{localStorage.setItem('fibwave.pshape',S.pshape)}catch(_){}toast('Photo shape: '+ss.options[ss.selectedIndex].text+' (in the photo scenes)')}}
+document.getElementById('wordChk').onchange=e=>{WS.on=e.target.checked;if(WS.on){if(!WS.worker)wordsStart();else{WS.state=WS.state==='error'?'error':'listening'}toast(WS.worker&&WS.state==='listening'?'Sung words on.':'Sung words: loading a speech model (about 75 MB, first time only). It runs only in this browser.')}wordsUI()};
 document.getElementById('gentle').onchange=e=>{S.gentle=e.target.checked;try{localStorage.setItem('fibwave.gentle',S.gentle?'1':'0')}catch(_){}};
 try{if(localStorage.getItem('fibwave.gentle')==='1'){S.gentle=true;document.getElementById('gentle').checked=true}}catch(_){}
 {const sp=document.getElementById('spinSel'),cp=document.getElementById('capSel'),SPN={off:'off',slow:'slow',music:'with the music',hits:'a full turn on big hits'};
@@ -5698,7 +5924,8 @@ document.getElementById('hires').onchange=e=>{PH.hires=e.target.checked;toast(PH
 try{const v=localStorage.getItem('fibwave.names');if(v==='1'){S.names=true;namesBox.checked=true}}catch(e){}
 namesBox.addEventListener('change',()=>{try{localStorage.setItem('fibwave.names',S.names?'1':'0')}catch(e){}});
 
-function hideStart(){start.hidden=true;document.getElementById('closeStart').hidden=false;poke()}
+function hideStart(){start.hidden=true;document.getElementById('closeStart').hidden=false;poke();showStartHint()}
+let hintShown=false;function showStartHint(){if(hintShown)return;hintShown=true;const h=document.getElementById('startHint');if(!h)return;h.hidden=false;h.style.opacity='1';setTimeout(()=>{h.style.opacity='0';setTimeout(()=>{h.hidden=true},900)},6500)}
 document.getElementById('closeStart').onclick=hideStart;
 document.getElementById('bSrc').onclick=()=>{start.hidden=false};
 document.getElementById('srcTab').onclick=()=>{CRT.gen++;critUI(false);useTab()};
@@ -5830,6 +6057,8 @@ addEventListener('keydown',e=>{
   else if(k===']'){if(sceneKind()==='md'||sceneKind()==='hy'||sceneKind()==='photo')presetNext(1);else setScene((S.scene+1)%SCENES.length)}
   else if(k==='k'){S.keyColor=!S.keyColor;document.getElementById('keycol').checked=S.keyColor;toast(S.keyColor?'Key colours on':'Key colours off')}
   else if(isLive()&&(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown')){e.preventDefault();const st5=5*DEG*sky.fov/100;if(e.key==='ArrowLeft')sky.lookAz-=st5;if(e.key==='ArrowRight')sky.lookAz+=st5;if(e.key==='ArrowUp')sky.lookAlt=Math.min(1.55,sky.lookAlt+st5);if(e.key==='ArrowDown')sky.lookAlt=Math.max(-0.35,sky.lookAlt-st5)}
+  else if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const d=e.key==='ArrowRight'?1:-1;setScene((S.scene+d+SCENES.length)%SCENES.length);toast(SCENES[S.scene].name)}
+  else if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();const d=e.key==='ArrowUp'?1:-1;S.palRandom=false;S.pal=(S.pal+d+PALS.length)%PALS.length;palSel.value=S.pal;toast('Colours: '+PALS[S.pal].name)}
   else if(k==='i'){S.hitfx=!S.hitfx;document.getElementById('hitfx').checked=S.hitfx;toast(S.hitfx?'Hit FX on':'Hit FX off')}
   else if(k==='b'){const bx=document.getElementById('bgchk');bx.checked=!bx.checked;bx.dispatchEvent(new Event('change'));toast(BG.user?'Photo backdrop on':'Photo backdrop off')}
   else if(k==='u'){const ks=Object.keys(FOCUS);setFocus(ks[(ks.indexOf(S.focus)+1)%ks.length]);toast('Focus: '+FOCUS[S.focus].name)}
