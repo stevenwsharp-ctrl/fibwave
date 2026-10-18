@@ -169,7 +169,7 @@ body:not(.locked) #showUi{display:none}
       <button class="src primary" id="srcOffline"><b>Save an offline copy</b><span>For camping or travel. While you have internet, this downloads one file (about 5–10 MB) with MilkDrop, the video synth, the full star catalog and the fonts inside. That file works with no internet.</span></button>
     </div>
     <input type="file" id="fileIn" accept="audio/*" multiple hidden>
-    <div class="keys"><kbd>1</kbd>–<kbd>0</kbd> scene · <kbd>Space</kbd> next · <kbd>[</kbd> <kbd>]</kbd> previous/next (presets in MilkDrop) · <kbd>G</kbd> film look · <kbd>I</kbd> hit FX · <kbd>J</kbd> test a big hit · <kbd>B</kbd> photo backdrop · <kbd>U</kbd> music focus · <kbd>K</kbd> key colours · drag photos onto the window to add them to the NASA Gallery · <kbd>R</kbd> random · <kbd>O</kbd> random order · <kbd>P</kbd> palette · <kbd>L</kbd> names · <kbd>A</kbd> auto-change · <kbd>W</kbd> pop-out window (no sharing bar) · <kbd>M</kbd> animal song on/off · <kbd>Y</kbd> photo spin · <kbd>F</kbd> full screen · <kbd>T</kbd> TV mode · <kbd>C</kbd> cast help · <kbd>H</kbd> or double-click: hide controls</div>
+    <div class="keys"><kbd>1</kbd>–<kbd>0</kbd> scene · <kbd>Space</kbd> next · <kbd>[</kbd> <kbd>]</kbd> previous/next (presets in MilkDrop) · <kbd>G</kbd> film look · <kbd>I</kbd> hit FX · <kbd>J</kbd> test a big hit · <kbd>B</kbd> photo backdrop · <kbd>U</kbd> music focus · <kbd>K</kbd> key colours · drag photos onto the window to add them to the photo scenes · <kbd>R</kbd> random · <kbd>O</kbd> random order · <kbd>P</kbd> palette · <kbd>L</kbd> names · <kbd>A</kbd> auto-change · <kbd>W</kbd> pop-out window (no sharing bar) · <kbd>M</kbd> animal song on/off · <kbd>Y</kbd> photo spin · <kbd>F</kbd> full screen · <kbd>T</kbd> TV mode · <kbd>C</kbd> cast help · <kbd>H</kbd> or double-click: hide controls</div>
   </div>
 </div>
 
@@ -221,6 +221,8 @@ body:not(.locked) #showUi{display:none}
     <label class="ctl" for="glow">Glow <input type="range" id="glow" min="0" max="1.5" step="0.05" value="0.6"></label>
     <label class="chk" for="film"><input type="checkbox" id="film" checked> Film</label>
     <label class="chk" for="gentle" title="Softer flashes on big hits, for people sensitive to flashing light"><input type="checkbox" id="gentle"> Gentle flashes</label>
+    <label class="ctl" for="eqPos" title="Show equalizer bars on top of every scene">EQ overlay <select id="eqPos"><option value="off">Off</option><option value="bottom">Bottom</option><option value="center">Bottom, from the centre</option><option value="top">Top</option><option value="ring">Ring</option><option value="sides">Sides</option></select></label>
+    <label class="ctl" for="eqAlpha" title="How strong the EQ overlay is. Low = mostly see-through">EQ strength <select id="eqAlpha"><option value="0.15">15%</option><option value="0.3" selected>30%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select></label>
     <label class="chk" for="keycol"><input type="checkbox" id="keycol" checked> Key colours</label>
     <label class="ctl" for="quality">Quality <select id="quality"><option value="2100000">Fast · 1080p</option><option value="3700000" selected>Sharp · 1440p</option><option value="8300000">Ultra · 4K</option></select></label>
   </div>
@@ -1936,9 +1938,9 @@ function bgFrame(){
 }
 function addUserPhotos(files){
   const imgs=[...files].filter(f=>/^image\//.test(f.type));if(!imgs.length)return false;
+  const i=SCENES.findIndex(s=>s.kind==='photo');if(i>=0&&SCENES[S.scene].kind!=='photo')setScene(i);
   imgs.forEach(f=>PH.pool.unshift({id:'local-'+f.name+f.size,title:f.name.replace(/\.[^.]+$/,''),local:true,url:URL.createObjectURL(f),date:''}));
   PH.ready=true;PH.failed=false;
-  const i=SCENES.findIndex(s=>s.kind==='photo');if(i>=0)setScene(i);
   photoGo(0);toast(imgs.length+' photo'+(imgs.length>1?'s':'')+' added to the gallery.');
   return true;
 }
@@ -4233,6 +4235,9 @@ const SCENES=[
   {name:'Möbius Wave',draw:mobiusWave,fb:{zoom:1.0,rot:0,trail:0.25},dwell:2},
   {name:'Pendulum Wave',draw:pendulumWave,fb:{zoom:1.0,rot:0,trail:0.55},dwell:2.4},
   {name:'Harmonic Strings',draw:harmonicStrings,fb:{zoom:1.0,rot:0,trail:0.4},dwell:1.8},
+  {name:'Cascade EQ',draw:eqCascade,fb:{zoom:1.0,rot:0,trail:0},dwell:1.6},
+  {name:'Retro LED EQ',draw:eqRetro,fb:{zoom:1.0,rot:0,trail:0.25},dwell:1.4},
+  {name:'Radial Echo EQ',draw:eqRadial,fb:{zoom:1.0,rot:0,trail:0.45},dwell:1.6},
   {name:'Spin in Space',draw:spinSpace,fb:{zoom:1.0,rot:0,trail:0.15},dwell:2},
   {name:'Spin in Air',draw:spinAir,fb:{zoom:1.0,rot:0,trail:0.6},dwell:2},
   {name:'Spin in Water',draw:spinWater,fb:{zoom:1.0,rot:0,trail:0.75},dwell:2},
@@ -4242,7 +4247,7 @@ const SCENES=[
    step(a){this.b=(this.b||0)+st.dt*(0.25+a.bass*0.9+a.kick*0.5)*(S.timbre&&live?TB.tempo:1);this.a=0.35+0.25*Math.sin(st.t*0.05)+a.mid*0.3;this.c=0.55+0.15*Math.sin(st.t*0.03)+a.kick*0.06;this.d=[5,6,8,12][Math.floor(A.beats/32)%4];
      if(S.names){label(18*DPR,26*DPR,'Möbius flow · z → (z − p)/(z − q): the pattern streams out of one point and spirals into another (a loxodromic Möbius map, as in the book \u201cIndra\u2019s Pearls\u201d)','info')}}},{name:'Holographic Universe',kind:'gl',fs:FS_HOLO,rs0:0.75,rsMax:1,th:0.8,dwell:1.6,
    step(a){this.a=(this.a||0)+st.dt*(0.08+a.mid*0.35+a.kick*0.2)*st.kdir;this.b=0.35*Math.sin(st.t*0.07)+a.bass*0.15;this.c=0.5+0.5*Math.sin(st.t*0.045+(A.beats>>4));this.d=Math.sin(st.t*0.02)*0.3;
-     if(S.names){label(18*DPR,26*DPR,'Holographic universe · 9 glowing points send out light waves; with a reference wave they make this interference pattern (a hologram: every piece of it holds the whole shape)','info');label(18*DPR,48*DPR,'Dennis Gabor invented holography in 1947 · Pribram and Bohm proposed holographic models of mind and matter · the 1983 Gateway report describes the universe as a hologram','info')}}},{name:'NASA Gallery',kind:'photo',col:'nasa',dwell:1.5},{name:'Nature & Wonders',kind:'photo',col:'nature',dwell:1.5},{name:'Ancient & Esoteric',kind:'photo',col:'ancient',dwell:1.5},{name:'MilkDrop Classics',kind:'md'},{name:'Video Synth',kind:'hy'}]:[])
+     if(S.names){label(18*DPR,26*DPR,'Holographic universe · 9 glowing points send out light waves; with a reference wave they make this interference pattern (a hologram: every piece of it holds the whole shape)','info');label(18*DPR,48*DPR,'Dennis Gabor invented holography in 1947 · Pribram and Bohm proposed holographic models of mind and matter · the 1983 Gateway report describes the universe as a hologram','info')}}},{name:'Nature & Wonders',kind:'photo',col:'nature',dwell:1.5},{name:'Ancient & Esoteric',kind:'photo',col:'ancient',dwell:1.5},{name:'MilkDrop Classics',kind:'md'},{name:'Video Synth',kind:'hy'}]:[])
 ];
 
 // scene length factor: complex scenes stay longer under Auto, simple ones change sooner
@@ -4253,21 +4258,21 @@ SCENES.forEach(s=>{if(!s.dwell)s.dwell=DWELL[s.name]||(s.kind==='gl'?1.5:s.kind?
 /* ---------- music style: a best guess from tempo, drums, bass weight, distortion and tonality ---------- */
 const STYLES={
  ambient:{name:'Ambient / chill',pal:['Aurora','Glacier','Moonlight','Deep Sea','Nebula'],react:0.9,auto:55,trail:0.9,glow:0.9,
-   scenes:['Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration','NASA Gallery']},
+   scenes:['Radial Echo EQ','Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration']},
  edm:{name:'EDM / house / techno',pal:['Synthwave','Full Spectrum','Infrared','Golden Drift'],react:2.2,auto:21,trail:0.8,glow:1.0,
-   scenes:['Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
+   scenes:['Cascade EQ','Radial Echo EQ','Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
  bass:{name:'Bass music / dubstep / DnB',pal:['Infrared','Ember','Synthwave','Cosmic Dust'],react:2.7,auto:13,trail:0.7,glow:1.2,
-   scenes:['Spin in Plasma','Spin in Water','Möbius Wave','Burning Ship','Mandelbox 3D','Entropy & Order','Holographic Universe','MilkDrop Classics','Golden Tunnel','Starfield','Strange Attractors','Fractal Bloom','Video Synth','Deep Space','Hypercube 4D','Alien World','Clifford Torus']},
+   scenes:['Retro LED EQ','Cascade EQ','Spin in Plasma','Spin in Water','Möbius Wave','Burning Ship','Mandelbox 3D','Entropy & Order','Holographic Universe','MilkDrop Classics','Golden Tunnel','Starfield','Strange Attractors','Fractal Bloom','Video Synth','Deep Space','Hypercube 4D','Alien World','Clifford Torus']},
  hiphop:{name:'Hip-hop / R&B',pal:['Gold Leaf','Red Rock','Rose Quartz','Cosmic Dust'],react:1.8,auto:34,trail:0.75,glow:0.8,
-   scenes:['Spin in Air','Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','NASA Gallery','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
+   scenes:['Retro LED EQ','Radial Echo EQ','Spin in Air','Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
  rock:{name:'Rock / metal',pal:['Ember','Solar Flare','Red Rock','Infrared'],react:2.2,auto:21,trail:0.7,glow:0.9,
-   scenes:['Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
+   scenes:['Retro LED EQ','Cascade EQ','Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
  pop:{name:'Pop',pal:['Rose Quartz','Golden Drift','Synthwave','Emerald'],react:1.6,auto:21,trail:0.8,glow:0.9,
-   scenes:['Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','NASA Gallery','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
+   scenes:['Radial Echo EQ','Retro LED EQ','Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
  classical:{name:'Classical / acoustic',pal:['Moonlight','Gold Leaf','Glacier','Deep Sea'],react:0.8,auto:55,trail:0.88,glow:0.8,
    scenes:['Spin in Honey','Spin in Space','Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
  jazz:{name:'Jazz / lo-fi / soul',pal:['Cosmic Dust','Rose Quartz','Emerald','Gold Leaf'],react:1.1,auto:34,trail:0.85,glow:0.8,
-   scenes:['Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
+   scenes:['Retro LED EQ','Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
 };
 const STY={cur:null,cand:null,candT:0,score:{},f:{sub:0,mid:0,high:0,tot:1e-6,ev:0,em:0},kicks:[],snares:[],alls:[],next:0,applied:null};
 for(const k in STYLES)STY.score[k]=0;
@@ -4559,6 +4564,87 @@ function gtInit(){
 }
 gtInit();
 
+/* ---------- Equalizer scenes and the EQ overlay (the old-school spectrum bars) ---------- */
+const EQ={hist:[],acc:0,pk:[],pv:[],sparks:[],rings:[],racc:0,rot:0,opk:[],opv:[],osp:[]};
+function eqBands(n){const a=new Array(n);for(let i=0;i<n;i++)a[i]=Math.min(1,spec(i/(n-1))*1.15);return a}
+// peak caps: jump up with the bar, then fall with gravity
+function eqPeaks(v,pk,pv,dt){for(let i=0;i<v.length;i++){if(pk[i]===undefined){pk[i]=0;pv[i]=0}if(v[i]>=pk[i]){pk[i]=v[i];pv[i]=0}else{pv[i]+=dt*1.6;pk[i]=Math.max(v[i],pk[i]-pv[i]*dt)}}}
+
+/* Cascade EQ: a 3D waterfall – each new spectrum comes in at the front and moves back into the distance */
+function eqCascade(c,a){
+  const B=48,R=44;EQ.acc+=st.dtReal;
+  if(EQ.acc>1/30||!EQ.hist.length){EQ.acc=0;EQ.hist.unshift(eqBands(B));if(EQ.hist.length>R)EQ.hist.pop()}
+  c.save();c.globalCompositeOperation='source-over';
+  const hz=H*0.3,fy=H*0.95;
+  const sky=c.createLinearGradient(0,0,0,hz*1.4);sky.addColorStop(0,'rgba(0,0,0,0)');sky.addColorStop(1,col(0.7,22,0.35+0.25*a.bass));c.fillStyle=sky;c.fillRect(0,0,W,hz*1.4);
+  for(let k=EQ.hist.length-1;k>=0;k--){
+    const row=EQ.hist[k],z=1+k*0.22,s=1/z,y=hz+(fy-hz)*s,span=W*0.5*s*1.15,bw=span*2/B,fade=Math.pow(s,0.8);
+    for(let b=0;b<B;b++){const v=row[b],x=W/2-span+b*bw,h=v*H*0.42*s;if(h<1)continue;
+      const g=c.createLinearGradient(0,y-h,0,y);g.addColorStop(0,col(b/B,48+18*v,fade));g.addColorStop(1,col(b/B,10,fade));
+      c.fillStyle=g;c.fillRect(x+bw*0.08,y-h,bw*0.84,h);
+      c.fillStyle=col(b/B,72,fade*(0.5+0.5*v));c.fillRect(x+bw*0.08,y-h-Math.max(1,2*DPR*s),bw*0.84,Math.max(1,2*DPR*s))}
+    if(k===0){c.strokeStyle=col(0.1,80,0.5);c.lineWidth=DPR;c.beginPath();c.moveTo(W/2-span,y+1);c.lineTo(W/2+span,y+1);c.stroke()}}
+  c.restore();
+  // a soft glow on the front row
+  const f=EQ.hist[0];if(f)for(let b=0;b<B;b+=3)if(f[b]>0.6)softDot(c,W/2-W*0.575+(b+0.5)*W*1.15/B,fy-f[b]*H*0.42,DPR*40*f[b],col(b/B,70,0.12*f[b]));
+  if(S.names)label(18*DPR,26*DPR,'Cascade EQ · each line is the sound spectrum at one moment (low notes on the left, high on the right); it moves back as time passes, so you see the last 1.5 seconds as a landscape','info');
+}
+
+/* Retro LED EQ: the classic 1990s player look – LED blocks, peak caps that fall, a glass floor */
+function eqRetro(c,a){
+  const n=Math.max(20,Math.min(40,Math.round(W/(46*DPR)))),v=eqBands(n),dt=st.dtReal;eqPeaks(v,EQ.pk,EQ.pv,dt);
+  const x0=W*0.06,x1=W*0.94,bw=(x1-x0)/n,floor=H*0.68,top=H*0.12,seg=Math.max(4*DPR,(floor-top)/34),gap=Math.max(1.5*DPR,seg*0.28);
+  c.save();c.globalCompositeOperation='source-over';
+  for(let i=0;i<n;i++){const x=x0+i*bw,lv=Math.round(v[i]*(floor-top)/seg);
+    for(let s=0;s<lv;s++){const y=floor-(s+1)*seg,f=s*seg/(floor-top),cs=f>0.82?'rgba(230,60,50,0.95)':f>0.6?'rgba(230,180,60,0.95)':col(i/n,44+14*f,0.95);
+      c.fillStyle=cs;c.fillRect(x+bw*0.1,y+gap/2,bw*0.8,seg-gap);
+      c.fillStyle=cs.replace(/[\d.]+\)$/,'0.18)');c.fillRect(x+bw*0.1,floor+(s)*seg*0.7+gap/2,bw*0.8,(seg-gap)*0.7)}   // reflection in the floor
+    const py=floor-EQ.pk[i]*(floor-top)-seg*0.5;c.fillStyle='rgba(245,245,255,0.95)';c.fillRect(x+bw*0.1,py,bw*0.8,Math.max(2*DPR,seg*0.35));
+    if(v[i]>0.75&&Math.random()<0.25)EQ.sparks.push({x:x+bw/2,y:floor-v[i]*(floor-top),vx:(Math.random()-0.5)*60*DPR,vy:-(120+Math.random()*160)*DPR,life:1,h:i/n})}
+  c.restore();
+  // sparks cascade up from loud bars and fall back
+  for(const p of EQ.sparks){p.vy+=420*DPR*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt*0.9;softDot(c,p.x,p.y,DPR*6,col(p.h,75,Math.max(0,p.life)*0.8))}
+  EQ.sparks=EQ.sparks.filter(p=>p.life>0&&p.y<floor);if(EQ.sparks.length>300)EQ.sparks.splice(0,EQ.sparks.length-300);
+  c.strokeStyle=col(0.5,60,0.35);c.lineWidth=DPR;c.beginPath();c.moveTo(x0,floor+0.5);c.lineTo(x1,floor+0.5);c.stroke();
+  if(S.names)label(18*DPR,26*DPR,'Retro LED EQ · '+n+' frequency bands, low to high · the white caps show the last peak and fall with gravity, like the classic 1990s music players','info');
+}
+
+/* Radial echo EQ: bars round a circle; old spectra ripple outwards in rings */
+function eqRadial(c,a){
+  const n=64,v=eqBands(n),cx=W/2,cy=H/2,R0=Math.min(W,H)*0.17*(1+a.kick*0.08),L=Math.min(W,H)*0.2;EQ.rot+=st.dt*0.15*st.kdir;
+  EQ.racc+=st.dtReal;if(EQ.racc>0.09){EQ.racc=0;EQ.rings.push({v:v.slice(),r:0,a:1,rot:EQ.rot})}
+  for(const g of EQ.rings){g.r+=st.dtReal*(0.35+a.bass*0.5);g.a-=st.dtReal*0.45}EQ.rings=EQ.rings.filter(g=>g.a>0);
+  for(const g of EQ.rings){const rr=R0+L*0.3+g.r*Math.min(W,H)*0.5;c.strokeStyle=col(g.r*0.8,60,g.a*0.35);c.lineWidth=DPR*1.5;c.beginPath();
+    for(let j=0;j<=n*2;j++){const i=j%(n*2),b=i<n?i:2*n-1-i,ang=g.rot+i/(n*2)*TAU,r=rr+g.v[b]*L*0.35*(1-g.r);j?c.lineTo(cx+Math.cos(ang)*r,cy+Math.sin(ang)*r):c.moveTo(cx+Math.cos(ang)*r,cy+Math.sin(ang)*r)}c.stroke()}
+  eqPeaks(v,EQ.opk,EQ.opv,st.dtReal);
+  for(let i=0;i<n*2;i++){const b=i<n?i:2*n-1-i,ang=EQ.rot+(i+0.5)/(n*2)*TAU,ca=Math.cos(ang),sa=Math.sin(ang),len=Math.max(2*DPR,v[b]*L);
+    c.strokeStyle=col(b/n,45+25*v[b],0.9);c.lineWidth=Math.max(2*DPR,TAU*R0/(n*2)*0.6);c.beginPath();c.moveTo(cx+ca*R0,cy+sa*R0);c.lineTo(cx+ca*(R0+len),cy+sa*(R0+len));c.stroke();
+    const pr=R0+EQ.opk[b]*L+4*DPR;c.fillStyle='rgba(240,240,255,0.85)';c.beginPath();c.arc(cx+ca*pr,cy+sa*pr,DPR*1.8,0,TAU);c.fill()}
+  softDot(c,cx,cy,R0*0.95,col(0.05,60,0.25+0.35*a.bass));
+  if(S.names)label(18*DPR,26*DPR,'Radial echo EQ · 64 bands round a circle (low notes at the join) · each ring is an older spectrum that moves out like a ripple','info');
+}
+
+/* the overlay: EQ bars on top of any scene, as clear as you like */
+function eqOverlay(){
+  const pos=S.eqPos;if(!pos||pos==='off')return;
+  const c=octx,al=S.eqAlpha,dt=st.dtReal||0.016;c.save();c.globalAlpha=al;c.globalCompositeOperation='source-over';
+  const led=(x,yBase,w,h,dir,i,n)=>{const seg=Math.max(3*DPR,Math.min(8*DPR,w*0.45)),gap=Math.max(1,seg*0.3),k=Math.floor(h/seg);
+    for(let s=0;s<k;s++){const f=s*seg/Math.max(h,1);c.fillStyle=col(i/n,52+30*(s*seg)/(H*0.2),1);c.fillRect(x,yBase+dir*(s*seg+gap/2)-(dir<0?seg-gap:0),w,seg-gap)}};
+  if(pos==='ring'){const n=64,v=eqBands(n);eqPeaks(v,EQ.opk,EQ.opv,dt);const cx=W/2,cy=H/2,R0=Math.min(W,H)*0.37,L=Math.min(W,H)*0.08;
+    for(let i=0;i<n*2;i++){const b=i<n?i:2*n-1-i,ang=-Math.PI/2+(i+0.5)/(n*2)*TAU,ca=Math.cos(ang),sa=Math.sin(ang);c.strokeStyle=col(b/n,65,1);c.lineWidth=Math.max(1.5*DPR,TAU*R0/(n*2)*0.38);c.lineCap='round';
+      c.beginPath();c.moveTo(cx+ca*R0,cy+sa*R0);c.lineTo(cx+ca*(R0+Math.max(DPR,v[b]*L)),cy+sa*(R0+Math.max(DPR,v[b]*L)));c.stroke()}
+    c.restore();return}
+  if(pos==='sides'){const n=24,v=eqBands(n),hh=H*0.8/n,L=W*0.12;
+    for(let i=0;i<n;i++){const y=H*0.9-(i+1)*hh,len=v[i]*L;c.fillStyle=col(i/n,62,1);c.fillRect(0,y+1,len,hh-2);c.fillRect(W-len,y+1,len,hh-2)}
+    c.restore();return}
+  const n=Math.max(24,Math.min(64,Math.round(W/(26*DPR)))),v=eqBands(n);eqPeaks(v,EQ.opk,EQ.opv,dt);
+  const hMax=H*0.16,bw=W/n,top=pos==='top',base=top?6*DPR:H-6*DPR,dir=top?1:-1;
+  for(let i=0;i<n;i++){const j=pos==='center'?Math.abs(i-(n-1)/2)/((n-1)/2):i/(n-1),val=pos==='center'?Math.min(1,spec(j)*1.15):v[i],idx=pos==='center'?Math.round(j*(n-1)):i;
+    const x=i*bw+bw*0.12,w=bw*0.76,h=val*hMax;led(x,base,w,h,dir,idx,n);
+    const pk=pos==='center'?val:EQ.opk[i];c.fillStyle='rgba(245,245,255,0.95)';c.fillRect(x,top?base+pk*hMax+2*DPR:base-pk*hMax-4*DPR,w,2*DPR)}
+  c.restore();
+}
+
 function lightsFrame(now,dt){
   if(!LT.on)return;
   LT.phase+=dt*(0.6+A.bass*3+A.kick*2)*(S.timbre?TB.tempo:1);
@@ -4719,6 +4805,7 @@ function render(){
   }
   else{render2D(sc);if(GLOK)glPost(glUploadCanvas(work),0.55);else display2D()}
   bgFrame();
+  eqOverlay();
   drawLabels();
 }
 
@@ -4810,6 +4897,10 @@ focusSel.onchange=e=>{setFocus(e.target.value);toast('Focus: '+FOCUS[S.focus].na
 document.getElementById('stylechk').onchange=e=>{S.styleMatch=e.target.checked;if(S.styleMatch&&STY.cur)applyStyle(STY.cur,true)};
 document.getElementById('bgchk').onchange=e=>{BG.user=e.target.checked;if(BG.user){photoInit('nasa');if(!BG.cur)bgNext();if(!bgAllowed())toast('Photo backdrops show behind scenes with dark space, for example the 4D, sacred-geometry and galaxy scenes.')}};
 document.getElementById('film').onchange=e=>{S.film=e.target.checked};
+{const ep=document.getElementById('eqPos'),ea=document.getElementById('eqAlpha');S.eqPos='off';S.eqAlpha=0.3;
+ try{const a=localStorage.getItem('fibwave.eqPos'),b=localStorage.getItem('fibwave.eqAlpha');if(a&&[...ep.options].some(o=>o.value===a)){S.eqPos=a;ep.value=a}if(b&&[...ea.options].some(o=>o.value===b)){S.eqAlpha=+b;ea.value=b}}catch(_){}
+ ep.onchange=()=>{S.eqPos=ep.value;try{localStorage.setItem('fibwave.eqPos',S.eqPos)}catch(_){}toast(S.eqPos==='off'?'EQ overlay off':'EQ overlay: '+ep.options[ep.selectedIndex].text+' · change "EQ strength" to make it more or less see-through')};
+ ea.onchange=()=>{S.eqAlpha=+ea.value;try{localStorage.setItem('fibwave.eqAlpha',ea.value)}catch(_){}}}
 document.getElementById('gentle').onchange=e=>{S.gentle=e.target.checked;try{localStorage.setItem('fibwave.gentle',S.gentle?'1':'0')}catch(_){}};
 try{if(localStorage.getItem('fibwave.gentle')==='1'){S.gentle=true;document.getElementById('gentle').checked=true}}catch(_){}
 {const sp=document.getElementById('spinSel'),cp=document.getElementById('capSel'),SPN={off:'off',slow:'slow',music:'with the music',hits:'a full turn on big hits'};
