@@ -217,6 +217,7 @@ body:not(.locked) #showUi{display:none}
     <label class="ctl" for="glow">Glow <input type="range" id="glow" min="0" max="1.5" step="0.05" value="0.6"></label>
     <label class="chk" for="film"><input type="checkbox" id="film" checked> Film</label>
     <label class="chk" for="gentle" title="Softer flashes on big hits, for people sensitive to flashing light"><input type="checkbox" id="gentle"> Gentle flashes</label>
+    <label class="chk" for="dynchk" title="Dim the picture in quiet parts; loud parts and new notes bring the light back"><input type="checkbox" id="dynchk" checked> Dim when quiet</label>
     <label class="ctl" for="eqPos" title="Show equalizer bars on top of every scene">EQ overlay <select id="eqPos"><option value="off">Off</option><option value="bottom">Bottom</option><option value="center">Bottom, from the centre</option><option value="top">Top</option><option value="ring">Ring</option><option value="sides">Sides</option></select></label>
     <label class="ctl" for="eqAlpha" title="How strong the EQ overlay is. Low = mostly see-through">EQ strength <select id="eqAlpha"><option value="0.15">15%</option><option value="0.3" selected>30%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select></label>
     <label class="chk" for="keycol"><input type="checkbox" id="keycol" checked> Key colours</label>
@@ -1016,7 +1017,7 @@ precision highp float;uniform sampler2D uT;uniform vec2 uHp,uOut;out vec4 o;
 void main(){vec2 uv=gl_FragCoord.xy/uOut;vec3 s=texture(uT,uv+vec2(-uHp.x*2.,0.)).rgb+texture(uT,uv+vec2(uHp.x*2.,0.)).rgb+texture(uT,uv+vec2(0.,-uHp.y*2.)).rgb+texture(uT,uv+vec2(0.,uHp.y*2.)).rgb
   +(texture(uT,uv+uHp).rgb+texture(uT,uv-uHp).rgb+texture(uT,uv+vec2(uHp.x,-uHp.y)).rgb+texture(uT,uv+vec2(-uHp.x,uHp.y)).rgb)*2.;o=vec4(s/12.,1.);}`;
 const FS_POST=`#version 300 es
-precision highp float;uniform sampler2D uT,uBloom,uHold;uniform vec2 uOut,uShake;uniform float uGlow,uPulse,uTime,uFilm,uHdr,uSnare,uDrop,uImp,uShock,uFold,uTrans,uTType,uFlash,uWarm,uBrt,uHarsh,uTim;out vec4 o;
+precision highp float;uniform sampler2D uT,uBloom,uHold;uniform vec2 uOut,uShake;uniform float uGlow,uPulse,uTime,uFilm,uHdr,uSnare,uDrop,uImp,uShock,uFold,uTrans,uTType,uFlash,uWarm,uBrt,uHarsh,uTim,uDyn;out vec4 o;
 float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
 float n2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
 vec3 shoulder(vec3 x){vec3 k=vec3(.78);return mix(x,k+(1.-k)*(1.-exp(-(x-k)/(1.-k))),step(k,x));}
@@ -1044,6 +1045,7 @@ void main(){
     c=mix(old,c,m);
   }
   c*=1.+(uPulse*.06+uSnare*.08+uDrop*.3+uImp*.28)*uFlash;
+  c*=uDyn;                                                       // quiet music: dimmer light
   c+=vec3(1.)*ring*.4*uFlash;
   c=shoulder(max(c,0.));
   c*=mix(vec3(1.),mix(vec3(.9,.97,1.1),vec3(1.1,1.,.86),uWarm),uTim);              // warm sound: golden light; cool sound: blue light
@@ -1171,7 +1173,7 @@ function glPost(tex,threshold){
   const fx=S.hitfx;
   gl.uniform2f(u.uOut,W,H);gl.uniform1f(u.uSnare,SCENES[S.scene].calm?0:RA.snare);gl.uniform1f(u.uDrop,SCENES[S.scene].calm?0:RA.drop);gl.uniform1f(u.uGlow,S.glow*0.32*(S.timbre&&live?0.8+0.45*TB.bright:1));gl.uniform1f(u.uPulse,SCENES[S.scene].calm?0:RA.pulse);gl.uniform1f(u.uTime,st.t);gl.uniform1f(u.uFilm,S.film?(SCENES[S.scene].calm?0.3:1):0);
   gl.uniform1f(u.uImp,fx?Math.min(1.5,A.impact*S.react*0.7):0);gl.uniform1f(u.uShock,fx?FX.shock:1);gl.uniform1f(u.uFold,fx&&FX.foldT>0?FX.fold:0);
-  gl.uniform2f(u.uShake,fx?FX.shake[0]:0,fx?FX.shake[1]:0);gl.uniform1f(u.uTrans,FX.trans);gl.uniform1f(u.uTType,FX.ttype);gl.uniform1f(u.uFlash,S.gentle?0.3:1);{const tm=S.timbre&&live&&!SCENES[S.scene].calm?1:0;gl.uniform1f(u.uTim,tm);gl.uniform1f(u.uWarm,TB.warm);gl.uniform1f(u.uBrt,TB.bright);gl.uniform1f(u.uHarsh,TB.harsh)}
+  gl.uniform2f(u.uShake,fx?FX.shake[0]:0,fx?FX.shake[1]:0);gl.uniform1f(u.uTrans,FX.trans);gl.uniform1f(u.uTType,FX.ttype);gl.uniform1f(u.uFlash,S.gentle?0.3:1);gl.uniform1f(u.uDyn,dynStep());{const tm=S.timbre&&live&&!SCENES[S.scene].calm?1:0;gl.uniform1f(u.uTim,tm);gl.uniform1f(u.uWarm,TB.warm);gl.uniform1f(u.uBrt,TB.bright);gl.uniform1f(u.uHarsh,TB.harsh)}
   drawFSQ();
   // keep this frame's picture, so the next scene change can transform out of it
   if(FX.trans>=1){gl.bindFramebuffer(gl.FRAMEBUFFER,G.hist.f);gl.viewport(0,0,W,H);gl.useProgram(G.copy.p);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tex);gl.uniform1i(G.copy.u.uT,0);gl.uniform2f(G.copy.u.uOut,W,H);drawFSQ();gl.bindFramebuffer(gl.FRAMEBUFFER,null)}
@@ -4089,8 +4091,9 @@ function mobiusWave(c,a){
 const PW={tau:0,N:21,K:51};
 function pendulumWave(c,a){
   const bpm=A.bpm>0?A.bpm:110,cycleBeats=64;PW.tau+=st.dtReal*(bpm/60)/cycleBeats*(S.timbre&&live?1:1);
-  const yaw=0.75+0.15*Math.sin(st.t*0.04),cy=Math.cos(yaw),sy=Math.sin(yaw),pit=0.32,cp=Math.cos(pit),sp=Math.sin(pit),F=Math.min(W,H)*1.05,cam=4;
-  const pr=(x,y,z)=>{const X=x*cy-z*sy,Z=x*sy+z*cy;const Y2=y*cp-Z*sp,Z2=y*sp+Z*cp;const k=F/(cam+Z2);return [W/2+X*k,H*0.2-Y2*k,Z2]};
+  const VP=[[0.75,0.32,0.2],[0.04,0.12,0.25],[1.45,0.18,0.22],[0.3,1.3,0.5],[2.4,-0.35,0.12]],bl=flyMode(PW,VP.length),va=VP[PW.prev],vb=VP[PW.mode],mix=(i)=>va[i]+(vb[i]-va[i])*bl;   // 5 vantage points: 3/4, along the row, side, from above, from below
+  const yaw=mix(0)+0.15*Math.sin(st.t*0.04),cy=Math.cos(yaw),sy=Math.sin(yaw),pit=mix(1),cp=Math.cos(pit),sp=Math.sin(pit),F=Math.min(W,H)*1.05,cam=4,ay=H*mix(2);
+  const pr=(x,y,z)=>{const X=x*cy-z*sy,Z=x*sy+z*cy;const Y2=y*cp-Z*sp,Z2=y*sp+Z*cp;const k=F/(cam+Z2);return [W/2+X*k,ay-Y2*k,Z2]};
   const th0=0.42+a.bass*0.12,items=[];
   for(let n=0;n<PW.N;n++){const f=PW.K+n,th=th0*Math.cos(TAU*f*PW.tau),L=1.6*Math.pow(PW.K/f,2),z=(n-(PW.N-1)/2)*0.13;
     const pv=pr(0,0,z),bob=pr(L*Math.sin(th),-L*Math.cos(th),z);items.push({n,pv,bob,depth:bob[2],th})}
@@ -4466,6 +4469,66 @@ const ETERNAL_SCENES=[
     this.c=clamp(0.5+0.45*Math.sin(st.t*0.045)+a.drop*0.4,0.05,1);this.d=clamp(0.25+0.55*Math.pow(Math.sin(st.t*0.021),2)+a.build*0.5,0,1.2);this.e=Math.sin(st.t*0.01)*0.3;
     verseDraw();if(S.names)label(18*DPR,26*DPR,'Eternal Voyage · through nebulae, pillars of dust and fractal shells · the rings with 12 marks are the hours of time passing · the clouds ebb from see-through to solid · ahead, a light in the shape of a cross','info')}}];
 
+/* ---------- Gemstones and crystals (GPU): a crystal cluster that grows with the music, lit by moving lights ---------- */
+const GEMS=[['Ruby','corundum (aluminium oxide) coloured red by chromium · hardness 9'],['Sapphire','corundum coloured blue by iron and titanium · hardness 9'],
+ ['Emerald','beryl coloured green by chromium and vanadium · hardness 7.5–8'],['Amethyst','quartz (silicon dioxide) coloured purple by iron and natural radiation · hardness 7'],
+ ['Clear quartz','silicon dioxide, the second most common mineral in Earth’s crust · hardness 7'],['Jade','jadeite or nephrite: tough, interlocked fibres, so light glows softly inside · hardness 6–7'],
+ ['Opal','silica spheres stacked in water; they split light into a play of colour · hardness 5.5–6.5'],['Obsidian','volcanic glass from fast-cooled lava · hardness 5–5.5'],
+ ['Monazite','a rare-earth phosphate of cerium, lanthanum and neodymium · hardness 5–5.5']];
+const FS_GEMS=GLSL_HEAD+`
+uniform float uE,uF;
+float sdHex(vec3 p,vec2 h){const vec3 k=vec3(-.8660254,.5,.57735);p=abs(p);p.xy-=2.*min(dot(k.xy,p.xy),0.)*k.xy;vec2 d=vec2(length(p.xy-vec2(clamp(p.x,-k.z*h.x,k.z*h.x),h.x))*sign(p.y-h.x),p.z-h.y);return min(max(d.x,d.y),0.)+length(max(d,0.));}
+vec3 cdir(float i){float y=.5+.48*fract(i*.618+.13),a=i*2.39996;float r=sqrt(1.-y*y);return normalize(vec3(cos(a)*r,y,sin(a)*r));}
+vec2 map(vec3 p){
+  float d=1e9;float m=0.;
+  for(int i=0;i<11;i++){float fi=float(i);vec3 z=cdir(fi),x=normalize(cross(z,vec3(0.,1.,.001))),y=cross(x,z);vec3 b=p-vec3(0.,-1.05,0.);
+    vec3 q=vec3(dot(b,x),dot(b,y),dot(b,z));float len=1.1+.9*fract(fi*.37)+spec(fi/11.)*.9,r=.16+.12*fract(fi*.71);
+    float pr=sdHex(q-vec3(0.,0.,(len+2.*r)*.5),vec2(r,(len+2.*r)*.5));float tip=dot(vec2(length(q.xy),q.z-len-r*1.6),normalize(vec2(1.6,1.)));
+    float cd=max(pr,tip);if(cd<d){d=cd;m=1.+fi*.01;}}
+  float g=p.y+1.05+.18*fbm(p.xz*1.5)-.05*length(p.xz);if(g<d){d=g;m=-1.;}
+  float cave=7.-length(p*vec3(1.,1.4,1.))+.6*fbm(p.xz*.6+p.y);if(cave<d){d=cave;m=-2.;}
+  return vec2(d,m);}
+vec3 nrm(vec3 p){vec2 e=vec2(.002,0.);return normalize(vec3(map(p+e.xyy).x-map(p-e.xyy).x,map(p+e.yxy).x-map(p-e.yxy).x,map(p+e.yyx).x-map(p-e.yyx).x));}
+vec3 gemCol(float g){g=mod(g,9.);
+  return g<1.?vec3(.85,.04,.12):g<2.?vec3(.06,.18,.9):g<3.?vec3(.04,.72,.32):g<4.?vec3(.55,.2,.85):g<5.?vec3(.85,.88,.92):g<6.?vec3(.28,.62,.38):g<7.?vec3(.85,.86,.9):g<8.?vec3(.05,.05,.07):vec3(.75,.5,.28);}
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*uRes)/uRes.y;
+  float ca=uA,dist=5.4-uBass*.5;vec3 ro=vec3(sin(ca)*dist,1.5+.6*sin(uA*.37),cos(ca)*dist),ta=vec3(0.,.35,0.);
+  vec3 f=normalize(ta-ro),r=normalize(cross(vec3(0.,1.,0.),f)),u=cross(f,r),rd=normalize(f*1.6+r*uv.x+u*uv.y);
+  vec3 L1=vec3(sin(uF)*3.,2.5,cos(uF)*3.),L2=vec3(sin(uF*1.7+3.)*2.5,.4+sin(uF*.8),cos(uF*1.7+3.)*2.5);
+  vec3 c1=vec3(1.,.92,.8)*(1.1+uKick*.8),c2=pal(.5+uC)*(.9+uSnare*1.2+uHat*.4);
+  float t=0.;vec2 h;for(int i=0;i<90;i++){h=map(ro+rd*t);if(h.x<.0015||t>16.)break;t+=h.x*.85;}
+  vec3 col=vec3(0.);
+  float gi=floor(uE),gf=smoothstep(.8,1.,fract(uE));
+  vec3 gc=mix(gemCol(gi),gemCol(gi+1.),gf);float g=mod(gi,9.),clar=g==5.?.2:g==7.?.5:g==6.?.45:1.,irid=g==6.?1.:0.;
+  if(t<16.){vec3 p=ro+rd*t,n=nrm(p),v=-rd;
+    vec3 l1=normalize(L1-p),l2=normalize(L2-p);float a1=1./(1.+dot(L1-p,L1-p)*.04),a2=1./(1.+dot(L2-p,L2-p)*.08);
+    float fr=pow(1.-max(dot(n,v),0.),4.);
+    if(h.y>0.){
+      vec3 rr=refract(rd,n,1./1.7);float inside=.5+.5*fbm(p.xy*3.+rr.xz*2.+uB*.05);
+      vec3 body=gc*(.25+.95*inside)*(.5+.6*clar);
+      if(irid>.5)body=mix(vec3(.82,.85,.9),pal(dot(n,v)*3.+fbm(p.xy*6.)*4.+uB*.1),.55);
+      float d1=max(dot(n,l1),0.),d2=max(dot(n,l2),0.),w1=dot(n,l1)*.5+.5;
+      vec3 lit=body*(mix(d1,w1,1.-clar)*c1*a1*1.6+d2*c2*a2*1.4+.08);
+      lit+=body*clar*(pow(max(dot(rr,l1),0.),3.)*c1*a1*2.5+pow(max(dot(rr,l2),0.),3.)*c2*a2*2.)+gc*clar*.12;                   // light passing through the stone
+      float s1=pow(max(dot(reflect(-l1,n),v),0.),70.*clar+8.),s2=pow(max(dot(reflect(-l2,n),v),0.),50.);
+      lit+=(s1*c1*a1+s2*c2*a2)*(1.2+clar)+fr*mix(vec3(.6,.7,.9),gc,.4)*(.3+.5*clar);
+      lit+=vec3(1.)*step(.985,hash(floor(p.xy*40.)+floor(uTime*3.)))*s1*3.*clar;   // sparkles on the facets
+      col=lit;}
+    else{float gr=fbm(p.xz*9.+p.y*4.),spk=step(.8,hash(floor(p.xz*60.)));
+      vec3 rock=mix(vec3(.18,.16,.15),vec3(.42,.38,.36),gr)+vec3(.5)*spk*.15;if(h.y<-1.5)rock*=.45;
+      col=rock*(max(dot(n,l1),0.)*c1*a1+max(dot(n,l2),0.)*c2*a2*.8+.03);}
+    col=mix(col,vec3(0.),smoothstep(6.,15.,t));}
+  col+=c1*exp(-length(cross(rd,L1-ro))*8.)*.15+c2*exp(-length(cross(rd,L2-ro))*8.)*.25;     // the lights themselves
+  o=vec4(col,1.);
+}`;
+const GEM_SCENE={name:'Gemstones & Crystals',kind:'gl',fs:FS_GEMS,rs0:0.5,rsMax:0.85,th:0.82,dwell:2.4,
+  step(a){this.a=(this.a||0)+st.dt*(0.08+a.mid*0.15);this.b=(this.b||0)+st.dt*(0.5+a.bass);this.f=(this.f||0)+st.dt*(0.35+a.energy*0.8+a.kick*0.6);
+    const gb=Math.floor(A.beats/16)+Math.floor(st.t/20);if(this.gb!==gb){this.gb=gb;this.gi=((this.gi||0)+1)%GEMS.length;this.gt=0}this.gt=Math.min(1,(this.gt||0)+st.dtReal/1.5);
+    this.e=this.gi+(this.gt<1?0:0);this.c=0.1*Math.sin(st.t*0.05);
+    const g=GEMS[this.gi];if(S.names){label(18*DPR,26*DPR,'Gemstones & crystals · '+g[0]+': '+g[1],'info');label(18*DPR,48*DPR,'The crystals grow with their frequency band · a warm light and a coloured light circle them with the beat','info')}
+    else if(this.gt<1||st.t%20<4)label(18*DPR,H-30*DPR,g[0],'info')}};
+
 // fb: per-frame feedback zoom/rotation (the old MilkDrop trick); trail = share of the Trails setting
 const SCENES=[
   {name:'Sunflower',draw:sunflower,fb:{zoom:1.006,rot:0.002}},
@@ -4503,6 +4566,7 @@ const SCENES=[
   {name:'Cascade EQ',draw:eqCascade,fb:{zoom:1.0,rot:0,trail:0},dwell:1.6},
   {name:'Retro LED EQ',draw:eqRetro,fb:{zoom:1.0,rot:0,trail:0.25},dwell:1.4},
   {name:'Radial Echo EQ',draw:eqRadial,fb:{zoom:1.0,rot:0,trail:0.45},dwell:1.6},
+  {name:'Note Patterns',draw:notePatterns,fb:{zoom:1.0,rot:0,trail:0.55},dwell:2},
   {name:'Spin in Space',draw:spinSpace,fb:{zoom:1.0,rot:0,trail:0.15},dwell:2},
   {name:'Spin in Air',draw:spinAir,fb:{zoom:1.0,rot:0,trail:0.6},dwell:2},
   {name:'Spin in Water',draw:spinWater,fb:{zoom:1.0,rot:0,trail:0.75},dwell:2},
@@ -4514,7 +4578,7 @@ const SCENES=[
    step(a){this.a=(this.a||0)+st.dt*(0.08+a.mid*0.35+a.kick*0.2)*st.kdir;this.b=0.35*Math.sin(st.t*0.07)+a.bass*0.15;this.c=0.5+0.5*Math.sin(st.t*0.045+(A.beats>>4));this.d=Math.sin(st.t*0.02)*0.3;
      if(S.names){label(18*DPR,26*DPR,'Holographic universe · 9 glowing points send out light waves; with a reference wave they make this interference pattern (a hologram: every piece of it holds the whole shape)','info');label(18*DPR,48*DPR,'Dennis Gabor invented holography in 1947 · Pribram and Bohm proposed holographic models of mind and matter · the 1983 Gateway report describes the universe as a hologram','info')}}},{name:'Nature & Wonders',kind:'photo',col:'nature',dwell:1.5},{name:'Ancient & Esoteric',kind:'photo',col:'ancient',dwell:1.5},{name:'MilkDrop Classics',kind:'md'},{name:'Video Synth',kind:'hy'}]:[])
 ];
-if(GLOK)SCENES.push(...ETERNAL_SCENES);
+if(GLOK)SCENES.push(...ETERNAL_SCENES,GEM_SCENE);
 
 // scene length factor: complex scenes stay longer under Auto, simple ones change sooner
 const DWELL={'Night Sky':2,'Solar System':1.5,'Moon Phases':1.4,'Fractal Bloom':1.8,'Particle Galaxy':1.6,'Earth from Orbit':1.8,'Lunar Earthrise':1.6,'Golden Tunnel':1.1,'Nebula Flow':1.3};
@@ -4524,21 +4588,21 @@ SCENES.forEach(s=>{if(!s.dwell)s.dwell=DWELL[s.name]||(s.kind==='gl'?1.5:s.kind?
 /* ---------- music style: a best guess from tempo, drums, bass weight, distortion and tonality ---------- */
 const STYLES={
  ambient:{name:'Ambient / chill',pal:['Aurora','Glacier','Moonlight','Deep Sea','Nebula'],react:0.9,auto:55,trail:0.9,glow:0.9,
-   scenes:['Eternal Voyage','Mirror Lake EQ','Radial Echo EQ','Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration']},
+   scenes:['Gemstones & Crystals','Note Patterns','Eternal Voyage','Mirror Lake EQ','Radial Echo EQ','Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration']},
  edm:{name:'EDM / house / techno',pal:['Synthwave','Full Spectrum','Infrared','Golden Drift'],react:2.2,auto:21,trail:0.8,glow:1.0,
-   scenes:['Eternal Voyage','Cascade EQ','Radial Echo EQ','Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
+   scenes:['Gemstones & Crystals','Eternal Voyage','Cascade EQ','Radial Echo EQ','Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
  bass:{name:'Bass music / dubstep / DnB',pal:['Infrared','Ember','Synthwave','Cosmic Dust'],react:2.7,auto:13,trail:0.7,glow:1.2,
    scenes:['Retro LED EQ','Cascade EQ','Spin in Plasma','Spin in Water','Möbius Wave','Burning Ship','Mandelbox 3D','Entropy & Order','Holographic Universe','MilkDrop Classics','Golden Tunnel','Starfield','Strange Attractors','Fractal Bloom','Video Synth','Deep Space','Hypercube 4D','Alien World','Clifford Torus']},
  hiphop:{name:'Hip-hop / R&B',pal:['Gold Leaf','Red Rock','Rose Quartz','Cosmic Dust'],react:1.8,auto:34,trail:0.75,glow:0.8,
    scenes:['Retro LED EQ','Radial Echo EQ','Spin in Air','Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
  rock:{name:'Rock / metal',pal:['Ember','Solar Flare','Red Rock','Infrared'],react:2.2,auto:21,trail:0.7,glow:0.9,
-   scenes:['Retro LED EQ','Cascade EQ','Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
+   scenes:['Gemstones & Crystals','Retro LED EQ','Cascade EQ','Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
  pop:{name:'Pop',pal:['Rose Quartz','Golden Drift','Synthwave','Emerald'],react:1.6,auto:21,trail:0.8,glow:0.9,
-   scenes:['Mirror Lake EQ','Radial Echo EQ','Retro LED EQ','Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
+   scenes:['Note Patterns','Mirror Lake EQ','Radial Echo EQ','Retro LED EQ','Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
  classical:{name:'Classical / acoustic',pal:['Moonlight','Gold Leaf','Glacier','Deep Sea'],react:0.8,auto:55,trail:0.88,glow:0.8,
-   scenes:['Eternal Voyage','Mirror Lake EQ','Spin in Honey','Spin in Space','Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
+   scenes:['Note Patterns','Gemstones & Crystals','Eternal Voyage','Mirror Lake EQ','Spin in Honey','Spin in Space','Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
  jazz:{name:'Jazz / lo-fi / soul',pal:['Cosmic Dust','Rose Quartz','Emerald','Gold Leaf'],react:1.1,auto:34,trail:0.85,glow:0.8,
-   scenes:['Mirror Lake EQ','Retro LED EQ','Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
+   scenes:['Note Patterns','Gemstones & Crystals','Mirror Lake EQ','Retro LED EQ','Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
 };
 const STY={cur:null,cand:null,candT:0,score:{},f:{sub:0,mid:0,high:0,tot:1e-6,ev:0,em:0},kicks:[],snares:[],alls:[],next:0,applied:null};
 for(const k in STYLES)STY.score[k]=0;
@@ -4830,6 +4894,30 @@ function gtInit(){
 }
 gtInit();
 
+/* ---------- Note patterns: each note interval shown as its own Lissajous figure ----------
+   Two notes with a simple frequency ratio (a fifth = 3:2, an octave = 2:1) draw a simple, still figure;
+   dissonant intervals (a tritone = 45:32) draw a complex, busy one. */
+const JUST=[[1,1],[16,15],[9,8],[6,5],[5,4],[4,3],[45,32],[3,2],[8,5],[5,3],[9,5],[15,8]];
+const IVN=['unison','minor 2nd','major 2nd','minor 3rd','major 3rd','perfect 4th','tritone','perfect 5th','minor 6th','major 6th','minor 7th','major 7th'];
+const NP={ph:0,ph2:0};
+function notePatterns(c,a){
+  const ch=A.chroma,ord=[...Array(12).keys()].sort((p,q)=>ch[q]-ch[p]),n1=ord[0],n2=ord[1],n3=ord[2],cx=W/2,cy=H/2,M=Math.min(W,H);
+  NP.ph+=st.dt*(0.25+a.mid*0.8);NP.ph2+=st.dt*(0.18+a.treb*0.6);
+  // circle of fifths: each note shows a rose with as many petals as its ratio to the key note
+  for(let k=0;k<12;k++){const pc=(A.keyRoot+k*7)%12,an=-Math.PI/2+k*TAU/12,v=Math.pow(ch[pc]||0,1.5),R=M*0.4,x=cx+Math.cos(an)*R*(W>H?1.25:1),y=cy+Math.sin(an)*R,iv=((pc-A.keyRoot)%12+12)%12,[p,q]=JUST[iv],rs=M*(0.025+v*0.05);
+    c.strokeStyle=col(pc/12,45+40*v,0.25+0.75*v);c.lineWidth=DPR*(1+v*2);c.beginPath();
+    for(let j=0;j<=160;j++){const t=j/160*TAU*q,r=rs*Math.cos(p/q*t+NP.ph*0.5);j?c.lineTo(x+Math.cos(t)*r,y+Math.sin(t)*r):c.moveTo(x+Math.cos(t)*r,y+Math.sin(t)*r)}c.stroke();
+    if(v>0.4)softDot(c,x,y,rs*2,col(pc/12,70,0.2*v));label(x-6*DPR,y+rs+14*DPR,NOTE[pc],'planet')}
+  // the big figure: the two strongest notes
+  const lis=(i1,i2,sz,alpha,ph)=>{const iv=((i2-i1)%12+12)%12,[p,q]=JUST[iv],v=Math.min(ch[i1],ch[i2]);c.strokeStyle=col(i1/12+0.1,55+30*v,alpha);c.lineWidth=DPR*(1.2+v*2.5+a.kick*1.5);c.beginPath();
+    for(let j=0;j<=900;j++){const t=j/900*TAU*Math.max(p,q),x=Math.sin(p*t+ph),y=Math.sin(q*t),z=Math.cos(p*t+ph),k=1/(1+z*0.15);j?c.lineTo(cx+x*sz*k,cy+y*sz*k):c.moveTo(cx+x*sz*k,cy+y*sz*k)}c.stroke();return [iv,p,q]};
+  const [iv,p,q]=lis(n1,n2,M*0.24*(1+a.bass*0.08),0.85,NP.ph);
+  lis(n1,n3,M*0.17,0.4,NP.ph2);
+  if(S.names){label(18*DPR,26*DPR,'Note patterns · the strongest notes now: '+NOTE[n1]+' and '+NOTE[n2]+' = a '+IVN[iv]+', frequency ratio '+p+':'+q+' · simple ratios make simple, calm figures; dissonant ones make busy figures','info');
+    label(18*DPR,48*DPR,'Round the edge: the circle of fifths in the key of '+NOTE[A.keyRoot]+(A.keyMinor?' minor':' major')+' · each rose has petals from its ratio to the key note','info')}
+}
+
+
 /* ---------- Equalizer scenes and the EQ overlay (the old-school spectrum bars) ---------- */
 const EQ={hist:[],acc:0,pk:[],pv:[],sparks:[],rings:[],racc:0,rot:0,opk:[],opv:[],osp:[]};
 function eqBands(n){const a=new Array(n);for(let i=0;i<n;i++)a[i]=Math.min(1,spec(i/(n-1))*1.15);return a}
@@ -4877,17 +4965,44 @@ function eqRetro(c,a){
 
 /* Radial echo EQ: bars round a circle; old spectra ripple outwards in rings */
 function eqRadial(c,a){
-  const n=64,v=eqBands(n),cx=W/2,cy=H/2,R0=Math.min(W,H)*0.17*(1+a.kick*0.08),L=Math.min(W,H)*0.2;EQ.rot+=st.dt*0.15*st.kdir;
+  flyMode(EQ,3);const md=EQ.mode,M=Math.min(W,H);
+  const n=64,v=eqBands(n),cx=W/2,cy=H/2,R0=M*0.17*(1+a.kick*0.08),L=M*0.2;EQ.rot+=st.dt*0.15*st.kdir;
+  c.save();c.globalAlpha=sstep(Math.min(1,EQ.mt*2));
   EQ.racc+=st.dtReal;if(EQ.racc>0.09){EQ.racc=0;EQ.rings.push({v:v.slice(),r:0,a:1,rot:EQ.rot})}
   for(const g of EQ.rings){g.r+=st.dtReal*(0.35+a.bass*0.5);g.a-=st.dtReal*0.45}EQ.rings=EQ.rings.filter(g=>g.a>0);
-  for(const g of EQ.rings){const rr=R0+L*0.3+g.r*Math.min(W,H)*0.5;c.strokeStyle=col(g.r*0.8,60,g.a*0.35);c.lineWidth=DPR*1.5;c.beginPath();
-    for(let j=0;j<=n*2;j++){const i=j%(n*2),b=i<n?i:2*n-1-i,ang=g.rot+i/(n*2)*TAU,r=rr+g.v[b]*L*0.35*(1-g.r);j?c.lineTo(cx+Math.cos(ang)*r,cy+Math.sin(ang)*r):c.moveTo(cx+Math.cos(ang)*r,cy+Math.sin(ang)*r)}c.stroke()}
-  eqPeaks(v,EQ.opk,EQ.opv,st.dtReal);
-  for(let i=0;i<n*2;i++){const b=i<n?i:2*n-1-i,ang=EQ.rot+(i+0.5)/(n*2)*TAU,ca=Math.cos(ang),sa=Math.sin(ang),len=Math.max(2*DPR,v[b]*L);
-    c.strokeStyle=col(b/n,45+25*v[b],0.9);c.lineWidth=Math.max(2*DPR,TAU*R0/(n*2)*0.6);c.beginPath();c.moveTo(cx+ca*R0,cy+sa*R0);c.lineTo(cx+ca*(R0+len),cy+sa*(R0+len));c.stroke();
-    const pr=R0+EQ.opk[b]*L+4*DPR;c.fillStyle='rgba(240,240,255,0.85)';c.beginPath();c.arc(cx+ca*pr,cy+sa*pr,DPR*1.8,0,TAU);c.fill()}
-  softDot(c,cx,cy,R0*0.95,col(0.05,60,0.25+0.35*a.bass));
-  if(S.names)label(18*DPR,26*DPR,'Radial echo EQ · 64 bands round a circle (low notes at the join) · each ring is an older spectrum that moves out like a ripple','info');
+  if(md===2){ // an eye: the bars become the iris, the pupil narrows when the music is loud
+    const RI=M*0.3,gx=Math.sin(st.t*0.35)*RI*0.12+(A.cent-0.45)*RI*0.3,gy=Math.sin(st.t*0.23)*RI*0.07,ex=cx+gx,ey=cy+gy;
+    const sc=c.createRadialGradient(cx,cy,RI*0.8,cx,cy,M*0.62);sc.addColorStop(0,'rgba(235,230,225,0.9)');sc.addColorStop(0.7,'rgba(170,150,150,0.55)');sc.addColorStop(1,'rgba(0,0,0,0)');
+    c.save();c.globalCompositeOperation='source-over';c.fillStyle=sc;c.beginPath();c.ellipse(cx,cy,M*0.62*(W>H?1.5:1),M*0.42,0,0,TAU);c.fill();
+    for(let k=0;k<14;k++){const an=hh(k)*TAU,r0=M*0.6;c.strokeStyle='rgba(170,40,40,'+(0.15+0.25*a.bass).toFixed(3)+')';c.lineWidth=DPR*(1+hh(k+5));c.beginPath();let x=cx+Math.cos(an)*r0*(W>H?1.4:1),y=cy+Math.sin(an)*r0*0.65;c.moveTo(x,y);
+      for(let j=0;j<6;j++){const tx=cx+Math.cos(an)*RI*1.15,ty=cy+Math.sin(an)*RI*1.15;x+=(tx-x)*0.22+(hh(k*7+j)-0.5)*M*0.03;y+=(ty-y)*0.22+(hh(k*9+j)-0.5)*M*0.03;c.lineTo(x,y)}c.stroke()}
+    const ig=c.createRadialGradient(ex,ey,0,ex,ey,RI);ig.addColorStop(0,col(0.55,35,1));ig.addColorStop(0.7,col(0.45,45,1));ig.addColorStop(1,col(0.6,15,1));c.fillStyle=ig;c.beginPath();c.arc(ex,ey,RI,0,TAU);c.fill();
+    const pr=RI*clamp(0.5-0.28*A.energy+0.1*(1-A.vol),0.16,0.55);
+    for(let i=0;i<n*2;i++){const b=i<n?i:2*n-1-i,ang=EQ.rot*0.3+(i+0.5)/(n*2)*TAU,ca=Math.cos(ang),sa=Math.sin(ang),len=(RI-pr)*(0.35+0.65*v[b]);
+      c.strokeStyle=col(b/n,50+30*v[b],0.75);c.lineWidth=Math.max(1.5*DPR,TAU*RI/(n*2)*0.45);c.beginPath();c.moveTo(ex+ca*pr*1.05,ey+sa*pr*1.05);c.lineTo(ex+ca*(pr+len),ey+sa*(pr+len));c.stroke()}
+    c.strokeStyle='rgba(20,15,20,0.8)';c.lineWidth=DPR*4;c.beginPath();c.arc(ex,ey,RI,0,TAU);c.stroke();
+    c.fillStyle='#020203';c.beginPath();c.arc(ex,ey,pr,0,TAU);c.fill();
+    c.fillStyle='rgba(255,255,255,0.85)';c.beginPath();c.ellipse(ex-RI*0.32,ey-RI*0.34,RI*0.12,RI*0.07,-0.6,0,TAU);c.fill();c.beginPath();c.arc(ex+RI*0.2,ey+RI*0.22,RI*0.035,0,TAU);c.fill();
+    const bl=EQ.blink=(EQ.blink||0)>0?EQ.blink-st.dtReal*4:(Math.random()<st.dtReal*0.12?1:0),cl=bl>0?Math.sin(Math.min(1,bl)*Math.PI):0;   // a blink now and then
+    if(cl>0){c.fillStyle='#000';c.fillRect(0,0,W,cy-M*0.45+cl*M*0.45);c.fillRect(0,cy+M*0.45-cl*M*0.45,W,H)}
+    c.restore();
+    if(S.names)label(18*DPR,26*DPR,'Radial echo EQ · the eye · the 128 bars are the iris; the pupil gets smaller when the music is loud, as a real pupil does in bright light','info');
+  }else{
+    for(const g of EQ.rings){const rr=R0+L*0.3+g.r*M*0.5;c.strokeStyle=col(g.r*0.8,60,g.a*(md===1?0.45:0.35));c.lineWidth=DPR*1.5;c.beginPath();
+      for(let j=0;j<=n*2;j++){const i=j%(n*2),b=i<n?i:2*n-1-i,ang=g.rot+i/(n*2)*TAU,r=md===1?rr+(j%2?g.v[b]*L*0.6+L*0.05:0)*(1-g.r*0.5):rr+g.v[b]*L*0.35*(1-g.r);j?c.lineTo(cx+Math.cos(ang)*r,cy+Math.sin(ang)*r):c.moveTo(cx+Math.cos(ang)*r,cy+Math.sin(ang)*r)}c.stroke()}
+    eqPeaks(v,EQ.opk,EQ.opv,st.dtReal);
+    for(let i=0;i<n*2;i++){const b=i<n?i:2*n-1-i,ang=EQ.rot+(i+0.5)/(n*2)*TAU,ca=Math.cos(ang),sa=Math.sin(ang),len=Math.max(2*DPR,v[b]*L);
+      if(md===1){ // a skyline round the circle: each bar is a tower with lit windows
+        const w=TAU*R0/(n*2)*0.85,px=-sa,py=ca;c.fillStyle=col(b/n,22+10*v[b],0.9);c.beginPath();
+        const x0=cx+ca*R0,y0=cy+sa*R0;c.moveTo(x0-px*w/2,y0-py*w/2);c.lineTo(x0+px*w/2,y0+py*w/2);c.lineTo(x0+px*w/2+ca*len,y0+py*w/2+sa*len);c.lineTo(x0-px*w/2+ca*len,y0-py*w/2+sa*len);c.closePath();c.fill();
+        for(let f=5*DPR;f<len-3*DPR;f+=6*DPR)if(hh(i*31+Math.floor(f))>0.45){c.fillStyle=hh(i+f)>0.85?'rgba(255,230,150,0.9)':col(b/n+0.1,75,0.75);c.fillRect(x0+ca*f-1.5*DPR,y0+sa*f-1.5*DPR,3*DPR,2.5*DPR)}
+        if(v[b]>0.55&&i%9===0){c.strokeStyle='rgba(255,90,80,0.9)';c.lineWidth=DPR;c.beginPath();c.moveTo(x0+ca*len,y0+sa*len);c.lineTo(x0+ca*(len+8*DPR),y0+sa*(len+8*DPR));c.stroke()}}
+      else{c.strokeStyle=col(b/n,45+25*v[b],0.9);c.lineWidth=Math.max(2*DPR,TAU*R0/(n*2)*0.6);c.beginPath();c.moveTo(cx+ca*R0,cy+sa*R0);c.lineTo(cx+ca*(R0+len),cy+sa*(R0+len));c.stroke();
+        const pr=R0+EQ.opk[b]*L+4*DPR;c.fillStyle='rgba(240,240,255,0.85)';c.beginPath();c.arc(cx+ca*pr,cy+sa*pr,DPR*1.8,0,TAU);c.fill()}}
+    softDot(c,cx,cy,R0*0.95,col(0.05,60,0.25+0.35*a.bass));
+    if(S.names)label(18*DPR,26*DPR,md===1?'Radial echo EQ · a round city skyline, with mountain peaks in the echo rings':'Radial echo EQ · 64 bands round a circle (low notes at the join) · each ring is an older spectrum that moves out like a ripple','info');
+  }
+  c.restore();
 }
 
 /* the overlay: EQ bars on top of any scene, as clear as you like */
@@ -5028,6 +5143,11 @@ function render2D(sc){
   wctx.globalCompositeOperation='source-over';wctx.globalAlpha=1;
 }
 // display without WebGL2: glow + flash + vignette in 2D
+// quiet passages and held notes dim the picture; loud parts and new notes bring the light back
+const DYN={v:1};
+function dynStep(){const dt=st.dtReal||0.016;let tg=1;
+  if(S.dyn&&live&&!SCENES[S.scene].calm){tg=clamp(0.22+0.78*Math.pow(A.energy,0.85)+0.12*A.noteHit+0.15*A.kick,0.22,1.05);if(A.vol<0.02)tg=0.3}
+  DYN.v+=(tg-DYN.v)*Math.min(1,dt*(tg>DYN.v?7:1.2));return DYN.v}
 function display2D(){
   ctx.globalCompositeOperation='copy';ctx.globalAlpha=1;ctx.drawImage(work,0,0);
   if(S.glow>0){
@@ -5045,6 +5165,7 @@ function display2D(){
     ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   }
   ctx.globalCompositeOperation='source-over';ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);
+  const dv=dynStep();if(dv<0.99){ctx.fillStyle='rgba(0,0,0,'+clamp(1-dv,0,1).toFixed(3)+')';ctx.fillRect(0,0,W,H)}
 }
 function render(){
   reactA();
@@ -5173,6 +5294,8 @@ document.getElementById('film').onchange=e=>{S.film=e.target.checked};
  ea.onchange=()=>{S.eqAlpha=+ea.value;try{localStorage.setItem('fibwave.eqAlpha',ea.value)}catch(_){}}}
 S.verses=true;try{if(localStorage.getItem('fibwave.verses')==='0'){S.verses=false;document.getElementById('verseChk').checked=false}}catch(_){}
 document.getElementById('verseChk').onchange=e=>{S.verses=e.target.checked;try{localStorage.setItem('fibwave.verses',S.verses?'1':'0')}catch(_){}};
+S.dyn=true;try{if(localStorage.getItem('fibwave.dyn')==='0'){S.dyn=false;document.getElementById('dynchk').checked=false}}catch(_){}
+document.getElementById('dynchk').onchange=e=>{S.dyn=e.target.checked;try{localStorage.setItem('fibwave.dyn',S.dyn?'1':'0')}catch(_){}};
 document.getElementById('gentle').onchange=e=>{S.gentle=e.target.checked;try{localStorage.setItem('fibwave.gentle',S.gentle?'1':'0')}catch(_){}};
 try{if(localStorage.getItem('fibwave.gentle')==='1'){S.gentle=true;document.getElementById('gentle').checked=true}}catch(_){}
 {const sp=document.getElementById('spinSel'),cp=document.getElementById('capSel'),SPN={off:'off',slow:'slow',music:'with the music',hits:'a full turn on big hits'};
