@@ -99,6 +99,7 @@ body:not(.noui) #wordState{bottom:auto;top:calc(12px + env(safe-area-inset-top))
 .tipline{background:rgba(240,190,90,.1);border:1px solid rgba(240,190,90,.35);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.5}
 #startHint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:8;background:rgba(10,12,18,.82);border:1px solid var(--line);border-radius:14px;padding:18px 22px;max-width:min(460px,86vw);text-align:center;font-size:15px;line-height:1.6;transition:opacity .8s;pointer-events:none}
 #startHint kbd{font-size:13px}
+.screenrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 4px}.screenrow .hint{flex-basis:100%;font-size:12px}
 #player .bar{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;font-size:12px;color:var(--dim);gap:8px}
 #player .bar button{background:none;border:1px solid var(--line);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px}
 #player iframe{display:block;width:100%;height:190px;border:0}
@@ -159,6 +160,9 @@ body:not(.locked) #showUi{display:none}
       </div>
       <span class="hint" id="linkHint">After you click Play, Chrome asks to share this tab. Keep “Share tab audio” on, then click Share. Tip: press W for the pop-out window without the sharing bar.</span>
     </form>
+    <div class="screenrow"><label class="ctl" for="screenSel">Screen</label>
+      <select id="screenSel"><option value="auto">Auto: find it</option><option value="laptop">This computer screen</option><option value="lgb6">LG B6 55-inch 4K OLED TV</option><option value="tv4k">Other 4K TV</option><option value="tv1080">1080p TV or projector</option><option value="phone">Phone or tablet</option></select>
+      <button class="btn" id="findScreens" type="button">Find my screens</button><span class="hint" id="screenHint"></span></div>
     <div class="sources">
       <button class="src primary" id="srcTab"><b>Share a tab — YouTube or Spotify</b><span>Play music in a different Chrome tab. In the share window, select that tab and turn on “Share tab audio”.</span></button>
       <button class="src" id="srcMic"><b>Microphone or BlackHole</b><span>Room sound, or select BlackHole below to take the sound of Spotify or any app straight in. No sharing bar at all.</span></button>
@@ -230,7 +234,7 @@ body:not(.locked) #showUi{display:none}
     <label class="ctl" for="eqPos" title="Show equalizer bars on top of every scene">EQ overlay <select id="eqPos"><option value="off">Off</option><option value="bottom">Bottom</option><option value="center">Bottom, from the centre</option><option value="top">Top</option><option value="ring">Ring</option><option value="sides">Sides</option></select></label>
     <label class="ctl" for="eqAlpha" title="How strong the EQ overlay is. Low = mostly see-through">EQ strength <select id="eqAlpha"><option value="0.15">15%</option><option value="0.3" selected>30%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select></label>
     <label class="chk" for="keycol"><input type="checkbox" id="keycol" checked> Key colours</label>
-    <label class="ctl" for="quality">Quality <select id="quality"><option value="2100000">Fast · 1080p</option><option value="3700000" selected>Sharp · 1440p</option><option value="8300000">Ultra · 4K</option></select></label>
+    <label class="ctl" for="quality">Quality <select id="quality"><option value="2100000">Fast · 1080p</option><option value="3700000" selected>Sharp · 1440p</option><option value="5200000">TV · 1700p</option><option value="8300000">Ultra · 4K</option></select></label>
   </div>
   <div class="grp">
     <button class="btn" id="bSrc">Source</button>
@@ -1034,7 +1038,7 @@ precision highp float;uniform sampler2D uT;uniform vec2 uHp,uOut;out vec4 o;
 void main(){vec2 uv=gl_FragCoord.xy/uOut;vec3 s=texture(uT,uv+vec2(-uHp.x*2.,0.)).rgb+texture(uT,uv+vec2(uHp.x*2.,0.)).rgb+texture(uT,uv+vec2(0.,-uHp.y*2.)).rgb+texture(uT,uv+vec2(0.,uHp.y*2.)).rgb
   +(texture(uT,uv+uHp).rgb+texture(uT,uv-uHp).rgb+texture(uT,uv+vec2(uHp.x,-uHp.y)).rgb+texture(uT,uv+vec2(-uHp.x,uHp.y)).rgb)*2.;o=vec4(s/12.,1.);}`;
 const FS_POST=`#version 300 es
-precision highp float;uniform sampler2D uT,uBloom,uHold;uniform vec2 uOut,uShake;uniform float uGlow,uPulse,uTime,uFilm,uHdr,uSnare,uDrop,uImp,uShock,uFold,uTrans,uTType,uFlash,uWarm,uBrt,uHarsh,uTim,uDyn;out vec4 o;
+precision highp float;uniform sampler2D uT,uBloom,uHold;uniform vec2 uOut,uShake;uniform float uOled;uniform float uGlow,uPulse,uTime,uFilm,uHdr,uSnare,uDrop,uImp,uShock,uFold,uTrans,uTType,uFlash,uWarm,uBrt,uHarsh,uTim,uDyn;out vec4 o;
 float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
 float n2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
 vec3 shoulder(vec3 x){vec3 k=vec3(.78);return mix(x,k+(1.-k)*(1.-exp(-(x-k)/(1.-k))),step(k,x));}
@@ -1068,7 +1072,7 @@ void main(){
   c*=uDyn;                                                       // quiet music: dimmer light
   c+=vec3(1.)*ring*.4*uFlash;
   c=shoulder(max(c,0.));
-  {float Lm=dot(c,vec3(.299,.587,.114));c=mix(c,c*.8+.03,smoothstep(.7,1.05,Lm)*.7);c+=vec3(.010,.012,.018)*(1.-smoothstep(0.,.09,Lm));}   // balance: calm the brightest parts, open the deepest shadows a little
+  {float Lm=dot(c,vec3(.299,.587,.114));c=mix(c,c*.8+.03*(1.-uOled),smoothstep(.7,1.05,Lm)*(.7+.2*uOled));c+=vec3(.010,.012,.018)*(1.-smoothstep(0.,.09,Lm))*(1.-uOled);c*=1.-uOled*smoothstep(.12,.8,Lm)*.08;}   // balance: calm the brightest parts, open the deepest shadows a little
   c*=mix(vec3(1.),mix(vec3(.9,.97,1.1),vec3(1.1,1.,.86),uWarm),uTim);              // warm sound: golden light; cool sound: blue light
   c*=mix(1.,.8+.4*uBrt,uTim);c=mix(c,c*c*(3.-2.*clamp(c,0.,1.)),uHarsh*.45*uTim);   // dark sound: deeper; harsh sound: harder contrast
   float vg=smoothstep(1.25,.3,length((uv-.5)*vec2(asp,1.)));c*=mix(.42-.16*(1.-uBrt)*uTim,1.,vg);
@@ -1194,7 +1198,7 @@ function glPost(tex,threshold){
   const fx=S.hitfx;
   gl.uniform2f(u.uOut,W,H);gl.uniform1f(u.uSnare,SCENES[S.scene].calm?0:RA.snare);gl.uniform1f(u.uDrop,SCENES[S.scene].calm?0:RA.drop);gl.uniform1f(u.uGlow,S.glow*0.28*(S.timbre&&live?0.8+0.45*TB.bright:1));gl.uniform1f(u.uPulse,SCENES[S.scene].calm?0:RA.pulse);gl.uniform1f(u.uTime,st.t);gl.uniform1f(u.uFilm,S.film?(SCENES[S.scene].calm?0.3:1):0);
   gl.uniform1f(u.uImp,fx?Math.min(1.5,A.impact*S.react*0.7):0);gl.uniform1f(u.uShock,fx?FX.shock:1);gl.uniform1f(u.uFold,fx&&FX.foldT>0?FX.fold:0);
-  gl.uniform2f(u.uShake,fx?FX.shake[0]:0,fx?FX.shake[1]:0);gl.uniform1f(u.uTrans,FX.trans);gl.uniform1f(u.uTType,FX.ttype);gl.uniform1f(u.uFlash,S.gentle?0.3:1);gl.uniform1f(u.uDyn,dynStep());{const tm=S.timbre&&live&&!SCENES[S.scene].calm?1:0;gl.uniform1f(u.uTim,tm);gl.uniform1f(u.uWarm,TB.warm);gl.uniform1f(u.uBrt,TB.bright);gl.uniform1f(u.uHarsh,TB.harsh)}
+  gl.uniform2f(u.uShake,fx?FX.shake[0]:0,fx?FX.shake[1]:0);gl.uniform1f(u.uTrans,FX.trans);gl.uniform1f(u.uTType,FX.ttype);gl.uniform1f(u.uFlash,S.gentle?0.3:1);gl.uniform1f(u.uDyn,dynStep());if(u.uOled)gl.uniform1f(u.uOled,S.oled?1:0);{const tm=S.timbre&&live&&!SCENES[S.scene].calm?1:0;gl.uniform1f(u.uTim,tm);gl.uniform1f(u.uWarm,TB.warm);gl.uniform1f(u.uBrt,TB.bright);gl.uniform1f(u.uHarsh,TB.harsh)}
   drawFSQ();
   // keep this frame's picture, so the next scene change can transform out of it
   if(FX.trans>=1){gl.bindFramebuffer(gl.FRAMEBUFFER,G.hist.f);gl.viewport(0,0,W,H);gl.useProgram(G.copy.p);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tex);gl.uniform1i(G.copy.u.uT,0);gl.uniform2f(G.copy.u.uOut,W,H);drawFSQ();gl.bindFramebuffer(gl.FRAMEBUFFER,null)}
@@ -3153,11 +3157,11 @@ function drawLabels(){
   octx.shadowColor='rgba(0,0,0,0.95)';octx.shadowBlur=5*DPR;
   const sz={con:12.5,star:11.5,planet:13,moon:13,info:13.5,big:15};
   for(const L of LABELS){
-    const size=(sz[L.kind]||12)*DPR*(W>2200?1.25:1);
+    const size=(sz[L.kind]||12)*DPR*(W>2200?1.25:1)*(S.textScale||1);
     octx.font=(L.kind==='con'?'600 ':'')+size+'px "Chakra Petch",system-ui,sans-serif';
     if('letterSpacing' in ctx)octx.letterSpacing=L.kind==='con'?(2*DPR)+'px':'0px';
     const text=L.kind==='con'?L.text.toUpperCase():L.text,w=octx.measureText(text).width;
-    let x=L.x,y=L.y;
+    let x=L.x+(S.oled?Math.sin(st.t/97)*6*DPR:0),y=L.y+(S.oled?Math.cos(st.t/131)*5*DPR:0);
     if(document.fullscreenElement||(POP.w&&!POP.w.closed)){x=W*0.035+(x/W)*W*0.93;y=H*0.04+(y/H)*H*0.92}   // keep text inside the TV safe area
     if(L.kind==='con'){octx.textAlign='center';x-=0}else{octx.textAlign='left';if(L.kind!=='info'&&L.kind!=='big')x+=8*DPR}
     const x0=L.kind==='con'?x-w/2:x,box=[x0-3,y-size*0.7,x0+w+3,y+size*0.7];
@@ -5908,6 +5912,42 @@ document.getElementById('dynchk').onchange=e=>{S.dyn=e.target.checked;try{localS
  ms.onchange=()=>{S.motion=ms.value;try{localStorage.setItem('fibwave.motion',S.motion)}catch(_){}};
  ss.onchange=()=>{S.pshape=ss.value;try{localStorage.setItem('fibwave.pshape',S.pshape)}catch(_){}toast('Photo shape: '+ss.options[ss.selectedIndex].text+' (in the photo scenes)')}}
 document.getElementById('wordChk').onchange=e=>{WS.on=e.target.checked;if(WS.on){if(!WS.worker)wordsStart();else{WS.state=WS.state==='error'?'error':'listening'}toast(WS.worker&&WS.state==='listening'?'Sung words on.':'Sung words: loading a speech model (about 75 MB, first time only). It runs only in this browser.')}wordsUI()};
+/* ---------- screen profiles: tune the picture for the screen it shows on ---------- */
+const SCREENS={
+ laptop:{name:'this computer screen',q:3.7e6,text:1,oled:false},
+ lgb6:{name:'LG B6 55-inch 4K OLED TV',q:5.2e6,text:1.6,oled:true,gentle:true},   // 3840×2160 at 60 Hz; perfect blacks; protect against burn-in; ABL dims big bright areas
+ tv4k:{name:'a 4K TV',q:5.2e6,text:1.6,oled:false},
+ tv1080:{name:'a 1080p TV or projector',q:2.1e6,text:1.5,oled:false},
+ phone:{name:'a phone or tablet',q:1.4e6,text:1.1,oled:false}};
+const SCR={sel:'auto',prof:'laptop',tv:null,details:null};
+function scrDetect(){
+  const vw=VW(),sc=vw.screen||(typeof screen!=='undefined'?screen:{width:1280,height:800}),phys=Math.round(sc.width*(vw.devicePixelRatio||1)),tv=SCR.tv;
+  if(typeof matchMedia==='function'&&matchMedia('(pointer:coarse)').matches&&Math.min(sc.width,sc.height)<900)return 'phone';
+  if(SCR.details&&SCR.details.currentScreen){const cs=SCR.details.currentScreen;if(!cs.isInternal&&/LG|OLED|TV/i.test(cs.label||''))return /LG/i.test(cs.label)?'lgb6':'tv4k';
+    if(!cs.isInternal&&cs.width*(cs.devicePixelRatio||1)>=3800)return 'lgb6';if(!cs.isInternal&&cs.width*(cs.devicePixelRatio||1)>=1900)return 'tv1080';return 'laptop'}
+  if(phys>=3800&&sc.isExtended!==undefined&&Math.abs(sc.width/sc.height-16/9)<0.02)return 'lgb6';     // a 16:9 4K screen: most likely the TV
+  return 'laptop'}
+function scrApply(announce){
+  SCR.prof=SCR.sel==='auto'?scrDetect():SCR.sel;const P=SCREENS[SCR.prof];
+  QUALITY=P.q;S.textScale=P.text;S.oled=!!P.oled;if(P.gentle){S.gentle=true;const g=document.getElementById('gentle');if(g)g.checked=true}
+  const qs=document.getElementById('quality');if(qs){let best=qs.options[0];for(const o of qs.options)if(Math.abs(+o.value-P.q)<Math.abs(+best.value-P.q))best=o;qs.value=best.value}
+  resize();
+  const h=document.getElementById('screenHint');if(h)h.textContent=(SCR.sel==='auto'?'Found: ':'Set for ')+P.name+' · render size about '+(W*H/1e6).toFixed(1)+' million pixels'+(P.oled?' · true blacks, gentle flashes, slow text shift and quick control hiding to protect the OLED from burn-in':'')+(SCR.tv?' · the pop-out opens on '+(SCR.tv.label||'the TV'):'');
+  if(announce)toast('Screen: '+P.name+' · visuals tuned for it');
+}
+async function scrFind(ask){
+  if(!('getScreenDetails' in window)){if(ask)toast('This browser cannot list screens. Choose the screen in the list instead.');return}
+  try{if(!ask){const ps=await navigator.permissions.query({name:'window-management'});if(ps.state!=='granted')return}
+    const d=await window.getScreenDetails();SCR.details=d;
+    SCR.tv=d.screens.find(x=>!x.isInternal&&(/LG|OLED|TV/i.test(x.label||'')||x.width*(x.devicePixelRatio||1)>=3800))||d.screens.find(x=>!x.isInternal)||null;
+    d.addEventListener('screenschange',()=>{SCR.tv=d.screens.find(x=>!x.isInternal)||null;scrApply()});d.addEventListener('currentscreenchange',()=>{if(SCR.sel==='auto')scrApply(true)});
+    if(ask)toast(d.screens.length+' screen'+(d.screens.length>1?'s':'')+': '+d.screens.map(x=>(x.label||'screen')+' ('+Math.round(x.width*(x.devicePixelRatio||1))+'×'+Math.round(x.height*(x.devicePixelRatio||1))+')').join(', '));
+    scrApply(ask)}catch(e){if(ask)toast('Fibwave could not list the screens. Choose the screen in the list instead.')}}
+{const ss=document.getElementById('screenSel');try{const v=localStorage.getItem('fibwave.screen');if(v&&SCREENS[v]||v==='auto'){SCR.sel=v;ss.value=v}}catch(_){}
+ ss.onchange=()=>{SCR.sel=ss.value;try{localStorage.setItem('fibwave.screen',SCR.sel)}catch(_){}scrApply(true)};
+ document.getElementById('findScreens').onclick=()=>scrFind(true);
+ scrApply();scrFind(false);
+ let rt=0;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(SCR.sel==='auto'){const was=SCR.prof;scrApply();if(SCR.prof!==was)toast('Screen: '+SCREENS[SCR.prof].name+' · visuals tuned for it')}},700)})}
 document.getElementById('gentle').onchange=e=>{S.gentle=e.target.checked;try{localStorage.setItem('fibwave.gentle',S.gentle?'1':'0')}catch(_){}};
 try{if(localStorage.getItem('fibwave.gentle')==='1'){S.gentle=true;document.getElementById('gentle').checked=true}}catch(_){}
 {const sp=document.getElementById('spinSel'),cp=document.getElementById('capSel'),SPN={off:'off',slow:'slow',music:'with the music',hits:'a full turn on big hits'};
@@ -5973,7 +6013,9 @@ document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement)
 const STAGE=['bgLayer','gl','c','photoLayer','ov'].map(id=>document.getElementById(id));
 function popOut(){
   if(POP.w&&!POP.w.closed){POP.w.focus();return}
-  const w=window.open('','fibwave_view','popup=yes,width='+Math.round(screen.availWidth*0.8)+',height='+Math.round(screen.availHeight*0.8));
+  const tv=SCR.tv&&SCR.prof!=='laptop'&&SCR.prof!=='phone'?SCR.tv:null;
+  const w=tv?window.open('','fibwave_view','popup=yes,left='+tv.availLeft+',top='+tv.availTop+',width='+tv.availWidth+',height='+tv.availHeight):window.open('','fibwave_view','popup=yes,width='+Math.round(screen.availWidth*0.8)+',height='+Math.round(screen.availHeight*0.8));
+  if(w&&tv)toast('The visuals open on '+(tv.label||'the TV')+'. Click the TV picture once for full screen.');
   if(!w){toast('Chrome blocked the pop-out. Allow pop-ups for this file, then try again.');return}
   const d=w.document;d.open();d.write('<!doctype html><html><head><meta charset="utf-8"><title>Fibwave</title></head><body></body></html>');d.close();
   document.querySelectorAll('style').forEach(st0=>d.head.appendChild(d.importNode(st0,true)));
@@ -5982,8 +6024,9 @@ function popOut(){
   for(const el of STAGE)d.body.appendChild(d.adoptNode(el));
   const hint=d.createElement('div');hint.id='popHint';hint.textContent='Click for full screen · you can drag this window to the TV first · Esc leaves full screen · close this window to bring the visuals back';d.body.appendChild(hint);
   POP.w=w;
+  {let rt2=0;w.addEventListener('resize',()=>{clearTimeout(rt2);rt2=setTimeout(()=>{if(SCR.sel==='auto'){const was=SCR.prof;scrApply();if(SCR.prof!==was)toast('Screen: '+SCREENS[SCR.prof].name+' · visuals tuned for it')}},700)})}   // the window moved to another screen
   let idle=0;const wake=()=>{d.body.classList.remove('idle');hint.classList.toggle('off',!!d.fullscreenElement);clearTimeout(idle);idle=setTimeout(()=>{d.body.classList.add('idle');hint.classList.add('off')},4000)};
-  const fs=()=>{if(!d.fullscreenElement)d.documentElement.requestFullscreen({navigationUI:'hide'}).catch(()=>{})};
+  const fs=()=>{if(!d.fullscreenElement)d.documentElement.requestFullscreen(SCR.tv?{navigationUI:'hide',screen:SCR.tv}:{navigationUI:'hide'}).catch(()=>d.documentElement.requestFullscreen({navigationUI:'hide'}).catch(()=>{}))};
   w.addEventListener('click',fs);w.addEventListener('mousemove',wake);d.addEventListener('fullscreenchange',wake);
   const fwd=e=>{try{dispatchEvent(new window[e.constructor.name](e.type,e))}catch(_){}};   // the control keys and sky drag still work in the pop-out
   ['pointerdown','pointermove','pointerup'].forEach(t=>w.addEventListener(t,fwd));w.addEventListener('wheel',fwd,{passive:true});
@@ -6043,7 +6086,7 @@ function poke(){
   if(uiLocked)return;
   hud.classList.remove('hide');document.body.classList.remove('noui');
   clearTimeout(idleT);
-  idleT=setTimeout(()=>{if(start.hidden&&castEl.hidden&&screensEl.hidden&&(TOUCH||(!hud.matches(':hover')&&!player.matches(':hover')))){hud.classList.add('hide');document.body.classList.add('noui')}},3500);
+  idleT=setTimeout(()=>{if(start.hidden&&castEl.hidden&&screensEl.hidden&&(TOUCH||(!hud.matches(':hover')&&!player.matches(':hover')))){hud.classList.add('hide');document.body.classList.add('noui')}},S.oled?2000:3500);
 }
 addEventListener('mousemove',poke);addEventListener('touchstart',poke,{passive:true});
 
