@@ -326,11 +326,13 @@ function resize(){
 addEventListener('resize',resize);resize();
 
 /* ---------- settings ---------- */
-const S={scene:0,pal:0,sens:1,trail:0.84,glow:0.6,auto:21,random:false,names:false,film:true,keyColor:true,react:1.6,hitfx:true,focus:'all',styleMatch:true,noPeople:true,gentle:false,timbre:true,spin:'music',caption:'7'};
+const S={scene:0,pal:1,sens:1,trail:0.84,glow:0.6,auto:21,random:false,names:false,film:true,keyColor:true,react:1.6,hitfx:true,focus:'all',styleMatch:true,noPeople:true,gentle:false,timbre:true,spin:'music',caption:'7'};
 
 /* Palettes: colour stops [hue, saturation, lightness]. Colours blend smoothly between stops.
    "drift" palettes turn round the colour wheel on each beat. */
+const LIVEP={base:0,span:200,sat:85,l:56};
 const PALS=[
+  {name:'🌈 Living Rainbow (follows the sound)',live:1,stops:[[0,90,58],[180,90,58]]},
   {name:'Golden Drift',drift:1,stops:[[42,95,60],[20,92,52],[340,80,56],[280,70,62],[220,75,60]]},
   {name:'Full Spectrum',drift:1,stops:[[0,100,58],[55,100,56],[120,95,50],[180,100,50],[240,100,62],[300,100,58]]},
   {name:'Solar Flare',stops:[[55,100,70],[38,100,58],[18,100,52],[355,92,48],[330,85,42]]},
@@ -352,6 +354,7 @@ let hueOff=0,hueDisp=0,keyHueDisp=0; // hueOff jumps on beats; hueDisp eases tow
 function lerpHue(a,b,t){const d=((b-a+540)%360)-180;return a+d*t}
 function palColor(t){
   const p=PALS[S.pal],s=p.stops,n=s.length;
+  if(p.live){const L=LIVEP;return [((L.base+t*L.span)%360+360)%360,L.sat,L.l]}
   let u=t+(p.drift?0:Math.sin(hueDisp*DEG)*0.16);
   u=((u%2)+2)%2;if(u>1)u=2-u;             // ping-pong: no hard colour jumps
   const x=u*(n-1),i=Math.min(n-2,Math.floor(x)),f=x-i,f2=f*f*(3-2*f);
@@ -400,13 +403,16 @@ async function useTab(selfTab){
   ensureCtx();
   if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){toast('This browser cannot share tab audio. Use Chrome or Edge.');return}
   let s;
+  // keep Fibwave in front: without this, Chrome jumps to the tab you share (Conditional Focus, Chrome 109+)
+  let ctl=null;try{if(typeof CaptureController!=='undefined'){ctl=new CaptureController();try{ctl.setFocusBehavior('no-focus-change')}catch(_){}}}catch(_){ctl=null}
   try{
-    s=await navigator.mediaDevices.getDisplayMedia({
+    s=await navigator.mediaDevices.getDisplayMedia({...(ctl?{controller:ctl}:{}),
       video:{frameRate:{ideal:1,max:5},width:{ideal:320}},
       audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,suppressLocalAudioPlayback:false},
       preferCurrentTab:selfTab,
       selfBrowserSurface:selfTab?'include':'exclude',systemAudio:'include',surfaceSwitching:'include'
     });
+    if(ctl){try{ctl.setFocusBehavior('no-focus-change')}catch(_){}}         // older Chrome: it must be called right after sharing starts
   }catch(e){toast(selfTab?'The music plays, but the visuals need tab sharing. Click Connect sound to try again.':'Tab sharing was cancelled.');if(selfTab)showConnect();return}
   if(!s.getAudioTracks().length){
     s.getTracks().forEach(t=>t.stop());
@@ -4651,6 +4657,72 @@ const WATER_SCENE={name:'Living Water',kind:'gl',fs:FS_WATER,rs0:0.7,rsMax:1,th:
     if(S.names){label(18*DPR,26*DPR,'Living water · '+['ocean swells','a calm lake','a flowing river'][this.mi]+' · '+dayName+' · the sun and the moon move across the sky; the moon’s pull raises and lowers the tide','info');
       label(18*DPR,48*DPR,'Waves are made of several sine waves added together · the bass makes them taller, kicks send rings across the water','info')}}};
 
+/* ---------- Waterways EQ (GPU): rivers, river systems and an ocean whose waves are the spectrum,
+   from the micro (ripples) to the macro (a whole watershed), on land or floating in empty space ---------- */
+const FS_RIVEREQ=GLSL_HEAD+`
+uniform float uE,uF;
+float sm3(vec2 p){return .55*noise(p)+.3*noise(p*2.03+1.7)+.15*noise(p*4.1+3.3);}
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*uRes)/uRes.y;float zoom=exp(uA);vec2 p=uv*zoom+vec2(uB*.02,uB*.05);
+  float vac=uC;                                   // 0 = land, 1 = empty space
+  vec3 land=mix(vec3(.12,.1,.06),vec3(.2,.24,.1),fbm(p*.8))*(.6+.4*fbm(p*3.));
+  vec3 col=mix(land,vec3(0.)+stars(uv*.6+uB*.001,.08,1.),vac);
+  float coast=.35*sin(p.x*.4+uE)+fbm(p*.3)*1.2-.9;   // where the land meets the ocean
+  float water=0.;vec3 wc=vec3(0.);
+  // a river system: iso-lines of a warped field are meandering channels; each order of stream follows its own band
+  for(int k=0;k<4;k++){float fk=float(k),sc=.6*pow(1.9,fk);vec2 q=p*sc+vec2(fk*7.3,fk*3.1);q+=vec2(sm3(q*.5+3.),sm3(q*.5+9.))*1.4;
+    float f=sm3(q);float band=spec(.08+fk*.22);float w=(.025+.04*band)/(1.+fk*.5);
+    float d=abs(f-.5)*2.;float ch=smoothstep(w,w*.3,d);
+    float flow=.5+.5*sin(q.x*14.+q.y*9.-uTime*(2.+fk)*(1.+uBass));
+    water=max(water,ch);wc+=ch*pal(.5+fk*.12+uF)*(.35+.9*band)*(.7+.3*flow);}
+  col=mix(col,wc,clamp(water,0.,1.));
+  // the ocean: its waves are the spectrum
+  if(p.y<coast){float dep=coast-p.y;float x=clamp(uv.x*uRes.y/uRes.x+.5,0.,1.);float sp=spec(x);
+    float waves=0.;for(int i=0;i<5;i++){float fi=float(i);float wy=coast-fi*.18-sp*.15*(1.+fi*.3);waves+=smoothstep(.02,0.,abs(p.y-wy-.05*sin(p.x*3.+uTime*(1.+fi*.3))))*(1.-fi*.15);}
+    vec3 sea=mix(pal(.55)*.35,pal(.62)*.12,smoothstep(0.,2.,dep));col=mix(sea,sea*.2,vac*.5)+pal(.45+x*.5)*waves*(.4+sp*1.4);}
+  // micro scale: ripples on the water surface when zoomed in
+  col+=water*pal(.7)*smoothstep(-.3,-1.,uA)*.25*sin(length(fract(p*6.)-.5)*40.-uTime*5.);
+  o=vec4(col*(1.+uPulse*.1),1.);
+}`;
+
+/* ---------- Brilliant Horizons (GPU): a wide horizon where light, weather and the elements change with the music ---------- */
+const FS_HORIZON=GLSL_HEAD+`
+uniform float uE,uF,uG;
+vec3 hsv(vec3 c){vec3 p=abs(fract(c.xxx+vec3(1.,2./3.,1./3.))*6.-3.);return c.z*mix(vec3(1.),clamp(p-1.,0.,1.),c.y);}
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*uRes)/uRes.y;float hz=-.05;
+  float el=uE,wx=uF;                                // element: 0 water, 1 fire, 2 metal, 3 wind · weather: 0 clear, 1 storm, 2 rainbow, 3 aurora
+  vec2 sun=vec2(.35*sin(uA*.05),hz+.08+.12*sin(uA*.07));
+  vec3 sky=mix(pal(.08)*1.1,pal(.62)*.35,smoothstep(hz,.6,uv.y));
+  if(el>.5&&el<1.5)sky=mix(vec3(1.,.45,.12),vec3(.25,.05,.05),smoothstep(hz,.55,uv.y));
+  float sd=length(uv-sun);sky+=vec3(1.,.85,.6)*(exp(-sd*30.)*1.3+exp(-sd*5.)*.35)*(1.+uKick*.3);
+  // clouds moving with the wind
+  float cl=fbm(vec2(uv.x*2.+uB*.15,uv.y*5.)+fbm(uv*3.+uB*.05));float cover=wx>.5&&wx<1.5?.35:.6;
+  vec3 cloud=mix(vec3(.9,.8,.75),pal(.12)*.8,.4)*(1.-.6*float(wx>.5&&wx<1.5));sky=mix(sky,cloud*(.5+.6*exp(-sd*3.)),smoothstep(cover,cover+.25,cl)*smoothstep(hz,hz+.15,uv.y)*.85);
+  if(wx>.5&&wx<1.5){sky*=.55;float bolt=step(.6,uKick)*smoothstep(.006,0.,abs(uv.x-.2*sin(uTime*.37)+.04*noise(vec2(uv.y*30.,floor(uTime*8.))))) *step(hz,uv.y);sky+=vec3(.8,.85,1.)*bolt*2.+vec3(.4,.45,.6)*uKick*.4;
+    sky+=vec3(.6)*step(.97,hash(floor(vec2(uv.x*120.+uv.y*30.,uv.y*20.+uTime*25.))))*.25;}                        // rain
+  if(wx>1.5&&wx<2.5){vec2 ac=vec2(-sun.x,hz-.25);float r=length(uv-ac);float bow=smoothstep(.06,.0,abs(r-.62));sky+=hsv(vec3(clamp((r-.56)/.12,0.,1.)*.8,.9,1.))*bow*.55*step(hz,uv.y);}  // a rainbow opposite the sun
+  if(wx>2.5){float au=exp(-abs(uv.y-.35-.06*sin(uv.x*4.+uB*.3))*14.)*smoothstep(.2,.8,fbm(vec2(uv.x*6.,uB*.2)));sky=sky*.5+pal(.35+uv.x*.2)*au*(.8+uMid);}
+  // equalizer mountains on the horizon
+  float sx=fract(uv.x*.4+.5),hm=hz+.03+.08*fbm(vec2(uv.x*3.,1.))+spec(sx)*.12;
+  vec3 col=sky;if(uv.y<hm&&uv.y>hz)col=mix(vec3(.03,.03,.05),pal(.6)*.2,smoothstep(hz,hm,uv.y))+pal(sx)*exp(-(hm-uv.y)*120.)*(.3+spec(sx));
+  if(uv.y<hz){float d=hz-uv.y;vec2 rp=vec2(uv.x,hz+d);
+    if(el<.5){rp.x+=(noise(vec2(uv.x*8.,1./(d+.03)*2.-uB))-.5)*.03*(.4+uBass);vec3 rs=sky;float sd2=length(rp-sun);rs=mix(pal(.62)*.3,pal(.1),exp(-sd2*4.))+vec3(1.,.85,.6)*exp(-sd2*25.);col=rs*.75;}            // water: a mirror
+    else if(el<1.5){float lava=fbm(vec2(uv.x*4.,1./(d+.05)+uB*.3));col=mix(vec3(.15,.02,0.),vec3(1.,.4,.05),smoothstep(.45,.75,lava))*(1.+uBass)+vec3(1.,.7,.2)*exp(-d*12.)*.5;}   // fire
+    else if(el<2.5){float st2=noise(vec2(uv.x*2.,1./(d+.02)*.6));vec3 env=mix(pal(.62)*.6,vec3(1.,.9,.75),exp(-abs(uv.x-sun.x)*4.));col=env*(.35+.65*st2)*vec3(.85,.88,.95)+vec3(1.)*pow(st2,8.)*.6;}  // metal: brushed chrome
+    else{float g=sin(uv.x*30.+uB*2.+fbm(vec2(uv.x*5.,1./(d+.05)))*6.)*.5+.5;col=mix(vec3(.25,.3,.08),vec3(.75,.7,.35),g*(.4+.6*smoothstep(0.,.3,d)))*(.5+.5*exp(-d*3.));}  // wind over grass
+  }
+  o=vec4(col*(1.+uPulse*.08),1.);
+}`;
+const NATURE2=[
+ {name:'Waterways EQ',kind:'gl',fs:FS_RIVEREQ,rs0:0.65,rsMax:1,th:0.8,dwell:2.2,
+  step(a){this.a=1.3*Math.sin(st.t*0.05)+0.2*Math.sin(st.t*0.17);this.b=(this.b||0)+st.dt*(0.6+a.bass*1.5);this.c=clamp(0.5+0.6*Math.sin(st.t*0.03+1),0,1);this.e=st.t*0.02;this.f=0.1*Math.sin(st.t*0.04);
+    if(S.names)label(18*DPR,26*DPR,'Waterways EQ · '+(this.a<-0.4?'zoomed in: ripples on the water':this.a>0.6?'zoomed out: a whole river system':'rivers and an ocean')+' · each order of stream gets wider with its own frequency band; the ocean waves are the spectrum'+(this.c>0.6?' · floating in empty space':''),'info')}},
+ {name:'Brilliant Horizons',kind:'gl',fs:FS_HORIZON,rs0:0.7,rsMax:1,th:0.8,dwell:2.2,
+  step(a){this.a=(this.a||0)+st.dt*(0.4+a.mid*0.6);this.b=(this.b||0)+st.dt*(0.5+a.bass*2+a.kick);
+    const eb=Math.floor(A.beats/16)+Math.floor(st.t/18);if(this.eb!==eb){this.eb=eb;this.e=Math.floor(hh(eb*2.1)*4);this.f=Math.floor(hh(eb*3.7)*4)}
+    if(S.names)label(18*DPR,26*DPR,'Brilliant Horizons · '+['water','fire','metal','wind'][this.e]+' · '+['clear sky','storm with lightning on the kicks','a rainbow (always opposite the sun)','aurora'][this.f]+' · the mountains are an equalizer','info')}}];
+
 // fb: per-frame feedback zoom/rotation (the old MilkDrop trick); trail = share of the Trails setting
 const SCENES=[
   {name:'Sunflower',draw:sunflower,fb:{zoom:1.006,rot:0.002}},
@@ -4688,6 +4760,8 @@ const SCENES=[
   {name:'Cascade EQ',draw:eqCascade,fb:{zoom:1.0,rot:0,trail:0},dwell:1.6},
   {name:'Retro LED EQ',draw:eqRetro,fb:{zoom:1.0,rot:0,trail:0.25},dwell:1.4},
   {name:'Radial Echo EQ',draw:eqRadial,fb:{zoom:1.0,rot:0,trail:0.45},dwell:1.6},
+  {name:'Helix EQ',draw:helixEQ,fly:true,fb:{zoom:1.0,rot:0,trail:0.3},dwell:1.8},
+  {name:'Flock',draw:flock,fb:{zoom:1.0,rot:0,trail:0.6},dwell:2},
   {name:'Aspen Grove',draw:aspenGrove,fb:{zoom:1.0,rot:0,trail:0},dwell:2.2},
   {name:'Note Patterns',draw:notePatterns,fb:{zoom:1.0,rot:0,trail:0.55},dwell:2},
   {name:'Spin in Space',draw:spinSpace,fb:{zoom:1.0,rot:0,trail:0.15},dwell:2},
@@ -4701,7 +4775,7 @@ const SCENES=[
    step(a){this.a=(this.a||0)+st.dt*(0.08+a.mid*0.35+a.kick*0.2)*st.kdir;this.b=0.35*Math.sin(st.t*0.07)+a.bass*0.15;this.c=0.5+0.5*Math.sin(st.t*0.045+(A.beats>>4));this.d=Math.sin(st.t*0.02)*0.3;
      if(S.names){label(18*DPR,26*DPR,'Holographic universe · 9 glowing points send out light waves; with a reference wave they make this interference pattern (a hologram: every piece of it holds the whole shape)','info');label(18*DPR,48*DPR,'Dennis Gabor invented holography in 1947 · Pribram and Bohm proposed holographic models of mind and matter · the 1983 Gateway report describes the universe as a hologram','info')}}},{name:'Nature & Wonders',kind:'photo',col:'nature',dwell:1.5},{name:'Ancient & Esoteric',kind:'photo',col:'ancient',dwell:1.5},{name:'MilkDrop Classics',kind:'md'},{name:'Video Synth',kind:'hy'}]:[])
 ];
-if(GLOK)SCENES.push(...ETERNAL_SCENES,GEM_SCENE,WATER_SCENE);
+if(GLOK)SCENES.push(...ETERNAL_SCENES,GEM_SCENE,WATER_SCENE,...NATURE2);
 
 // scene length factor: complex scenes stay longer under Auto, simple ones change sooner
 const DWELL={'Night Sky':2,'Solar System':1.5,'Moon Phases':1.4,'Fractal Bloom':1.8,'Particle Galaxy':1.6,'Earth from Orbit':1.8,'Lunar Earthrise':1.6,'Golden Tunnel':1.1,'Nebula Flow':1.3};
@@ -4711,21 +4785,21 @@ SCENES.forEach(s=>{if(!s.dwell)s.dwell=DWELL[s.name]||(s.kind==='gl'?1.5:s.kind?
 /* ---------- music style: a best guess from tempo, drums, bass weight, distortion and tonality ---------- */
 const STYLES={
  ambient:{name:'Ambient / chill',pal:['Aurora','Glacier','Moonlight','Deep Sea','Nebula'],react:0.9,auto:55,trail:0.9,glow:0.9,
-   scenes:['Living Water','Aspen Grove','Gemstones & Crystals','Note Patterns','Eternal Voyage','Mirror Lake EQ','Radial Echo EQ','Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration']},
+   scenes:['Waterways EQ','Brilliant Horizons','Flock','Living Water','Aspen Grove','Gemstones & Crystals','Note Patterns','Eternal Voyage','Mirror Lake EQ','Radial Echo EQ','Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration']},
  edm:{name:'EDM / house / techno',pal:['Synthwave','Full Spectrum','Infrared','Golden Drift'],react:2.2,auto:21,trail:0.8,glow:1.0,
-   scenes:['Gemstones & Crystals','Eternal Voyage','Cascade EQ','Radial Echo EQ','Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
+   scenes:['Helix EQ','Brilliant Horizons','Gemstones & Crystals','Eternal Voyage','Cascade EQ','Radial Echo EQ','Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
  bass:{name:'Bass music / dubstep / DnB',pal:['Infrared','Ember','Synthwave','Cosmic Dust'],react:2.7,auto:13,trail:0.7,glow:1.2,
-   scenes:['Retro LED EQ','Cascade EQ','Spin in Plasma','Spin in Water','Möbius Wave','Burning Ship','Mandelbox 3D','Entropy & Order','Holographic Universe','MilkDrop Classics','Golden Tunnel','Starfield','Strange Attractors','Fractal Bloom','Video Synth','Deep Space','Hypercube 4D','Alien World','Clifford Torus']},
+   scenes:['Helix EQ','Retro LED EQ','Cascade EQ','Spin in Plasma','Spin in Water','Möbius Wave','Burning Ship','Mandelbox 3D','Entropy & Order','Holographic Universe','MilkDrop Classics','Golden Tunnel','Starfield','Strange Attractors','Fractal Bloom','Video Synth','Deep Space','Hypercube 4D','Alien World','Clifford Torus']},
  hiphop:{name:'Hip-hop / R&B',pal:['Gold Leaf','Red Rock','Rose Quartz','Cosmic Dust'],react:1.8,auto:34,trail:0.75,glow:0.8,
-   scenes:['Living Water','Retro LED EQ','Radial Echo EQ','Spin in Air','Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
+   scenes:['Helix EQ','Living Water','Retro LED EQ','Radial Echo EQ','Spin in Air','Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
  rock:{name:'Rock / metal',pal:['Ember','Solar Flare','Red Rock','Infrared'],react:2.2,auto:21,trail:0.7,glow:0.9,
-   scenes:['Living Water','Gemstones & Crystals','Retro LED EQ','Cascade EQ','Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
+   scenes:['Brilliant Horizons','Living Water','Gemstones & Crystals','Retro LED EQ','Cascade EQ','Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
  pop:{name:'Pop',pal:['Rose Quartz','Golden Drift','Synthwave','Emerald'],react:1.6,auto:21,trail:0.8,glow:0.9,
-   scenes:['Aspen Grove','Note Patterns','Mirror Lake EQ','Radial Echo EQ','Retro LED EQ','Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
+   scenes:['Flock','Helix EQ','Brilliant Horizons','Aspen Grove','Note Patterns','Mirror Lake EQ','Radial Echo EQ','Retro LED EQ','Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
  classical:{name:'Classical / acoustic',pal:['Moonlight','Gold Leaf','Glacier','Deep Sea'],react:0.8,auto:55,trail:0.88,glow:0.8,
-   scenes:['Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Eternal Voyage','Mirror Lake EQ','Spin in Honey','Spin in Space','Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
+   scenes:['Flock','Waterways EQ','Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Eternal Voyage','Mirror Lake EQ','Spin in Honey','Spin in Space','Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
  jazz:{name:'Jazz / lo-fi / soul',pal:['Cosmic Dust','Rose Quartz','Emerald','Gold Leaf'],react:1.1,auto:34,trail:0.85,glow:0.8,
-   scenes:['Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Mirror Lake EQ','Retro LED EQ','Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
+   scenes:['Flock','Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Mirror Lake EQ','Retro LED EQ','Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
 };
 const STY={cur:null,cand:null,candT:0,score:{},f:{sub:0,mid:0,high:0,tot:1e-6,ev:0,em:0},kicks:[],snares:[],alls:[],next:0,applied:null};
 for(const k in STYLES)STY.score[k]=0;
@@ -5041,6 +5115,49 @@ function notePatterns(c,a){
 }
 
 
+/* ---------- Helix EQ: the spectrum wound round a double helix ---------- */
+const HX={rot:0,z:0};
+function helixEQ(c,a){
+  flyStep();const bl=flyMode(HX,3),pace=flyPace(HX),n=72,v=eqBands(n),M=Math.min(W,H);HX.rot+=st.dt*(0.5+a.bass*1.5)*pace;HX.z+=st.dt*(0.4+a.mid)*pace;
+  const cams=[[[0,0,-9],[0,0,0],[0,1,0]],[[6,2,-5],[0,0,1],[0,1,0]],[[0.2,-7.5,0.5],[0,0,0.5],[0,0,1]]];
+  const A0=cams[HX.prev],B0=cams[HX.mode],C=camLook(v3.lerp(A0[0],B0[0],bl),v3.lerp(A0[1],B0[1],bl),v3.norm(v3.lerp(A0[2],B0[2],bl)),M*0.95);
+  const items=[];
+  for(let s=0;s<2;s++)for(let i=0;i<n;i++){const y=(i/(n-1)-0.5)*9,th=HX.rot+i*0.35+(s?Math.PI:0),r=1.1,base=[Math.cos(th)*r,y,Math.sin(th)*r],len=0.25+v[i]*2.6,tip=[Math.cos(th)*(r+len),y,Math.sin(th)*(r+len)];
+    const p0=camP(C,base),p1=camP(C,tip);if(p0&&p1)items.push({Z:(p0[2]+p1[2])/2,p0,p1,i,s,v:v[i]})}
+  items.sort((p,q)=>q.Z-p.Z);
+  for(const it of items){const k=it.p0[3];c.strokeStyle=col(it.i/n+it.s*0.5,45+35*it.v,0.55+0.45*it.v);c.lineWidth=Math.max(1.5,k*0.13);c.beginPath();c.moveTo(it.p0[0],it.p0[1]);c.lineTo(it.p1[0],it.p1[1]);c.stroke();
+    c.fillStyle='rgba(245,245,255,'+(0.4+0.5*it.v).toFixed(3)+')';c.beginPath();c.arc(it.p1[0],it.p1[1],Math.max(1.2,k*0.09),0,TAU);c.fill();
+    if(it.v>0.6)softDot(c,it.p1[0],it.p1[1],k*0.6*it.v,col(it.i/n,70,0.2))}
+  // the two backbones
+  for(let s=0;s<2;s++){c.strokeStyle=col(s?0.6:0.1,60,0.6);c.lineWidth=DPR*2;c.beginPath();let on=false;for(let i=0;i<=120;i++){const y=(i/120-0.5)*9,th=HX.rot+i/120*(n-1)*0.35+(s?Math.PI:0),p=camP(C,[Math.cos(th)*1.1,y,Math.sin(th)*1.1]);if(p){on?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]);on=true}}c.stroke()}
+  if(S.names)label(18*DPR,26*DPR,'Helix EQ · 72 frequency bands wound up two strands, low notes at the bottom · '+['side view','three-quarter view','looking down the axis'][HX.mode]+' · drag to look round','info');
+}
+
+/* ---------- Flock: birds that move as one (a murmuration), and geometric energy pulses launched by the beat ---------- */
+const FK={b:[],p:[],kick:0};
+function flock(c,a){
+  const dt=Math.min(0.05,st.dtReal||0.016),M=Math.min(W,H);
+  if(!FK.b.length)for(let i=0;i<240;i++)FK.b.push({x:W*(0.3+hh(i)*0.4),y:H*(0.3+hh(i+5)*0.4),vx:(hh(i+9)-0.5)*100,vy:(hh(i+3)-0.5)*100,h:hh(i*3)});
+  const tx=W/2+Math.cos(st.t*0.23)*W*0.28,ty=H/2+Math.sin(st.t*0.31)*H*0.22,scatter=a.kick>0.8,sp=(140+a.energy*180)*DPR,R=M*0.06;
+  for(const b of FK.b){let ax=0,ay=0,cx=0,cy=0,vx=0,vy=0,n=0,sx=0,sy=0;
+    for(const o of FK.b){if(o===b)continue;const dx=o.x-b.x,dy=o.y-b.y,d2=dx*dx+dy*dy;if(d2<R*R){n++;cx+=o.x;cy+=o.y;vx+=o.vx;vy+=o.vy;if(d2<R*R*0.15){sx-=dx;sy-=dy}}}
+    if(n){ax+=(cx/n-b.x)*(0.6+a.bass*1.5)+(vx/n-b.vx)*1.2+sx*3}
+    ax+=(tx-b.x)*0.25;ay+=0;ay+=(ty-b.y)*0.25;if(n)ay+=(cy/n-b.y)*(0.6+a.bass*1.5)+(vy/n-b.vy)*1.2+sy*3;
+    if(scatter){const dx=b.x-tx,dy=b.y-ty,d=Math.hypot(dx,dy)+1;ax+=dx/d*sp*8;ay+=dy/d*sp*8}
+    b.vx+=ax*dt;b.vy+=ay*dt;const s=Math.hypot(b.vx,b.vy)+1e-6,lim=sp*(scatter?2:1);if(s>lim){b.vx*=lim/s;b.vy*=lim/s}if(s<sp*0.4){b.vx*=sp*0.4/s;b.vy*=sp*0.4/s}
+    b.x+=b.vx*dt;b.y+=b.vy*dt;
+    const an=Math.atan2(b.vy,b.vx),sz=DPR*(5+a.hat*3),flap=Math.sin(st.t*14+b.h*40)*0.5;
+    c.save();c.translate(b.x,b.y);c.rotate(an);c.strokeStyle=col(b.h*0.3+st.t*0.01,65+20*a.mid,0.9);c.lineWidth=DPR*1.6;c.beginPath();c.moveTo(-sz,-sz*(0.9+flap));c.lineTo(sz*0.8,0);c.lineTo(-sz,sz*(0.9+flap));c.stroke();c.restore()}
+  // energy pulses: geometric shapes thrown out on kicks and snares
+  if(a.kick>0.85&&FK.kick<=0.85||a.snare>0.9&&Math.random()<0.3){const k=Math.floor(Math.random()*4);FK.p.push({x:tx,y:ty,vx:(Math.random()-0.5)*600*DPR,vy:(Math.random()-0.5)*400*DPR,r:0,s:M*(0.02+Math.random()*0.04),k,h:Math.random(),life:1})}
+  FK.kick=a.kick;
+  for(const p of FK.p){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=30*DPR*dt;p.r+=dt*3;p.life-=dt*0.45;const sides=[3,4,5,6][p.k];c.strokeStyle=col(p.h,75,Math.max(0,p.life));c.lineWidth=DPR*2;c.beginPath();
+    for(let j=0;j<=sides;j++){const an=p.r+j*TAU/sides;j?c.lineTo(p.x+Math.cos(an)*p.s,p.y+Math.sin(an)*p.s):c.moveTo(p.x+Math.cos(an)*p.s,p.y+Math.sin(an)*p.s)}c.stroke();softDot(c,p.x,p.y,p.s*1.8,col(p.h,70,0.25*Math.max(0,p.life)))}
+  FK.p=FK.p.filter(p=>p.life>0);
+  if(S.names)label(18*DPR,26*DPR,'Flock · 240 birds follow 3 simple rules: stay close, match speed, do not collide (like a starling murmuration) · the bass pulls them tighter, a kick scatters them · shapes fly out on the beat','info');
+}
+
+
 /* ---------- Equalizer scenes and the EQ overlay (the old-school spectrum bars) ---------- */
 const EQ={hist:[],acc:0,pk:[],pv:[],sparks:[],rings:[],racc:0,rot:0,opk:[],opv:[],osp:[]};
 function eqBands(n){const a=new Array(n);for(let i=0;i<n;i++)a[i]=Math.min(1,spec(i/(n-1))*1.15);return a}
@@ -5097,19 +5214,24 @@ function eqRadial(c,a){
     const RI=M*0.3,gx=Math.sin(st.t*0.35)*RI*0.12+(A.cent-0.45)*RI*0.3,gy=Math.sin(st.t*0.23)*RI*0.07,ex=cx+gx,ey=cy+gy;
     const sc=c.createRadialGradient(cx,cy,RI*0.8,cx,cy,M*0.62);sc.addColorStop(0,'rgba(235,230,225,0.9)');sc.addColorStop(0.7,'rgba(170,150,150,0.55)');sc.addColorStop(1,'rgba(0,0,0,0)');
     c.save();c.globalCompositeOperation='source-over';c.fillStyle=sc;c.beginPath();c.ellipse(cx,cy,M*0.62*(W>H?1.5:1),M*0.42,0,0,TAU);c.fill();
-    for(let k=0;k<14;k++){const an=hh(k)*TAU,r0=M*0.6;c.strokeStyle='rgba(170,40,40,'+(0.15+0.25*a.bass).toFixed(3)+')';c.lineWidth=DPR*(1+hh(k+5));c.beginPath();let x=cx+Math.cos(an)*r0*(W>H?1.4:1),y=cy+Math.sin(an)*r0*0.65;c.moveTo(x,y);
-      for(let j=0;j<6;j++){const tx=cx+Math.cos(an)*RI*1.15,ty=cy+Math.sin(an)*RI*1.15;x+=(tx-x)*0.22+(hh(k*7+j)-0.5)*M*0.03;y+=(ty-y)*0.22+(hh(k*9+j)-0.5)*M*0.03;c.lineTo(x,y)}c.stroke()}
+    const ez=1+2.4*Math.pow(Math.max(0,Math.sin(st.t*0.11)),2);c.translate(ex,ey);c.scale(ez,ez);c.translate(-ex,-ey);   // slow zoom into the iris
     const ig=c.createRadialGradient(ex,ey,0,ex,ey,RI);ig.addColorStop(0,col(0.55,35,1));ig.addColorStop(0.7,col(0.45,45,1));ig.addColorStop(1,col(0.6,15,1));c.fillStyle=ig;c.beginPath();c.arc(ex,ey,RI,0,TAU);c.fill();
     const pr=RI*clamp(0.5-0.28*A.energy+0.1*(1-A.vol),0.16,0.55);
     for(let i=0;i<n*2;i++){const b=i<n?i:2*n-1-i,ang=EQ.rot*0.3+(i+0.5)/(n*2)*TAU,ca=Math.cos(ang),sa=Math.sin(ang),len=(RI-pr)*(0.35+0.65*v[b]);
       c.strokeStyle=col(b/n,50+30*v[b],0.75);c.lineWidth=Math.max(1.5*DPR,TAU*RI/(n*2)*0.45);c.beginPath();c.moveTo(ex+ca*pr*1.05,ey+sa*pr*1.05);c.lineTo(ex+ca*(pr+len),ey+sa*(pr+len));c.stroke()}
-    c.strokeStyle='rgba(20,15,20,0.8)';c.lineWidth=DPR*4;c.beginPath();c.arc(ex,ey,RI,0,TAU);c.stroke();
+    // iris layers: a second, finer fibre layer, crypts, the collarette ring and a dark limbal ring
+    for(let i=0;i<220;i++){const ang=i/220*TAU+EQ.rot*0.2,r0=pr*1.1+hh(i)*RI*0.2,r1=RI*(0.6+0.38*hh(i+3));c.strokeStyle=col(0.5+hh(i+7)*0.3,55+25*hh(i),0.18);c.lineWidth=DPR*0.7;c.beginPath();
+      for(let j=0;j<=6;j++){const r=r0+(r1-r0)*j/6,w=Math.sin(j*1.3+i)*0.03;j?c.lineTo(ex+Math.cos(ang+w)*r,ey+Math.sin(ang+w)*r):c.moveTo(ex+Math.cos(ang+w)*r,ey+Math.sin(ang+w)*r)}c.stroke()}
+    for(let i=0;i<18;i++){const ang=hh(i*5.3)*TAU,r=pr*1.4+hh(i*2.1)*(RI-pr)*0.5;c.fillStyle='rgba(10,10,20,'+(0.25+0.2*hh(i)).toFixed(3)+')';c.beginPath();c.ellipse(ex+Math.cos(ang)*r,ey+Math.sin(ang)*r,RI*0.05,RI*0.022,ang,0,TAU);c.fill()}
+    c.strokeStyle=col(0.12,70,0.6+0.3*a.mid);c.lineWidth=DPR*1.5;c.beginPath();for(let j=0;j<=96;j++){const ang=j/96*TAU,r=pr*1.75+Math.sin(j*1.9+st.t)*RI*0.03*(1+v[j%n]);j?c.lineTo(ex+Math.cos(ang)*r,ey+Math.sin(ang)*r):c.moveTo(ex+Math.cos(ang)*r,ey+Math.sin(ang)*r)}c.closePath();c.stroke();
+    for(let i=0;i<600;i++){const ang=hh(i*1.1)*TAU,r=pr+hh(i*2.7)*(RI-pr);c.fillStyle=col(hh(i*3.3),60+30*hh(i),0.35);c.fillRect(ex+Math.cos(ang)*r,ey+Math.sin(ang)*r,DPR,DPR)}
+    const lg=c.createRadialGradient(ex,ey,RI*0.85,ex,ey,RI*1.02);lg.addColorStop(0,'rgba(10,8,15,0)');lg.addColorStop(1,'rgba(10,8,15,0.85)');c.fillStyle=lg;c.beginPath();c.arc(ex,ey,RI*1.02,0,TAU);c.fill();
     c.fillStyle='#020203';c.beginPath();c.arc(ex,ey,pr,0,TAU);c.fill();
     c.fillStyle='rgba(255,255,255,0.85)';c.beginPath();c.ellipse(ex-RI*0.32,ey-RI*0.34,RI*0.12,RI*0.07,-0.6,0,TAU);c.fill();c.beginPath();c.arc(ex+RI*0.2,ey+RI*0.22,RI*0.035,0,TAU);c.fill();
     const bl=EQ.blink=(EQ.blink||0)>0?EQ.blink-st.dtReal*4:(Math.random()<st.dtReal*0.12?1:0),cl=bl>0?Math.sin(Math.min(1,bl)*Math.PI):0;   // a blink now and then
     if(cl>0){c.fillStyle='#000';c.fillRect(0,0,W,cy-M*0.45+cl*M*0.45);c.fillRect(0,cy+M*0.45-cl*M*0.45,W,H)}
     c.restore();
-    if(S.names)label(18*DPR,26*DPR,'Radial echo EQ · the eye · the 128 bars are the iris; the pupil gets smaller when the music is loud, as a real pupil does in bright light','info');
+    if(S.names)label(18*DPR,26*DPR,'Radial echo EQ · the eye · the 128 bars are the iris, with finer fibres, crypts and the collarette ring; the view slowly zooms into the iris · the pupil gets smaller when the music is loud','info');
   }else{
     for(const g of EQ.rings){const rr=R0+L*0.3+g.r*M*0.5;c.strokeStyle=col(g.r*0.8,60,g.a*(md===1?0.45:0.35));c.lineWidth=DPR*1.5;c.beginPath();
       for(let j=0;j<=n*2;j++){const i=j%(n*2),b=i<n?i:2*n-1-i,ang=g.rot+i/(n*2)*TAU,r=md===1?rr+(j%2?g.v[b]*L*0.6+L*0.05:0)*(1-g.r*0.5):rr+g.v[b]*L*0.35*(1-g.r);j?c.lineTo(cx+Math.cos(ang)*r,cy+Math.sin(ang)*r):c.moveTo(cx+Math.cos(ang)*r,cy+Math.sin(ang)*r)}c.stroke()}
@@ -5269,6 +5391,8 @@ function render2D(sc){
 // quiet passages and held notes dim the picture; loud parts and new notes bring the light back
 const DYN={v:1};
 function dynStep(){const dt=st.dtReal||0.016;let tg=1;
+  {const L=LIVEP,warm=typeof TB!=='undefined'?TB.warm:0.5,k=Math.min(1,dt*0.8);L.base+=dt*(6+45*A.energy+90*A.drop+20*A.kick)+(warm-0.5)*dt*30;   // living rainbow: speed from energy, warm sounds lean red, cool lean blue
+    L.span+=((80+280*clamp(A.cent*1.3+A.flat,0,1))-L.span)*k;L.sat+=((60+40*clamp(A.energy+(typeof TB!=='undefined'?TB.harsh:0)*0.5,0,1))-L.sat)*k;L.l+=((48+14*A.energy+(A.keyMinor?-4:4))-L.l)*k}
   if(S.dyn&&live&&!SCENES[S.scene].calm){tg=clamp(0.22+0.78*Math.pow(A.energy,0.85)+0.12*A.noteHit+0.15*A.kick,0.22,1.05);if(A.vol<0.02)tg=0.3}
   DYN.v+=(tg-DYN.v)*Math.min(1,dt*(tg>DYN.v?7:1.2));return DYN.v}
 function display2D(){
