@@ -158,13 +158,13 @@ body:not(.locked) #showUi{display:none}
         <input id="linkIn" type="url" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off">
         <button type="submit" class="go">Play</button>
       </div>
-      <span class="hint" id="linkHint">After you click Play, Chrome asks to share this tab. Keep “Share tab audio” on, then click Share. Tip: press W for the pop-out window without the sharing bar.</span>
+      <span class="hint" id="linkHint">After you click Play, Chrome asks to share this tab. Keep “Share tab audio” on, then click Share. Note: a pasted link plays inside Fibwave, so Chrome shows its sharing bar here. For a clean screen, play the music in its own tab and use “Share a tab” below.</span>
     </form>
     <div class="screenrow"><label class="ctl" for="screenSel">Screen</label>
       <select id="screenSel"><option value="auto">Auto: find it</option><option value="laptop">This computer screen</option><option value="lgb6">LG B6 55-inch 4K OLED TV</option><option value="tv4k">Other 4K TV</option><option value="tv1080">1080p TV or projector</option><option value="phone">Phone or tablet</option></select>
       <button class="btn" id="findScreens" type="button">Find my screens</button><span class="hint" id="screenHint"></span></div>
     <div class="sources">
-      <button class="src primary" id="srcTab"><b>Share a tab — YouTube or Spotify</b><span>Play music in a different Chrome tab. In the share window, select that tab and turn on “Share tab audio”.</span></button>
+      <button class="src primary" id="srcTab"><b>Share a tab — YouTube or Spotify</b><span>Play music in a different Chrome tab. A small helper window opens: choose that tab there, with “Share tab audio” on. Chrome’s sharing bar then stays on the small window, not on the visuals.</span></button>
       <button class="src" id="srcMic"><b>Microphone or BlackHole</b><span>Room sound, or select BlackHole below to take the sound of Spotify or any app straight in. No sharing bar at all.</span></button>
       <button class="src" id="srcFile"><b>Audio files</b><span>Play MP3, WAV, FLAC or M4A files from your computer.</span></button>
       <button class="src" id="srcDemo"><b>Demo beat</b><span>A built-in 118 BPM loop to test the visuals.</span></button>
@@ -412,6 +412,31 @@ function stopSource(){
 function started(label){
   srcLabel=label;live=true;hideStart();
   if(navigator.wakeLock)navigator.wakeLock.request('screen').catch(()=>{});
+}
+/* Chrome puts its "sharing to this tab" bar on the tab that RECEIVES the shared sound. So a small helper window receives it,
+   and passes the sound to Fibwave: the visuals tab never gets the bar. Keep the helper open (it can sit on the Mac screen or be minimised). */
+let CAPW=null;
+function useTabHelper(){
+  ensureCtx();
+  if(CAPW&&!CAPW.closed){CAPW.focus();return}
+  const h=window.open('','fibwave_capture','popup=yes,width=440,height=300,left=40,top=40');
+  if(!h){toast('Chrome blocked the small sharing window. Allow pop-ups for Fibwave, or Fibwave shares from this tab (with the bar).');useTab(false);return}
+  CAPW=h;const d=h.document;d.open();d.write('<!doctype html><html><head><meta charset="utf-8"><title>Fibwave · sound</title><style>body{margin:0;font:15px/1.5 system-ui,sans-serif;background:#0b0c11;color:#ece6d6;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;text-align:center;padding:0 18px;box-sizing:border-box}button{font:inherit;font-weight:600;background:#f0be5a;color:#111;border:0;border-radius:10px;padding:12px 18px;cursor:pointer;margin:12px 0}p{margin:4px 0;color:#bdb6a6;font-size:13px}</style></head><body><b>Fibwave sound</b><button id="go">Choose the tab with the music</button><p id="msg">Select the YouTube or Spotify tab and keep “Share tab audio” on. Chrome’s sharing bar then shows here, not on the visuals.</p></body></html>');d.close();
+  d.getElementById('go').onclick=async()=>{
+    let s;try{let ctl=null;try{if(h.CaptureController){ctl=new h.CaptureController();try{ctl.setFocusBehavior('no-focus-change')}catch(_){}}}catch(_){}
+      s=await h.navigator.mediaDevices.getDisplayMedia({...(ctl?{controller:ctl}:{}),video:{frameRate:{ideal:1,max:5},width:{ideal:320}},
+        audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,suppressLocalAudioPlayback:false},selfBrowserSurface:'exclude',systemAudio:'include',surfaceSwitching:'include'});
+      if(ctl){try{ctl.setFocusBehavior('no-focus-change')}catch(_){}}}
+    catch(e){d.getElementById('msg').textContent='Sharing was cancelled. Click the button to try again.';return}
+    if(!s.getAudioTracks().length){s.getTracks().forEach(t=>t.stop());d.getElementById('msg').textContent='No sound came through. Try again and turn on “Share tab audio”.';return}
+    stopSource();stream=s;srcNode=actx.createMediaStreamSource(new MediaStream(s.getAudioTracks()));srcNode.connect(analyser);
+    s.getAudioTracks()[0].addEventListener('ended',()=>{if(stream===s){stopSource();srcLabel='SHARE STOPPED';toast('Tab sharing stopped. Select Source to start again.')}});
+    started('TAB AUDIO');
+    d.getElementById('go').textContent='Change the tab';d.getElementById('msg').textContent='Sharing. Keep this small window open: you can move it aside or minimise it. Closing it stops the sound.';
+    try{window.focus()}catch(_){}
+  };
+  h.addEventListener('beforeunload',()=>{if(stream&&srcLabel==='TAB AUDIO'){stopSource();srcLabel='NO SOURCE';toast('The sharing window was closed, so the sound stopped. Select Source to start again.')}});
+  toast('In the small window, click “Choose the tab with the music”. The sharing bar shows there, not on the visuals.');
 }
 async function useTab(selfTab){
   selfTab=selfTab===true;
@@ -5968,7 +5993,7 @@ function hideStart(){start.hidden=true;document.getElementById('closeStart').hid
 let hintShown=false;function showStartHint(){if(hintShown)return;hintShown=true;const h=document.getElementById('startHint');if(!h)return;h.hidden=false;h.style.opacity='1';setTimeout(()=>{h.style.opacity='0';setTimeout(()=>{h.hidden=true},900)},6500)}
 document.getElementById('closeStart').onclick=hideStart;
 document.getElementById('bSrc').onclick=()=>{start.hidden=false};
-document.getElementById('srcTab').onclick=()=>{CRT.gen++;critUI(false);useTab()};
+document.getElementById('srcTab').onclick=()=>{CRT.gen++;critUI(false);useTabHelper()};
 // Firefox and Safari can share a screen, but they never send its sound to the page: guide people to BlackHole instead
 const UA=navigator.userAgent,NO_TAB_AUDIO=/Firefox\//.test(UA)||(/Safari\//.test(UA)&&!/Chrome|Chromium|Edg\//.test(UA));
 if(NO_TAB_AUDIO){const b=document.getElementById('srcTab');b.classList.remove('primary');b.disabled=true;b.style.opacity=0.55;
