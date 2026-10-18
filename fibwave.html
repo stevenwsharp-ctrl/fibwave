@@ -85,6 +85,15 @@ input[type=range]{accent-color:var(--gold);width:90px}
 .hint{font-size:12.5px;color:var(--dim);line-height:1.4}
 .hint.warn{color:var(--gold)}
 #player{position:fixed;top:calc(12px + env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));width:min(340px,calc(100% - 24px));background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;z-index:6;transition:opacity .5s}
+#riffs{position:fixed;top:calc(12px + env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));width:min(560px,calc(100% - 24px));background:rgba(14,16,22,.95);border:1px solid var(--line);border-radius:10px;z-index:6;padding:8px 10px;font-size:12px}
+#riffs .rh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#riffs button,#riffs select{background:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;color:inherit}
+#riffs .rs{display:flex;align-items:center;gap:10px;margin:6px 0;color:var(--dim)}
+#riffs .pb{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}#riffs .pb i{display:block;height:100%;width:0;background:var(--gold)}
+#riffs .rb{display:flex;flex-wrap:wrap;gap:6px;align-items:center}#riffs .rb button.on{border-color:var(--gold);color:var(--gold)}#riffs .rp{margin-left:auto}
+#riffs canvas{display:block;width:100%;height:150px;margin-top:6px}
+#riffs p{margin:4px 0 0;color:var(--dim);line-height:1.4}
+@media (max-width:700px) and (hover:none){#riffs{top:auto;bottom:calc(12px + env(safe-area-inset-bottom))}}
 #player .bar{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;font-size:12px;color:var(--dim);gap:8px}
 #player .bar button{background:none;border:1px solid var(--line);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:12px}
 #player iframe{display:block;width:100%;height:190px;border:0}
@@ -177,6 +186,7 @@ body:not(.locked) #showUi{display:none}
     <label class="chk" for="names"><input type="checkbox" id="names"> Names</label>
     <label class="chk" for="stylechk"><input type="checkbox" id="stylechk" checked> Match style</label>
     <label class="chk" for="timbrechk" title="Follow tempo changes, flow, brightness, warmth and harshness of the sound"><input type="checkbox" id="timbrechk" checked> Tone mood</label>
+    <label class="chk" for="gtchk" title="Listen to the song and show 3 guitar riffs to practise"><input type="checkbox" id="gtchk"> Guitar riffs</label>
     <label class="ctl" for="focus">Focus <select id="focus"></select></label>
     <label class="chk" for="bgchk"><input type="checkbox" id="bgchk"> Photo backdrop</label>
     <label class="ctl" for="spinSel" title="Turn photos round their vertical axis (Y)">Photo spin <select id="spinSel"><option value="off">Off</option><option value="slow">Slow</option><option value="music" selected>With music</option><option value="hits">On big hits</option></select></label>
@@ -226,6 +236,14 @@ body:not(.locked) #showUi{display:none}
 <div id="player" hidden>
   <div class="bar"><span id="playerName">Player</span><span><button id="pMin">Hide video</button> <button id="pClose">Close</button></span></div>
   <iframe id="pFrame" allow="autoplay; encrypted-media; clipboard-write; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" title="Music player"></iframe>
+</div>
+<div id="riffs" hidden>
+  <div class="rh"><b>Guitar riffs</b><span><button id="gtNew" title="Forget this song and listen again">New song</button> <button id="gtClose">Close</button></span></div>
+  <div class="rs"><span id="gtState">Listening…</span><div class="pb"><i id="gtBar"></i></div></div>
+  <div id="gtBtns" class="rb" hidden><button id="gtR0">1 Melody hook</button><button id="gtR1">2 Groove riff</button><button id="gtR2">3 Chord riff</button>
+    <span class="rp"><button id="gtPlay">▶ Hear it</button> <select id="gtSpeed" aria-label="Speed"><option value="1">100%</option><option value="0.75">75%</option><option value="0.5">50%</option></select></span></div>
+  <canvas id="gtTab" hidden></canvas>
+  <p id="gtInfo"></p>
 </div>
 <div class="panel" id="lights" hidden>
   <div class="card">
@@ -4387,6 +4405,160 @@ function hueStep(now,t){
   const body=m<3?{on:false,transitiontime:1}:{on:true,bri:Math.max(1,Math.min(254,Math.round(m/255*254))),xy:rgbXY(c),transitiontime:l.role==='pulse'||LT.flash>.3?0:2};
   fetch(url(LT.hue.ip,'/api/'+LT.hue.user+'/lights/'+l.id+'/state'),{method:'PUT',body:JSON.stringify(body)}).catch(()=>{})}
 /* every frame: read the top edge of the picture (for "copy the screen"), work out the colours, send */
+/* ---------- Guitar riffs: listen to the song, then write 3 riffs to practise ----------
+   1 Melody hook  – the most repeated 4-note shape in the melody (pitch tracking), with its own rhythm
+   2 Groove riff  – a low pentatonic riff on the song's kick-drum rhythm, in the song's key
+   3 Chord riff   – an arpeggio over the song's own chord progression (chords found bar by bar)
+   They are made from the song's key, tempo, rhythm, chords and melody. They are practice riffs, not the official guitar part. */
+const GT={on:false,src:'',listen:0,bp:0,kick:new Float32Array(16),snare:new Float32Array(16),ev:[],bars:[],curBar:-1,acc:new Float32Array(12),accN:0,
+  riffs:null,sel:0,builtAt:0,quiet:0,gap:false,cand:-1,candN:0,lastM:-1,kp:false,sp:false,play:null,gain:null,cache:{},speed:1,NEED:20};
+const TUNE=[64,59,55,50,45,40];                     // strings from high e to low E (MIDI)
+const STR=['e','B','G','D','A','E'];
+function gtReset(why){Object.assign(GT,{listen:0,kick:new Float32Array(16),snare:new Float32Array(16),ev:[],bars:[],curBar:-1,acc:new Float32Array(12),accN:0,riffs:null,builtAt:0,cand:-1,candN:0,lastM:-1});gtStop();gtUI();if(why)toast(why)}
+function gtSrcId(){return srcLabel+'|'+(playlist.length?track:'')+'|'+(typeof playerLabel!=='undefined'?pFrame.src:'')}
+// strongest clear pitch between 180 and 1050 Hz (the melody range), with a check for the octave below
+function gtPitch(){
+  if(!analyser)return -1;const hz=binHz(),i0=Math.ceil(180/hz),i1=Math.min(freq.length-2,Math.floor(1050/hz));let bi=-1,bv=0,sum=0;
+  for(let i=i0;i<=i1;i++){sum+=freq[i];if(freq[i]>bv&&freq[i]>=freq[i-1]&&freq[i]>=freq[i+1]){bv=freq[i];bi=i}}
+  const mean=sum/(i1-i0+1);if(bi<0||bv<120||bv<mean+45)return -1;
+  const a=DB_LUT[freq[bi-1]],b=DB_LUT[freq[bi]],c=DB_LUT[freq[bi+1]],d=(a-c)/(2*(a-2*b+c)||1);let f=(bi+Math.max(-0.5,Math.min(0.5,d)))*hz;
+  const h=Math.round(bi/2);if(f/2>=150&&freq[h]>bv-10)f/=2;
+  return Math.round(69+12*Math.log2(f/440));
+}
+function gtChord(c){let best=-1,bs=-1e9;for(let r=0;r<12;r++)for(const mi of [0,1]){const t=mi?3:4,s=c[r]*1.2+c[(r+t)%12]+c[(r+7)%12]-0.35*(c[(r+(mi?4:3))%12]+c[(r+1)%12]+c[(r+6)%12]);if(s>bs){bs=s;best=r+mi*12}}return best}
+function gtChordName(id){return NOTE[id%12]+(id>=12?'m':'')}
+function guitarFrame(now,dt){
+  if(!GT.on)return;
+  dt=Math.min(0.5,(now-(GT.lastNow||now))/1000);GT.lastNow=now;          // real time, also when the frame rate is low
+  const id=gtSrcId();if(id!==GT.src){GT.src=id;gtReset()}
+  if(!live||GT.play){gtUI(true);return}
+  // a steady beat clock, pulled toward the kick drum
+  const bpm=A.bpm>0?A.bpm:(GT.listen>6?90:0);if(bpm)GT.bp+=dt*bpm/60;   // music with no clear beat: count at 90 BPM
+  const kL=STY.kicks[STY.kicks.length-1]||0,sL=STY.snares[STY.snares.length-1]||0,kick=kL!==GT.kLast,sn=sL!==GT.sLast;GT.kLast=kL;GT.sLast=sL;
+  if(kick&&bpm){const e=Math.round(GT.bp)-GT.bp;GT.bp+=e*0.2;const slot=Math.round((GT.bp/4-Math.floor(GT.bp/4))*16)%16;for(let i=0;i<16;i++)GT.kick[i]*=0.985;GT.kick[slot]+=1}
+  if(sn&&bpm){const slot=Math.round((GT.bp/4-Math.floor(GT.bp/4))*16)%16;for(let i=0;i<16;i++)GT.snare[i]*=0.985;GT.snare[slot]+=1}
+    // a new song after a pause
+  if(A.vol<0.03){GT.quiet+=dt;if(GT.quiet>3&&GT.listen>8)GT.gap=true}else{if(GT.gap){GT.gap=false;gtReset('New song: Fibwave listens again to make new riffs.')}GT.quiet=0}
+  if(A.vol<0.08){gtUI(true);return}
+  GT.listen+=dt;
+  // melody notes
+  const m=gtPitch();
+  if(m>0&&A.tonal>0.2){if(m===GT.cand)GT.candN++;else{GT.cand=m;GT.candN=1}
+    if(GT.candN===3&&(m!==GT.lastM||A.noteHit>0.8)){GT.lastM=m;GT.ev.push({m,bp:GT.bp});if(GT.ev.length>600)GT.ev.shift()}}
+  // chords, one per bar
+  const bar=Math.floor(GT.bp/4);
+  if(A.kick<0.4){for(let i=0;i<12;i++)GT.acc[i]+=A.chroma[i];GT.accN++}
+  if(bar!==GT.curBar){if(GT.curBar>=0&&GT.accN>8){GT.bars.push(gtChord(GT.acc));if(GT.bars.length>64)GT.bars.shift()}GT.curBar=bar;GT.acc.fill(0);GT.accN=0}
+  if(GT.listen>=GT.NEED&&(!GT.riffs||(GT.builtAt<45&&GT.listen>=45)))gtBuild();
+  gtUI(true);
+}
+function gtRng(seed){let s=seed>>>0||1;return()=>{s^=s<<13;s^=s>>>17;s^=s<<5;return (s>>>0)/4294967296}}
+function gtBuild(){
+  GT.builtAt=GT.listen;
+  const root=A.keyRoot,minor=A.keyMinor,bpm=Math.round(A.bpm||90),rnd=gtRng(root*977+bpm*31+(minor?7:3)+GT.bars.length);
+  const scale=minor?[0,3,5,7,10]:[0,2,4,7,9],inScale=m=>scale.includes(((m-root)%12+12)%12);
+  const keyName=NOTE[root]+(minor?' minor':' major');
+  // 1 melody hook
+  let n1=[],how1='';const E=GT.ev;
+  if(E.length>=10){const cnt={},first={};let bestK=null,bestC=0,bestI=0;
+    for(let i=0;i+3<E.length;i++){const k=(E[i].m%12)+':'+(E[i+1].m-E[i].m)+':'+(E[i+2].m-E[i+1].m)+':'+(E[i+3].m-E[i+2].m);cnt[k]=(cnt[k]||0)+1;if(!(k in first))first[k]=i;if(cnt[k]>bestC||cnt[k]===bestC&&first[k]<bestI){bestC=cnt[k];bestK=k;bestI=first[k]}}
+    const b0=Math.floor(E[bestI].bp*2)/2;const seen=new Set();
+    for(const e of E){const c=Math.round((e.bp-b0)*4);if(c<0||c>31||seen.has(c))continue;seen.add(c);n1.push({c,m:e.m})}
+    n1.sort((p,q)=>p.c-q.c);if(n1.length){const c0=n1[0].c;n1.forEach(x=>x.c-=c0)}if(n1.length>16)n1=n1.filter((x,i)=>x.c%2===0||i%2===0).slice(0,16);
+    how1=bestC>1?'The shape you hear most often in the melody ('+bestC+' times). Best guess from the sound.':'Taken from the melody. Best guess from the sound.'}
+  if(n1.length<4){n1=[];let d=0;const r0=52+((root-4+12)%12);for(const c of [0,3,6,8,10,12,14,16,19,22,24,26,28]){d=Math.max(0,Math.min(7,d+[-1,1,1,2,-1,-2][Math.floor(rnd()*6)]));n1.push({c,m:r0+Math.floor(d/5)*12+scale[d%5]})}
+    how1='The melody was not clear enough, so this is a hook from the '+(minor?'minor':'major')+' pentatonic scale of the song.'}
+  {const ms=n1.map(x=>x.m).sort((a,b)=>a-b),med=ms[ms.length>>1];let sh=0;while(med+sh>67)sh-=12;while(med+sh<55)sh+=12;n1.forEach(x=>x.m+=sh)}
+  // 2 groove riff on the kick rhythm
+  const kmax=Math.max(...GT.kick),hits=[];
+  if(kmax>2){for(let i=0;i<16;i++)if(GT.kick[i]>kmax*0.35||GT.snare[i]>Math.max(...GT.snare)*0.6&&i%2===1)hits.push(i);if(!hits.includes(0))hits.unshift(0)}
+  const rhythm=hits.length>=3?hits.sort((a,b)=>a-b).slice(0,8):[0,3,6,8,10,12,14];
+  const lowR=40+((root-4+12)%12),gsc=minor?[0,3,5,7,10,12]:[0,4,5,7,9,12],w=gsc.map(s=>0.3+(chromaL[(root+s)%12]||0));
+  const pick=()=>{let t=rnd()*w.reduce((a,b)=>a+b,0);for(let i=0;i<gsc.length;i++){t-=w[i];if(t<=0)return gsc[i]}return 0};
+  const bar1=rhythm.map((c,i)=>({c,m:lowR+(i===0?0:(i%3===0?0:pick()))}));
+  const turn=minor?[7,10,12]:[7,9,12];const bar2=bar1.map((x,i)=>({c:x.c+16,m:i>=bar1.length-3?lowR+turn[i-(bar1.length-3)]:x.m}));
+  const n2=[...bar1,...bar2];
+  // 3 chord riff over the song's progression
+  let prog=[],how3='';const B=GT.bars;
+  if(B.length>=4){const cnt={};let bk=null,bc=0;for(let i=0;i+3<B.length;i++){const k=B.slice(i,i+4).join(',');cnt[k]=(cnt[k]||0)+1;if(cnt[k]>bc){bc=cnt[k];bk=k}}
+    prog=bk.split(',').map(Number);if(new Set(prog).size===1&&B.length>=8){const u=[...new Set(B.slice(-8))];if(u.length>1)prog=[u[0],u[1%u.length],u[2%u.length],u[3%u.length]]}
+    how3='The 4 chords Fibwave hears most often in a row'+(bc>1?' ('+bc+' times)':'')+'.'}
+  if(new Set(prog).size<2){prog=minor?[root+12,(root+8)%12,(root+3)%12,(root+10)%12]:[root,(root+7)%12,(root+9)%12+12,(root+5)%12];how3='The chords were not clear, so this is a common progression in '+keyName+'.'}
+  const n3=[],ch3=[];prog.forEach((id,b)=>{const r=id%12,third=id>=12?3:4,R=45+((r-9+12)%12);ch3.push({c:b*8,name:gtChordName(id)});
+    [0,7,12,7,third+12,12,7,12].forEach((o,j)=>n3.push({c:b*8+j,m:R+o}))});
+  GT.riffs=[
+    {name:'1 · Melody hook',step:0.25,cols:32,notes:n1,chords:[],how:how1,tip:'Play it slowly with alternate picking (down, up). Then play along with the song.'},
+    {name:'2 · Groove riff',step:0.25,cols:32,notes:n2,chords:[],how:'Low notes on the kick-drum rhythm of the song, from the '+(minor?'minor':'major')+' pentatonic scale in '+keyName+'.',tip:'Palm-mute the low notes (rest the side of your picking hand on the strings near the bridge). Lock in with the kick drum.'},
+    {name:'3 · Chord riff',step:0.5,cols:32,notes:n3,chords:ch3,how:how3+' Each bar is an arpeggio (the chord notes one at a time).',tip:'Hold the chord shape with your fretting hand and let the notes ring.'}];
+  for(const r of GT.riffs)r.tab=gtLayout(r.notes);
+  GT.meta={key:keyName,bpm,guess:!A.bpm};gtUI();
+  if(GT.builtAt<45)toast('Guitar riffs are ready: 3 riffs in '+keyName+' at '+bpm+' BPM.');
+}
+// put the notes on the fretboard: find the hand position (4-fret window) that fits the riff best
+function gtLayout(notes){
+  let best=null,bc=1e9;
+  for(let p=0;p<=12;p++){let cost=p*0.12,prev=null,out=[];
+    for(const n of notes){let opt=null,oc=1e9;
+      for(let s=0;s<6;s++){const f=n.m-TUNE[s];if(f<0||f>17)continue;const inW=f===0&&p<=3||f>=p&&f<=p+4,near=f>=p-1&&f<=p+5;
+        const c=(inW?0:near?3:12+Math.abs(f-p))+(prev?Math.abs(s-prev.s)*0.6:0);if(c<oc){oc=c;opt={c:n.c,s,f}}}
+      if(!opt){cost+=99;continue}cost+=oc;prev=opt;out.push(opt)}
+    if(cost<bc){bc=cost;best=out}}
+  return best||[];
+}
+/* sound: a plucked string (Karplus–Strong), so you can hear the riff */
+function gtPluck(m){
+  if(GT.cache[m])return GT.cache[m];const sr=actx.sampleRate,f=440*Math.pow(2,(m-69)/12),N=Math.max(2,Math.round(sr/f)),L=Math.floor(sr*1.6),b=actx.createBuffer(1,L,sr),y=b.getChannelData(0);
+  for(let i=0;i<N;i++)y[i]=(Math.random()*2-1)*(1-i/N*0.3);
+  const k=0.4993+0.0005*Math.min(1,f/600);for(let i=N;i<L;i++)y[i]=k*(y[i-N]+y[i-N+1]);
+  return GT.cache[m]=b;
+}
+function gtPlay(){
+  const r=GT.riffs&&GT.riffs[GT.sel];if(!r)return;ensureCtx();gtStop();
+  const bpm=(GT.meta.bpm||100)*GT.speed,colS=60/bpm*r.step,loop=r.cols*colS,t0=actx.currentTime+0.1,g=actx.createGain();g.gain.value=0.55;g.connect(actx.destination);
+  for(let rep=0;rep<2;rep++)for(const n of r.notes){const s=actx.createBufferSource();s.buffer=gtPluck(n.m);const e=actx.createGain();e.gain.value=1;s.connect(e);e.connect(g);
+    const t=t0+rep*loop+n.c*colS;s.start(t);e.gain.setValueAtTime(1,t+Math.max(0.12,colS*1.8));e.gain.exponentialRampToValueAtTime(0.001,t+Math.max(0.2,colS*2.4)+0.15);s.stop(t+1.7)}
+  GT.play={g,t0,colS,end:t0+2*loop};document.getElementById('gtPlay').textContent='■ Stop';
+}
+function gtStop(){if(GT.play){try{GT.play.g.disconnect()}catch(e){}GT.play=null}const b=document.getElementById('gtPlay');if(b)b.textContent='▶ Hear it'}
+/* the panel */
+let gtLastDraw=0;
+function gtUI(fromFrame){
+  const el=document.getElementById('riffs');if(!el)return;el.hidden=!GT.on;if(!GT.on)return;
+  const now=performance.now();if(fromFrame&&now-gtLastDraw<33)return;gtLastDraw=now;
+  if(GT.play&&actx&&actx.currentTime>GT.play.end)gtStop();
+  const st2=document.getElementById('gtState'),cv=document.getElementById('gtTab'),info=document.getElementById('gtInfo');
+  document.getElementById('gtBtns').hidden=!GT.riffs;
+  if(!GT.riffs){cv.hidden=true;
+    st2.textContent=!live?'Start music first (Source). Then Fibwave listens to the song for 20 seconds.':A.vol<0.08?'Waiting for sound…':'Listening to the song… '+Math.min(GT.NEED,Math.floor(GT.listen))+' / '+GT.NEED+' s';
+    document.getElementById('gtBar').style.width=Math.min(100,GT.listen/GT.NEED*100)+'%';info.textContent='';return}
+  st2.textContent='Key '+GT.meta.key+' · '+GT.meta.bpm+' BPM'+(GT.meta.guess?' (no clear beat)':'')+(GT.builtAt<45?' · more listening makes the riffs better':'');document.getElementById('gtBar').style.width='100%';
+  [0,1,2].forEach(i=>document.getElementById('gtR'+i).classList.toggle('on',i===GT.sel));
+  const r=GT.riffs[GT.sel];info.textContent=r.how+' Tip: '+r.tip;
+  cv.hidden=false;const dpr=Math.min(2,devicePixelRatio||1),Wc=cv.clientWidth||520,Hc=150;if(cv.width!==Math.round(Wc*dpr)){cv.width=Math.round(Wc*dpr);cv.height=Math.round(Hc*dpr)}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,Wc,Hc);
+  const x0=22,cw=(Wc-x0-8)/r.cols,y0=30,lh=18,perBar=4/r.step;
+  // where the music is now (or the preview)
+  let col=-1;if(GT.play&&actx){const t=(actx.currentTime-GT.play.t0)/GT.play.colS;if(t>=0)col=Math.floor(t)%r.cols}else if(live&&A.bpm)col=Math.floor((((GT.bp/r.step)%r.cols)+r.cols)%r.cols);
+  if(col>=0){c.fillStyle='rgba(240,190,90,0.18)';c.fillRect(x0+col*cw,y0-10,cw,lh*5+20)}
+  c.font='12px ui-monospace,Menlo,monospace';c.textAlign='center';c.textBaseline='middle';
+  for(let s=0;s<6;s++){const y=y0+s*lh;c.strokeStyle='rgba(220,220,230,0.35)';c.lineWidth=1;c.beginPath();c.moveTo(x0,y);c.lineTo(Wc-8,y);c.stroke();c.fillStyle='rgba(220,220,230,0.7)';c.fillText(STR[s],10,y)}
+  for(let b=0;b<=r.cols;b+=perBar){const x=x0+b*cw;c.strokeStyle='rgba(220,220,230,0.6)';c.beginPath();c.moveTo(x,y0);c.lineTo(x,y0+5*lh);c.stroke()}
+  for(let b=0;b<r.cols;b+=4/r.step/4){c.fillStyle='rgba(220,220,230,0.35)';c.fillText(String((b/(1/r.step))%4+1),x0+(b+0.5)*cw,y0+5*lh+14)}
+  for(const ch of r.chords){c.fillStyle='#f0be5a';c.textAlign='left';c.fillText(ch.name,x0+ch.c*cw+3,y0-18);c.textAlign='center'}
+  for(const t of r.tab){const x=x0+(t.c+0.5)*cw,y=y0+t.s*lh,txt=String(t.f),wd=c.measureText(txt).width+4;c.fillStyle='#14161d';c.fillRect(x-wd/2,y-7,wd,14);
+    c.fillStyle=t.c===col?'#ffd27a':'#f2f2f5';c.font=(t.c===col?'bold ':'')+'12px ui-monospace,Menlo,monospace';c.fillText(txt,x,y);c.font='12px ui-monospace,Menlo,monospace'}
+}
+function gtInit(){
+  const chk=document.getElementById('gtchk');
+  chk.onchange=()=>{GT.on=chk.checked;if(GT.on){GT.src='';toast(live?'Fibwave listens to the song for 20 seconds, then shows 3 guitar riffs.':'Start music first. Then Fibwave listens and shows 3 guitar riffs.')}else gtStop();gtUI()};
+  [0,1,2].forEach(i=>document.getElementById('gtR'+i).onclick=()=>{GT.sel=i;gtStop();gtUI()});
+  document.getElementById('gtPlay').onclick=()=>GT.play?gtStop():gtPlay();
+  document.getElementById('gtSpeed').onchange=e=>{GT.speed=+e.target.value;if(GT.play)gtPlay()};
+  document.getElementById('gtNew').onclick=()=>gtReset('Fibwave listens again to make new riffs.');
+  document.getElementById('gtClose').onclick=()=>{chk.checked=false;chk.onchange()};
+}
+gtInit();
+
 function lightsFrame(now,dt){
   if(!LT.on)return;
   LT.phase+=dt*(0.6+A.bass*3+A.kick*2)*(S.timbre?TB.tempo:1);
@@ -4576,7 +4748,7 @@ function frame(now){
   st.dtReal=dt;st.dt=dt*speed;st.t+=st.dt;if(dt>0)fps=fps*0.95+(1/dt)*0.05;
   const gwOn=GW.on&&SCENES[S.scene].name==='Gateway'&&actx;if(gwOn)binauralStart();else if(GW.bin)binauralStop();
   render();if(GLOK)glAdapt(SCENES[S.scene],dt);
-  lightsFrame(now,dt);
+  lightsFrame(now,dt);guitarFrame(now,dt);
   if(!hud.classList.contains('hide')){
     drawMini();
     if(++hudTick%10===0){lcdMood.textContent=live&&S.timbre?(moodWords().replace(/\s+/g,' ').trim()||'BALANCED')+(LT.on?' · LIGHTS':''):'';bpmEl.textContent=A.bpm?Math.round(A.bpm):'---';lcdTxt.textContent=srcLabel+' · '+SCENES[S.scene].name.toUpperCase()+(S.focus!=='all'?' · FOCUS '+FOCUS[S.focus].name.toUpperCase():'');
