@@ -419,10 +419,11 @@ let CAPW=null;
 function useTabHelper(){
   ensureCtx();
   if(CAPW&&!CAPW.closed){CAPW.focus();return}
-  const h=window.open('','fibwave_capture','popup=yes,width=440,height=300,left=40,top=40');
+  const h=window.open('','fibwave_capture','popup=yes,width=820,height=720,left=40,top=40');   // big enough for Chrome's list of tabs; it gets small after sharing starts
   if(!h){toast('Chrome blocked the small sharing window. Allow pop-ups for Fibwave, or Fibwave shares from this tab (with the bar).');useTab(false);return}
   CAPW=h;const d=h.document;d.open();d.write('<!doctype html><html><head><meta charset="utf-8"><title>Fibwave · sound</title><style>body{margin:0;font:15px/1.5 system-ui,sans-serif;background:#0b0c11;color:#ece6d6;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;text-align:center;padding:0 18px;box-sizing:border-box}button{font:inherit;font-weight:600;background:#f0be5a;color:#111;border:0;border-radius:10px;padding:12px 18px;cursor:pointer;margin:12px 0}p{margin:4px 0;color:#bdb6a6;font-size:13px}</style></head><body><b>Fibwave sound</b><button id="go">Choose the tab with the music</button><p id="msg">Select the YouTube or Spotify tab and keep “Share tab audio” on. Chrome’s sharing bar then shows here, not on the visuals.</p></body></html>');d.close();
   d.getElementById('go').onclick=async()=>{
+    try{if(h.outerHeight<600)h.resizeTo(820,720)}catch(_){}
     let s;try{let ctl=null;try{if(h.CaptureController){ctl=new h.CaptureController();try{ctl.setFocusBehavior('no-focus-change')}catch(_){}}}catch(_){}
       s=await h.navigator.mediaDevices.getDisplayMedia({...(ctl?{controller:ctl}:{}),video:{frameRate:{ideal:1,max:5},width:{ideal:320}},
         audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,suppressLocalAudioPlayback:false},selfBrowserSurface:'exclude',systemAudio:'include',surfaceSwitching:'include'});
@@ -432,6 +433,7 @@ function useTabHelper(){
     stopSource();stream=s;srcNode=actx.createMediaStreamSource(new MediaStream(s.getAudioTracks()));srcNode.connect(analyser);
     s.getAudioTracks()[0].addEventListener('ended',()=>{if(stream===s){stopSource();srcLabel='SHARE STOPPED';toast('Tab sharing stopped. Select Source to start again.')}});
     started('TAB AUDIO');
+    try{h.resizeTo(460,260)}catch(_){}
     d.getElementById('go').textContent='Change the tab';d.getElementById('msg').textContent='Sharing. Keep this small window open: you can move it aside or minimise it. Closing it stops the sound.';
     try{window.focus()}catch(_){}
   };
