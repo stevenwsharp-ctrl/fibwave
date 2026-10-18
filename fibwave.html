@@ -188,6 +188,7 @@ body:not(.locked) #showUi{display:none}
     <label class="chk" for="gtchk" title="Listen to the song and show 3 guitar riffs to practise"><input type="checkbox" id="gtchk"> Guitar riffs</label>
     <label class="ctl" for="focus">Focus <select id="focus"></select></label>
     <label class="chk" for="bgchk"><input type="checkbox" id="bgchk"> Photo backdrop</label>
+    <label class="ctl" for="shapeSel" title="Show the photos as a flat card, a glass sphere, a prism or an aquarium">Photo shape <select id="shapeSel"><option value="card">Card</option><option value="sphere">Glass sphere</option><option value="prism">Prism</option><option value="aquarium">Aquarium</option></select></label>
     <label class="ctl" for="spinSel" title="Turn photos round their vertical axis (Y)">Photo spin <select id="spinSel"><option value="off">Off</option><option value="slow">Slow</option><option value="music" selected>With music</option><option value="hits">On big hits</option></select></label>
     <label class="ctl" for="capSel" title="Photo titles and credits">Captions <select id="capSel"><option value="0">Off</option><option value="3">3 s</option><option value="7" selected>7 s</option><option value="15">15 s</option><option value="always">Always</option></select></label>
   </div>
@@ -218,6 +219,7 @@ body:not(.locked) #showUi{display:none}
     <label class="chk" for="film"><input type="checkbox" id="film" checked> Film</label>
     <label class="chk" for="gentle" title="Softer flashes on big hits, for people sensitive to flashing light"><input type="checkbox" id="gentle"> Gentle flashes</label>
     <label class="chk" for="dynchk" title="Dim the picture in quiet parts; loud parts and new notes bring the light back"><input type="checkbox" id="dynchk" checked> Dim when quiet</label>
+    <label class="ctl" for="motionSel" title="How smoothly the visuals follow the music">Motion <select id="motionSel"><option value="smooth">Smooth</option><option value="balanced" selected>Balanced</option><option value="punchy">Punchy</option></select></label>
     <label class="ctl" for="eqPos" title="Show equalizer bars on top of every scene">EQ overlay <select id="eqPos"><option value="off">Off</option><option value="bottom">Bottom</option><option value="center">Bottom, from the centre</option><option value="top">Top</option><option value="ring">Ring</option><option value="sides">Sides</option></select></label>
     <label class="ctl" for="eqAlpha" title="How strong the EQ overlay is. Low = mostly see-through">EQ strength <select id="eqAlpha"><option value="0.15">15%</option><option value="0.3" selected>30%</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="1">100%</option></select></label>
     <label class="chk" for="keycol"><input type="checkbox" id="keycol" checked> Key colours</label>
@@ -771,7 +773,7 @@ function onDrop(now){
 }
 
 /* ---------- scenes ---------- */
-const st={sunRot:0,gz:0,grot:0,arms:1,krot:0,kdir:1,sym:8,srot:0,sarms:3,tz:0,t:0,dt:0.016};
+const st={kdirS:1,sunRot:0,gz:0,grot:0,arms:1,krot:0,kdir:1,sym:8,srot:0,sarms:3,tz:0,t:0,dt:0.016};
 function sunflower(c,a){
   const N=1300,cx=W/2,cy=H/2,R=Math.min(W,H)*0.47*(1+a.bass*0.1+a.pulse*0.05),k=R/Math.sqrt(N);
   st.sunRot+=0.002+a.mid*0.012;
@@ -808,7 +810,7 @@ function golden(c,a){
 }
 function kaleido(c,a){
   const n=st.sym,cx=W/2,cy=H/2,R=Math.min(W,H)*0.5,B=56;
-  st.krot+=(0.0015+a.treb*0.01)*st.kdir;
+  st.krot+=(0.0015+a.treb*0.01)*st.kdirS;
   for(let layer=0;layer<2;layer++){
     const scl=layer?0.55:1,off=layer?Math.PI/n:0;
     for(let s=0;s<n;s++)for(let m=0;m<2;m++){
@@ -1038,6 +1040,9 @@ void main(){
   vec2 dd=q-.5;
   float ca=(uFilm*(.0025+uPulse*.004)+uSnare*.006+uDrop*.02+uImp*.018+uHarsh*uTim*.012)*dot(dd,dd)*4.;
   vec3 c=vec3(texture(uT,q+dd*ca).r,texture(uT,q).g,texture(uT,q-dd*ca).b);
+  {vec2 tx=1./vec2(textureSize(uT,0));vec3 a1=texture(uT,q+tx*vec2(-1.,-1.)).rgb,a2=texture(uT,q+tx*vec2(1.,-1.)).rgb,a3=texture(uT,q+tx*vec2(-1.,1.)).rgb,a4=texture(uT,q+tx*vec2(1.,1.)).rgb;
+   vec3 lw=vec3(.299,.587,.114);float l1=dot(a1,lw),l2=dot(a2,lw),l3=dot(a3,lw),l4=dot(a4,lw),lc=dot(c,lw);float mx=max(max(max(l1,l2),max(l3,l4)),lc),mn=min(min(min(l1,l2),min(l3,l4)),lc);
+   float edge=(mx-mn)/(mx+.08);c=mix(c,(a1+a2+a3+a4+c*2.)/6.,smoothstep(.25,.75,edge)*.6);}     // soften jagged edges, keep soft textures
   c+=texture(uBloom,q).rgb*uGlow*(1.+uDrop*1.5+uImp);
   if(uTrans<1.){                                                // animated scene change
     float t=uTrans,m;vec2 hq=uv;
@@ -1054,6 +1059,7 @@ void main(){
   c*=uDyn;                                                       // quiet music: dimmer light
   c+=vec3(1.)*ring*.4*uFlash;
   c=shoulder(max(c,0.));
+  {float Lm=dot(c,vec3(.299,.587,.114));c=mix(c,c*.8+.03,smoothstep(.7,1.05,Lm)*.7);c+=vec3(.010,.012,.018)*(1.-smoothstep(0.,.09,Lm));}   // balance: calm the brightest parts, open the deepest shadows a little
   c*=mix(vec3(1.),mix(vec3(.9,.97,1.1),vec3(1.1,1.,.86),uWarm),uTim);              // warm sound: golden light; cool sound: blue light
   c*=mix(1.,.8+.4*uBrt,uTim);c=mix(c,c*c*(3.-2.*clamp(c,0.,1.)),uHarsh*.45*uTim);   // dark sound: deeper; harsh sound: harder contrast
   float vg=smoothstep(1.25,.3,length((uv-.5)*vec2(asp,1.)));c*=mix(.42-.16*(1.-uBrt)*uTim,1.,vg);
@@ -1177,7 +1183,7 @@ function glPost(tex,threshold){
   gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,B[0].t);gl.uniform1i(u.uBloom,1);gl.activeTexture(gl.TEXTURE0);
   gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,G.hold.t);gl.uniform1i(u.uHold,2);gl.activeTexture(gl.TEXTURE0);
   const fx=S.hitfx;
-  gl.uniform2f(u.uOut,W,H);gl.uniform1f(u.uSnare,SCENES[S.scene].calm?0:RA.snare);gl.uniform1f(u.uDrop,SCENES[S.scene].calm?0:RA.drop);gl.uniform1f(u.uGlow,S.glow*0.32*(S.timbre&&live?0.8+0.45*TB.bright:1));gl.uniform1f(u.uPulse,SCENES[S.scene].calm?0:RA.pulse);gl.uniform1f(u.uTime,st.t);gl.uniform1f(u.uFilm,S.film?(SCENES[S.scene].calm?0.3:1):0);
+  gl.uniform2f(u.uOut,W,H);gl.uniform1f(u.uSnare,SCENES[S.scene].calm?0:RA.snare);gl.uniform1f(u.uDrop,SCENES[S.scene].calm?0:RA.drop);gl.uniform1f(u.uGlow,S.glow*0.28*(S.timbre&&live?0.8+0.45*TB.bright:1));gl.uniform1f(u.uPulse,SCENES[S.scene].calm?0:RA.pulse);gl.uniform1f(u.uTime,st.t);gl.uniform1f(u.uFilm,S.film?(SCENES[S.scene].calm?0.3:1):0);
   gl.uniform1f(u.uImp,fx?Math.min(1.5,A.impact*S.react*0.7):0);gl.uniform1f(u.uShock,fx?FX.shock:1);gl.uniform1f(u.uFold,fx&&FX.foldT>0?FX.fold:0);
   gl.uniform2f(u.uShake,fx?FX.shake[0]:0,fx?FX.shake[1]:0);gl.uniform1f(u.uTrans,FX.trans);gl.uniform1f(u.uTType,FX.ttype);gl.uniform1f(u.uFlash,S.gentle?0.3:1);gl.uniform1f(u.uDyn,dynStep());{const tm=S.timbre&&live&&!SCENES[S.scene].calm?1:0;gl.uniform1f(u.uTim,tm);gl.uniform1f(u.uWarm,TB.warm);gl.uniform1f(u.uBrt,TB.bright);gl.uniform1f(u.uHarsh,TB.harsh)}
   drawFSQ();
@@ -1195,7 +1201,7 @@ const GLSCENES=[
   {name:'Particle Galaxy',kind:'gl',points:240000,rs0:1,rsMax:1,th:0.9,
    step(a){this.a=(this.a||0)+st.dt*(0.05+a.mid*0.3+a.bass*0.2);this.b=st.t*0.035}},
   {name:'Golden Tunnel',kind:'gl',fs:FS_TUNNEL,rs0:0.8,rsMax:1,th:0.75,
-   step(a){this.b=(this.b||0)+st.dt*(0.5+a.bass*3.2+a.pulse*1.6+a.kick*1.5+a.build*2+a.drop*4);this.a=(this.a||0)+st.dt*(0.01+a.mid*0.04)*st.kdir;this.c=Math.sin(st.t*0.02)*0.2}}
+   step(a){this.b=(this.b||0)+st.dt*(0.5+a.bass*3.2+a.pulse*1.6+a.kick*1.5+a.build*2+a.drop*4);this.a=(this.a||0)+st.dt*(0.01+a.mid*0.04)*st.kdirS;this.c=Math.sin(st.t*0.02)*0.2}}
 ];
 
 
@@ -1560,7 +1566,7 @@ const QUANTUM_SCENES=[
   {name:'Quantum Interference',kind:'gl',fs:FS_INTERF,rs0:0.75,rsMax:1,th:0.8,dwell:1.4,
    step(a){
      const kT=A.tonal>0.35?9+A.note*1.1:12+A.cent*12;this.k=(this.k||kT)+(kT-(this.k||kT))*Math.min(1,st.dt*2);
-     this.a=(this.a||0)+st.dt*(3+a.bass*9+a.kick*6);this.b=(this.b||0)+st.dt*(0.05+a.mid*0.2)*st.kdir;this.c=this.k;
+     this.a=(this.a||0)+st.dt*(3+a.bass*9+a.kick*6);this.b=(this.b||0)+st.dt*(0.05+a.mid*0.2)*st.kdirS;this.c=this.k;
      this.d=[3,5,8,13][Math.floor(A.beats/16)%4];
      if(S.names)label(18*DPR,26*DPR,this.d+' wave sources · wavelength follows the note '+NOTE[A.note]+' · bright bands = waves in phase','info');
    }}
@@ -1611,7 +1617,8 @@ const phSlot=c=>PH.store[c]||(PH.store[c]={pool:[],idx:-1,ready:false,loading:fa
 const SEEN=(()=>{try{return new Set(JSON.parse(localStorage.getItem('fibwave.seen')||'[]'))}catch(e){return new Set()}})();
 function markSeen(id){SEEN.delete(id);SEEN.add(id);if(SEEN.size>900)SEEN.delete(SEEN.values().next().value);try{localStorage.setItem('fibwave.seen',JSON.stringify([...SEEN]))}catch(e){}}
 const FS_PHOTO=GLSL_HEAD+`
-uniform sampler2D uP0,uP1;uniform vec2 uS0,uS1;uniform float uMixP,uK0,uK1,uMode,uSeed0,uSeed1,uSpin,uSpinK;uniform vec3 uTS,uTH;
+uniform sampler2D uP0,uP1;uniform vec2 uS0,uS1;uniform float uMixP,uK0,uK1,uMode,uSeed0,uSeed1,uSpin,uSpinK,uShape;uniform vec3 uTS,uTH;
+vec3 hsvP(vec3 c){vec3 p=abs(fract(c.xxx+vec3(1.,2./3.,1./3.))*6.-3.);return c.z*mix(vec3(1.),clamp(p-1.,0.,1.),c.y);}
 vec2 cover(vec2 uv,vec2 img,float ken,float seed){
   float sa=uRes.x/uRes.y,ia=img.x/max(img.y,1.);vec2 s=sa>ia?vec2(1.,ia/sa):vec2(sa/ia,1.);
   float z=1.06+ken*.12;vec2 drift=vec2(sin(seed*17.),cos(seed*11.))*(.04+ken*.05);
@@ -1655,6 +1662,37 @@ vec3 photoCol(vec2 uv){
 }
 void main(){
   vec2 uv0=gl_FragCoord.xy/uRes;
+  if(uShape>.5){float asp=uRes.x/uRes.y,th=uSpin+uTime*.12;vec2 s=(uv0-.5)*vec2(asp,1.);vec3 bg=textureLod(uP1,clamp(uv0,0.,1.),6.).rgb*.22;
+    if(uShape<1.5){                                        // a glass sphere with the photo wrapped round it
+      float R=.42,r=length(s);if(r>R){o=vec4(bg+vec3(.55,.7,1.)*exp(-(r-R)*16.)*.3,1.);return;}
+      float z=sqrt(R*R-r*r);vec3 n=vec3(s,z)/R;float lon=atan(n.x,n.z)+th,lat=asin(clamp(n.y,-1.,1.));
+      vec3 c=photoCol(vec2(fract(lon/TAU+.5),lat/3.14159+.5)),L=normalize(vec3(-.45,.55,.7));
+      float fr=pow(1.-n.z,3.);c=mix(c,textureLod(uP1,clamp(.5+(uv0-.5)*.6,0.,1.),3.).rgb*.5+vec3(.45,.55,.8)*.3,fr*.7);
+      c*=.7+.4*max(dot(n,L),0.);c+=vec3(1.)*pow(max(dot(reflect(-L,n),vec3(0.,0.,1.)),0.),70.)*.9;o=vec4(c,1.);return;}
+    vec3 E=vec3(0.,0.,-3.2),D=normalize(vec3(s,3.2));
+    if(uShape<2.5){                                        // a triangular glass prism with the photo on its faces
+      float ap=.27,hh=.43,tn=-1e9,tf=1e9;int fi=-1;
+      for(int k=0;k<3;k++){float a=th+float(k)*TAU/3.;vec3 nk=vec3(sin(a),0.,-cos(a));float dn=dot(D,nk),tt=(ap-dot(E,nk))/dn;if(dn<0.){if(tt>tn){tn=tt;fi=k;}}else tf=min(tf,tt);}
+      {float t1=(-hh-E.y)/D.y,t2=(hh-E.y)/D.y;if(min(t1,t2)>tn){tn=min(t1,t2);fi=3;}tf=min(tf,max(t1,t2));}
+      if(tn>tf||tn<0.){float fan=smoothstep(.1,0.,abs(s.y+.05-s.x*.3));o=vec4(bg+hsvP(vec3(fract(s.x*.5+.5),.75,.6))*fan*.4*step(.25,abs(s.x)),1.);return;}
+      vec3 P=E+D*tn,c;
+      if(fi==3)c=photoCol(P.xz*1.1+.5)*.55;
+      else{float a=th+float(fi)*TAU/3.;vec3 nk=vec3(sin(a),0.,-cos(a)),tg=vec3(cos(a),0.,sin(a));float u=dot(P,tg)/(ap*3.4641)+.5;c=photoCol(vec2(u,P.y/(2.*hh)+.5));
+        float ed=min(u,1.-u);c+=hsvP(vec3(fract(ed*5.+th*.1),.8,1.))*smoothstep(.14,0.,ed)*.45;float fc=max(dot(nk,-D),0.);c*=.55+.45*fc;c+=vec3(1.)*pow(fc,40.)*.25;}
+      o=vec4(c,1.);return;}
+    {                                                      // an aquarium: the photo seen through moving water, light ripples and bubbles
+      float tw=.38*sin(uTime*.15+uSpin*.2),f=3.2,sc=.8;vec3 dir=vec3(s,f),n=vec3(sin(tw),0.,cos(tw));float den=dot(dir,n),t=f*cos(tw)/den;
+      vec3 P=vec3(0.,0.,-f)+dir*t,ax=vec3(cos(tw),0.,-sin(tw));vec2 cuv=vec2(dot(P,ax)/sc/asp+.5,P.y/sc+.5);
+      if(cuv.x<0.||cuv.x>1.||cuv.y<0.||cuv.y>1.){o=vec4(bg,1.);return;}
+      float wl=.86+.012*sin(cuv.x*12.+uTime*2.);vec2 w=cuv;
+      if(cuv.y<wl)w+=vec2(sin(cuv.y*22.+uTime*2.1),cos(cuv.x*19.+uTime*1.7))*.006*(1.+uBass);
+      vec3 c=photoCol(w);
+      if(cuv.y<wl){c*=vec3(.72,.95,1.08);float ca=noise(cuv*7.+uTime*.35)+noise(cuv*9.3-uTime*.27);c+=vec3(.55,.9,1.)*pow(max(0.,1.-abs(ca-1.)*1.6),10.)*.45;
+        for(int k=0;k<14;k++){float fk=float(k),bx=hash(vec2(fk,1.)),by=fract(uTime*(.05+.07*hash(vec2(fk,2.)))+hash(vec2(fk,3.))),br=.008+.012*hash(vec2(fk,4.));
+          vec2 bp=vec2(bx+.01*sin(uTime*2.+fk),by*wl);float dd=length((cuv-bp)*vec2(asp,1.));c+=vec3(.8,.95,1.)*smoothstep(.003,0.,abs(dd-br))*.7;}}
+      else c*=.55;
+      c+=vec3(.85,.95,1.)*smoothstep(.006,0.,abs(cuv.y-wl))*.5;float e=min(min(cuv.x,1.-cuv.x)*asp,min(cuv.y,1.-cuv.y));c+=vec3(.8,.9,1.)*smoothstep(.012,0.,e)*.5;
+      o=vec4(c,1.);return;}}
   if(uSpinK<.002){o=vec4(photoCol(uv0),1.);return;}
   // the photo as a card that turns round its vertical (longitudinal) axis, seen in perspective
   float asp=uRes.x/uRes.y,f=3.2,th=uSpin,sc=1.-.28*uSpinK;
@@ -1867,7 +1905,7 @@ function photoRender(){
     gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,PH.tex[c0.slot]);gl.uniform1i(u.uP0,3);
     gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,PH.tex[c1.slot]);gl.uniform1i(u.uP1,4);gl.activeTexture(gl.TEXTURE0);
     gl.uniform2f(u.uS0,c0.w,c0.h);gl.uniform2f(u.uS1,c1.w,c1.h);gl.uniform1f(u.uMixP,PH.mix);
-    gl.uniform1f(u.uK0,age(c0));gl.uniform1f(u.uK1,age(c1));gl.uniform1f(u.uSeed0,c0.seed);gl.uniform1f(u.uSeed1,c1.seed);gl.uniform1f(u.uMode,PH.mode);gl.uniform1f(u.uSpin,PH.spin);gl.uniform1f(u.uSpinK,PH.spinK);
+    gl.uniform1f(u.uK0,age(c0));gl.uniform1f(u.uK1,age(c1));gl.uniform1f(u.uSeed0,c0.seed);gl.uniform1f(u.uSeed1,c1.seed);gl.uniform1f(u.uMode,PH.mode);gl.uniform1f(u.uSpin,PH.spin);if(u.uShape)gl.uniform1f(u.uShape,{card:0,sphere:1,prism:2,aquarium:3}[S.pshape||'card']);gl.uniform1f(u.uSpinK,PH.spinK);
     const ts=hslRGB(palColor(0.15)),th=hslRGB(palColor(0.75));gl.uniform3f(u.uTS,ts[0],ts[1],ts[2]);gl.uniform3f(u.uTH,th[0],th[1],th[2]);
     drawFSQ();glPost(G.scene.t,0.82);
   }else{
@@ -1964,7 +2002,7 @@ const BANDV=a=>[a.sub,a.low,a.lowmid,a.mids,a.himid,a.pres,a.brill];
 const FOL={phase:1,prog:0};
 function flowerOfLife(c,a){
   const cx=W/2,cy=H/2,R=Math.min(W,H)*0.44;FOL.prog=Math.min(1,FOL.prog+st.dt*0.3);
-  const rot=st.t*0.025*st.kdir,cr=Math.cos(rot),sr=Math.sin(rot),P=(x,y)=>[cx+x*cr-y*sr,cy+x*sr+y*cr];
+  const rot=st.t*0.025*st.kdirS,cr=Math.cos(rot),sr=Math.sin(rot),P=(x,y)=>[cx+x*cr-y*sr,cy+x*sr+y*cr];
   c.strokeStyle=col(0.1,60,0.3+a.vol*0.2);c.lineWidth=DPR*(1.5+a.kick);ring(c,cx,cy,R*1.03);ring(c,cx,cy,R*1.06);
   const ph=FOL.phase;
   if(ph<2){
@@ -2046,7 +2084,7 @@ const TRIGRAMS=[['Qian ☰ heaven',[1,1,1]],['Xun ☴ wind',[0,1,1]],['Kan ☵ w
 const yy={rot:0};
 function yinyang(c,a){
   const cx=W/2,cy=H/2,R=Math.min(W,H)*0.22*(1+a.bass*0.04);
-  yy.rot+=st.dt*(0.15+a.bass*0.6+a.kick*0.5)*st.kdir;
+  yy.rot+=st.dt*(0.15+a.bass*0.6+a.kick*0.5)*st.kdirS;
   const ro=yy.rot,pt=(r,an)=>[cx+Math.cos(an+ro)*r,cy+Math.sin(an+ro)*r];
   // taiji: light and dark halves drawn as glow fills
   const light=col(0.15,80,0.55+a.mid*0.3),dark=col(0.65,30,0.35);
@@ -2593,10 +2631,10 @@ const SCI_SCENES=[
    }},
   {name:'Julia Set',kind:'gl',fs:FS_JULIA,rs0:0.7,rsMax:1,th:0.8,dwell:1.5,
    step(a){this.th=(this.th||0)+st.dt*(0.04+a.mid*0.12+a.kick*0.08);const r=0.7885+Math.sin(st.t*0.11)*0.01+a.bass*0.012;
-     this.a=r*Math.cos(this.th);this.b=r*Math.sin(this.th);const z=1.45-a.kick*0.08-a.drop*0.25;this.c=(this.c||z)+(z-(this.c||z))*Math.min(1,st.dt*6);this.d=st.t*0.02*st.kdir;
+     this.a=r*Math.cos(this.th);this.b=r*Math.sin(this.th);const z=1.45-a.kick*0.08-a.drop*0.25;this.c=(this.c||z)+(z-(this.c||z))*Math.min(1,st.dt*6);this.d=st.t*0.02*st.kdirS;
      if(S.names)label(18*DPR,26*DPR,'Julia set · z → z² + c with c = '+this.a.toFixed(3)+(this.b>=0?' + ':' − ')+Math.abs(this.b).toFixed(3)+'i','info')}},
   {name:'Quasicrystal',kind:'gl',fs:FS_QUASI,rs0:0.8,rsMax:1,th:0.8,dwell:1.2,
-   step(a){this.a=(this.a||0)+st.dt*(1+a.bass*3+a.kick*2);this.b=(this.b||0)+st.dt*0.02*st.kdir;this.c=0;this.d=[5,7,8,12][Math.floor(A.beats/16)%4];
+   step(a){this.a=(this.a||0)+st.dt*(1+a.bass*3+a.kick*2);this.b=(this.b||0)+st.dt*0.02*st.kdirS;this.c=0;this.d=[5,7,8,12][Math.floor(A.beats/16)%4];
      if(S.names)label(18*DPR,26*DPR,this.d+' plane waves add up to an order that never repeats (like Penrose tiles and real quasicrystals)','info')}}
 ];
 GLSCENES.push(...SCI_SCENES);
@@ -2728,7 +2766,7 @@ const FRACTAL_SCENES=[
      if(this.z>=deep){this.z=deep;this.dir=-1}
      if(this.z<=0&&this.dir<0){this.z=0;this.dir=1;this.k=(this.k+1)%MB_SPOTS.length}
      const sp=MB_SPOTS[this.k],sc=3*Math.exp(-this.z),f=clamp(this.z/2.2,0,1);
-     this.a=-0.6+(sp[1]+0.6)*f;this.b=sp[2]*f;this.c=sc/(1+a.kick*0.02);this.d=st.t*0.02*st.kdir;
+     this.a=-0.6+(sp[1]+0.6)*f;this.b=sp[2]*f;this.c=sc/(1+a.kick*0.02);this.d=st.t*0.02*st.kdirS;
      this.e=Math.round(110+this.z*30);this.f=(this.f||0)+st.dt*(0.01+a.mid*0.05);
      if(S.names)label(18*DPR,26*DPR,'Mandelbrot set · z → z² + c · zooming into '+sp[0]+' · magnification '+Math.round(3/sc).toLocaleString()+'×','info')}},
   {name:'Burning Ship',kind:'gl',fs:FS_SHIP,rs0:0.7,rsMax:1,th:0.8,dwell:1.6,
@@ -2736,13 +2774,13 @@ const FRACTAL_SCENES=[
      this.a=-0.45+(-1.762+0.45)*t;this.b=-0.5+(-0.028+0.5)*t;this.c=zz*(1-a.kick*0.03);this.d=(this.d||0)+st.dt*0.01;
      if(S.names)label(18*DPR,26*DPR,'Burning Ship fractal · z → (|x| + i|y|)² + c · the "ship" sails at c ≈ −1.76 − 0.03i','info')}},
   {name:'Newton Fractal',kind:'gl',fs:FS_NEWTON,rs0:0.75,rsMax:1,th:0.8,dwell:1.6,
-   step(a){this.a=1+0.35*Math.sin(st.t*0.11)+a.bass*0.25+a.drop*0.3;this.b=[3,4,5,6,3,5][Math.floor(A.beats/32)%6];this.c=2.4-a.kick*0.08;this.d=(this.d||0)+st.dt*(0.02+a.mid*0.05)*st.kdir;
+   step(a){this.a=1+0.35*Math.sin(st.t*0.11)+a.bass*0.25+a.drop*0.3;this.b=[3,4,5,6,3,5][Math.floor(A.beats/32)%6];this.c=2.4-a.kick*0.08;this.d=(this.d||0)+st.dt*(0.02+a.mid*0.05)*st.kdirS;
      if(S.names)label(18*DPR,26*DPR,'Newton fractal · Newton’s method finds the '+this.b+' roots of z^'+this.b+' = 1; each colour is the root a starting point flows to (step size '+this.a.toFixed(2)+')','info')}},
   {name:'Phoenix Fractal',kind:'gl',fs:FS_PHOENIX,rs0:0.75,rsMax:1,th:0.8,dwell:1.5,
    step(a){this.a=0.5667+0.02*Math.sin(st.t*0.13)+a.bass*0.01;this.b=-0.5+0.06*Math.sin(st.t*0.09)+a.mid*0.03;this.c=1.55-a.kick*0.05;this.d=(this.d||0)+st.dt*0.01;
      if(S.names)label(18*DPR,26*DPR,'Phoenix fractal · zₙ₊₁ = zₙ² + c + p·zₙ₋₁ (each step remembers the one before) · c = '+this.a.toFixed(4)+', p = '+this.b.toFixed(3),'info')}},
   {name:'Apollonian Gasket',kind:'gl',fs:FS_APOLLO,rs0:0.8,rsMax:1,th:0.8,dwell:1.5,
-   step(a){this.a=1.15+0.15*Math.sin(st.t*0.05)+a.bass*0.05;this.b=(this.b||0)+st.dt*(0.01+a.mid*0.03);this.c=1.6+0.4*Math.sin(st.t*0.03)-a.kick*0.05;this.d=(this.d||0)+st.dt*0.02*st.kdir;
+   step(a){this.a=1.15+0.15*Math.sin(st.t*0.05)+a.bass*0.05;this.b=(this.b||0)+st.dt*(0.01+a.mid*0.03);this.c=1.6+0.4*Math.sin(st.t*0.03)-a.kick*0.05;this.d=(this.d||0)+st.dt*0.02*st.kdirS;
      if(S.names)label(18*DPR,26*DPR,'Apollonian gasket · circles packed inside circles forever, made by circle inversion (Apollonius of Perga, about 200 BCE)','info')}},
   {name:'Lyapunov Space',kind:'gl',fs:FS_LYAP,rs0:0.6,rsMax:1,th:0.8,dwell:1.5,
    step(a){const q=LY_SEQ[Math.floor(A.beats/32)%LY_SEQ.length];this.d=q[1];this.e=q[2];
@@ -2811,9 +2849,9 @@ document.getElementById(GLOK?'c':'gl').hidden=true;
 const HY={h:null,canvas:null,idx:0,k:0,loading:false,failed:false,c1:[1,.6,.3],c2:[.3,.5,1],w:0,hh:0};
 const hc1=i=>()=>HY.c1[i]*1.35,hc2=i=>()=>HY.c2[i]*1.35;
 const HY_PATCHES=[
- {name:'Liquid Kaleido',f:h=>h.osc(()=>6+RA.bass*24,0.06,()=>0.6+RA.cent*1.6).kaleid(()=>[4,5,6,8,13][HY.k%5]).rotate(()=>st.t*0.08*st.kdir,()=>0.03+RA.mid*0.12)
+ {name:'Liquid Kaleido',f:h=>h.osc(()=>6+RA.bass*24,0.06,()=>0.6+RA.cent*1.6).kaleid(()=>[4,5,6,8,13][HY.k%5]).rotate(()=>st.t*0.08*st.kdirS,()=>0.03+RA.mid*0.12)
    .modulate(h.noise(()=>2+RA.treb*5,0.2),()=>0.1+RA.kick*0.35).color(hc1(0),hc1(1),hc1(2)).add(h.src(h.o0).scale(1.01).color(.88,.88,.92),()=>0.35+RA.energy*0.3).out(h.o0)},
- {name:'Feedback Bloom',f:h=>h.src(h.o0).scale(()=>1.008+RA.bass*0.03).rotate(()=>0.006*st.kdir+RA.mid*0.01).color(.965,.965,.975)
+ {name:'Feedback Bloom',f:h=>h.src(h.o0).scale(()=>1.008+RA.bass*0.03).rotate(()=>0.006*st.kdirS+RA.mid*0.01).color(.965,.965,.975)
    .add(h.shape(()=>[3,5,8,13][HY.k%4],()=>0.1+RA.kick*0.35,0.04).color(hc1(0),hc1(1),hc1(2)).rotate(()=>st.t*0.3),()=>0.5+RA.snare*0.8).out(h.o0)},
  {name:'Op-Art Voronoi',f:h=>h.voronoi(()=>4+RA.mids*18,()=>0.2+RA.bass*1.2,0.3).mult(h.osc(()=>12+RA.snare*30,0.05,()=>RA.cent*3).rotate(()=>st.t*0.05))
    .modulate(h.o0,()=>0.03+RA.kick*0.08).color(hc2(0),hc2(1),hc2(2)).out(h.o0)},
@@ -2821,12 +2859,12 @@ const HY_PATCHES=[
    .add(h.osc(()=>40+RA.hat*80,-0.03,0).rotate(1.047).mult(h.shape(64,0.4,0.3)),0.6).color(hc1(0),hc1(1),hc1(2)).out(h.o0)},
  {name:'Plasma Pixels',f:h=>h.noise(()=>2+RA.bass*6,()=>0.1+RA.energy*0.3).color(hc1(0),hc1(1),hc1(2)).add(h.osc(()=>8+RA.mid*20,0.1,1.5).color(hc2(0),hc2(1),hc2(2)),0.5)
    .pixelate(()=>48+(1-RA.hat)*220,()=>27+(1-RA.hat)*130).modulate(h.noise(3),()=>0.04+RA.kick*0.2).out(h.o0)},
- {name:'Chromatic Tunnel',f:h=>h.src(h.o0).scale(()=>0.97-RA.bass*0.03).rotate(()=>0.01*st.kdir).color(.97,.95,.99)
+ {name:'Chromatic Tunnel',f:h=>h.src(h.o0).scale(()=>0.97-RA.bass*0.03).rotate(()=>0.01*st.kdirS).color(.97,.95,.99)
    .add(h.osc(()=>20+RA.mid*40,0.1,()=>1+RA.cent*2).mult(h.shape(4,()=>0.18+RA.kick*0.4,0.01)).color(hc1(0),hc1(1),hc1(2)),0.8).out(h.o0)},
  {name:'Neon Waves',f:h=>h.osc(()=>4+RA.bass*12,0.1,0.8).modulate(h.osc(()=>2+RA.mid*6,-0.05).rotate(1.57),()=>0.3+RA.kick*0.8)
    .mult(h.osc(()=>30+RA.hat*60,0.02).thresh(0.6,0.05)).color(hc2(0),hc2(1),hc2(2)).add(h.src(h.o0).scale(1.01).color(.9,.9,.95),0.5).out(h.o0)},
  {name:'Sacred Geometry',f:h=>h.shape(()=>[3,5,6,8][HY.k%4],()=>0.3+RA.kick*0.25,0.005).repeat(()=>2+Math.floor(RA.mid*4),()=>2+Math.floor(RA.mid*4)).kaleid(()=>[6,8,12][HY.k%3])
-   .rotate(()=>st.t*0.1*st.kdir).color(hc1(0),hc1(1),hc1(2)).add(h.src(h.o0).scale(1.02).rotate(-0.01).color(.92,.92,.96),0.7).out(h.o0)},
+   .rotate(()=>st.t*0.1*st.kdirS).color(hc1(0),hc1(1),hc1(2)).add(h.src(h.o0).scale(1.02).rotate(-0.01).color(.92,.92,.96),0.7).out(h.o0)},
  {name:'Golden Weave',f:h=>h.osc(()=>13+RA.lowmid*20,0.03,()=>RA.cent*2).rotate(0.618).mult(h.osc(()=>8+RA.himid*16,-0.02,1).rotate(-0.618)).modulateScale(h.osc(()=>2+RA.bass*4,0.05),()=>0.4+RA.kick*0.6)
    .color(hc1(0),hc1(1),hc1(2)).add(h.src(h.o0).scale(0.99).color(.9,.88,.93),0.45).out(h.o0)}
 ];
@@ -2890,7 +2928,7 @@ function randomizeLook(){
   S.glow=+(0.35+Math.random()*0.85).toFixed(2);document.getElementById('glow').value=S.glow;
   S.trail=+(0.55+Math.random()*0.38).toFixed(2);document.getElementById('trail').value=S.trail;
   S.film=Math.random()<0.85;document.getElementById('film').checked=S.film;
-  st.kdir=Math.random()<0.5?-1:1;
+  st.kdirS=Math.random()<0.5?-1:1;
 }
 function goRandom(withLook){
   const i=pickRandomScene();setScene(i);
@@ -3498,7 +3536,7 @@ for(let i=0;i<1500;i++){const s={};sfSpawn(s,false);SF.push(s)}
 const sfv={roll:0,sp:0.15};
 function starfield(c,a){
   const target=0.12+a.bass*1.1+a.pulse*0.7;sfv.sp+=(target-sfv.sp)*Math.min(1,st.dt*4);
-  sfv.roll+=st.dt*(0.02+a.mid*0.08)*st.kdir;
+  sfv.roll+=st.dt*(0.02+a.mid*0.08)*st.kdirS;
   const cx=W/2+Math.sin(st.t*0.13)*W*0.05*(0.3+a.mid),cy=H/2+Math.cos(st.t*0.11)*H*0.05*(0.3+a.mid),F=Math.max(W,H)*0.45;
   const cr=Math.cos(sfv.roll),sr=Math.sin(sfv.roll),dz=sfv.sp*st.dt;
   for(const s of SF){
@@ -3761,7 +3799,7 @@ function songMandala(c,a){
   g.globalCompositeOperation='source-over';
   SM.ang+=dA/2;if(SM.ang>wedge/2)SM.ang-=wedge/2;          // the sweep runs over half a wedge; the mirror makes the other half
   // show it, slowly turning
-  const S0=Math.min(W,H)/R;c.save();c.translate(W/2,H/2);c.rotate(st.t*0.02*st.kdir);c.scale(S0*(1+a.kick*0.015),S0*(1+a.kick*0.015));
+  const S0=Math.min(W,H)/R;c.save();c.translate(W/2,H/2);c.rotate(st.t*0.02*st.kdirS);c.scale(S0*(1+a.kick*0.015),S0*(1+a.kick*0.015));
   c.drawImage(SM.buf,-cx,-cx);c.restore();
   // centre: the shape of the sound wave itself (delay plot: a pure tone draws a circle, a chirp a spiral)
   if(fineAn&&actx){
@@ -4140,7 +4178,7 @@ function gizaStep(sc,a){
 const MOB={ph:0,ph2:0,k:3.5,k2:1.5,yaw:0,N:200};
 function mobiusWave(c,a){
   const ks=[2.5,3.5,4.5,5.5];MOB.k=ks[Math.floor(A.beats/32)%4];
-  const tempo=S.timbre&&live?TB.tempo:1;MOB.ph+=st.dt*(1.6+a.bass*2.2)*tempo;MOB.ph2-=st.dt*(0.9+a.mid*1.5);MOB.yaw+=st.dt*(0.06+a.mid*0.05)*st.kdir;
+  const tempo=S.timbre&&live?TB.tempo:1;MOB.ph+=st.dt*(1.6+a.bass*2.2)*tempo;MOB.ph2-=st.dt*(0.9+a.mid*1.5);MOB.yaw+=st.dt*(0.06+a.mid*0.05)*st.kdirS;
   const amp=0.16+a.bass*0.22+a.kick*0.08+a.drop*0.2,amp2=0.05+a.mid*0.12,Rm=1,wid=0.32,N=MOB.N,du=TAU/N;
   const cy=Math.cos(MOB.yaw),sy=Math.sin(MOB.yaw),tp=0.55+0.12*Math.sin(st.t*0.05),cp=Math.cos(tp),sp=Math.sin(tp),F=Math.min(W,H)*1.15,cam=3.2;
   const P=(u,v,d)=>{const cu=Math.cos(u),su=Math.sin(u),c2=Math.cos(u/2),s2=Math.sin(u/2);
@@ -4215,6 +4253,7 @@ function spinStep(a){
   const bpm=A.bpm>0?A.bpm:110,tgt=(0.9+2.6*a.bass+0.8*a.mid+1.5*a.kick)*(bpm/120)*(S.timbre&&live?TB.tempo:1);
   SPB.w+=(tgt-SPB.w)*Math.min(1,st.dtReal*2.2);
   if(A.beats!==SPB.beat){SPB.beat=A.beats;if(A.beats%32===0&&A.beats>0)SPB.dir*=-1}   // spin direction turns over every 32 beats
+  SPB.dirS=(SPB.dirS===undefined?SPB.dir:SPB.dirS)+(SPB.dir-(SPB.dirS===undefined?SPB.dir:SPB.dirS))*Math.min(1,st.dtReal*0.8);   // ...slowly: it slows, stops, then turns the other way
 }
 // a ball with turning meridians; pitch tips the spin axis toward the viewer; flat squashes the poles
 function spinBall(c,cx,cy,R,ang,pitch,roll,flat,hueT,glow){
@@ -4252,7 +4291,7 @@ function spFlowScene(c,a,water){
   if(SPB.mode!==water){SPB.mode=water;SPB.parts=[];SPB.vort=[];SPB.bub=[]}
   spinStep(a);const dt=Math.min(0.1,st.dt);
   const k=Math.min(W,H)*(water?0.15:0.14),cx=W*0.36,cy=H*0.5,X0=-cx/k,X1=(W-cx)/k,Y1=(H/2)/k;
-  const U=(water?1.2:1.6)*(0.8+0.5*a.mid),spin=SPB.w*SPB.dir;                       // spin>0: anticlockwise on screen
+  const U=(water?1.2:1.6)*(0.8+0.5*a.mid),spin=SPB.w*SPB.dirS;                       // spin>0: anticlockwise on screen
   SPB.ang-=spin*dt;
   const G=Math.max(-3.4*Math.PI*U,Math.min(3.4*Math.PI*U,TAU*spin*0.55));            // surface drags air: Γ ≈ 2πR²ω (part of it)
   const lift=-G*U;                                                                    // Kutta–Joukowski: force ⟂ flow, toward the fast side
@@ -4307,7 +4346,7 @@ function spinSpace(c,a){
   spinStep(a);const dt=Math.min(0.1,st.dt);
   if(!SPB.stars.length)for(let i=0;i<320;i++)SPB.stars.push([spRand(),spRand(),spRand()]);
   for(const s of SPB.stars){const tw=0.4+0.6*Math.abs(Math.sin(st.t*(0.5+s[2]*2)+s[2]*40));c.fillStyle='rgba(235,240,255,'+(0.2+0.6*s[2]*tw).toFixed(3)+')';c.fillRect(s[0]*W,s[1]*H,DPR*(1+s[2]*1.4),DPR*(1+s[2]*1.4))}
-  const R=Math.min(W,H)*0.17,cx=W/2,cy=H*0.52,spin=SPB.w*SPB.dir;SPB.ang+=spin*dt;
+  const R=Math.min(W,H)*0.17,cx=W/2,cy=H*0.52,spin=SPB.w*SPB.dirS;SPB.ang+=spin*dt;
   const flat=1-Math.min(0.16,0.012*spin*spin);                        // faster spin: more bulge at the equator
   const prec=st.t*0.18,tilt=0.32+0.06*Math.sin(st.t*0.9);              // the axis wobbles in a cone round L (free precession)
   const roll=tilt*Math.cos(prec),pitch=0.38+tilt*Math.sin(prec)*0.5;
@@ -4368,7 +4407,7 @@ function spinHoney(c,a){
 
 /* ---- plasma: a spinning magnet in a gas of charged particles ---- */
 function spinPlasma(c,a){
-  spinStep(a);const dt=Math.min(0.1,st.dt),spin=SPB.w*SPB.dir*0.6;SPB.ang+=spin*dt;
+  spinStep(a);const dt=Math.min(0.1,st.dt),spin=SPB.w*SPB.dirS*0.6;SPB.ang+=spin*dt;
   const R=Math.min(W,H)*0.11,cx=W/2,cy=H*0.5,pit=0.35,cp=Math.cos(pit),sp=Math.sin(pit),F=14,al=0.4;   // al: magnet tilted from the spin axis
   const ca=Math.cos(al),sa=Math.sin(al),cs=Math.cos(SPB.ang),ss=Math.sin(SPB.ang);
   const toW=(x,y,z)=>{const x1=x*ca-y*sa,y1=x*sa+y*ca;return [x1*cs+z*ss,y1,-x1*ss+z*cs]};          // magnet frame → world
@@ -4543,7 +4582,7 @@ const ETERNAL_SCENES=[
   step(a){this.a=(this.a||0)+st.dt*(0.3+a.mid*0.4);this.b=(this.b||0)+st.dt*(0.6+a.bass*2+a.kick);this.c=0.08*Math.sin(st.t*0.03);this.e=Math.floor(A.beats/16);
     verseDraw();if(S.names)label(18*DPR,26*DPR,'Mirror Lake EQ · the middle mountains are an equalizer (their height follows the spectrum) · bars of flower-of-life circles, chevrons, fractals and hexagons stand on the shore · the lake mirrors it all','info')}},
  {name:'Eternal Voyage',kind:'gl',fs:FS_ETERNAL,rs0:0.42,rsMax:0.75,th:0.75,dwell:2.6,
-  step(a){this.b=(this.b||0)+st.dt*(0.9+a.bass*2.5+a.kick*1.2+a.build*2+a.drop*4);this.a=(this.a||0)+st.dt*(0.05+a.mid*0.2)*st.kdir;
+  step(a){this.b=(this.b||0)+st.dt*(0.9+a.bass*2.5+a.kick*1.2+a.build*2+a.drop*4);this.a=(this.a||0)+st.dt*(0.05+a.mid*0.2)*st.kdirS;
     this.c=clamp(0.5+0.45*Math.sin(st.t*0.045)+a.drop*0.4,0.05,1);this.d=clamp(0.25+0.55*Math.pow(Math.sin(st.t*0.021),2)+a.build*0.5,0,1.2);this.e=Math.sin(st.t*0.01)*0.3;
     verseDraw();if(S.names)label(18*DPR,26*DPR,'Eternal Voyage · through nebulae, pillars of dust and fractal shells · the rings with 12 marks are the hours of time passing · the clouds ebb from see-through to solid · ahead, a light in the shape of a cross','info')}}];
 
@@ -4723,6 +4762,98 @@ const NATURE2=[
     const eb=Math.floor(A.beats/16)+Math.floor(st.t/18);if(this.eb!==eb){this.eb=eb;this.e=Math.floor(hh(eb*2.1)*4);this.f=Math.floor(hh(eb*3.7)*4)}
     if(S.names)label(18*DPR,26*DPR,'Brilliant Horizons · '+['water','fire','metal','wind'][this.e]+' · '+['clear sky','storm with lightning on the kicks','a rainbow (always opposite the sun)','aurora'][this.f]+' · the mountains are an equalizer','info')}}];
 
+/* ---------- Cloudscape (GPU): fly through real 3D clouds lit by the sun, moved by the wind ---------- */
+const GLSL_N3=`
+float h1(float n){return fract(sin(n)*43758.5453);}
+float n3(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);float n=i.x+i.y*57.+i.z*113.;
+  return mix(mix(mix(h1(n),h1(n+1.),f.x),mix(h1(n+57.),h1(n+58.),f.x),f.y),mix(mix(h1(n+113.),h1(n+114.),f.x),mix(h1(n+170.),h1(n+171.),f.x),f.y),f.z);}
+float fb3(vec3 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=a*n3(p);p=p*2.02+vec3(1.7,9.2,3.1);a*=.5;}return s;}
+vec3 hsv(vec3 c){vec3 p=abs(fract(c.xxx+vec3(1.,2./3.,1./3.))*6.-3.);return c.z*mix(vec3(1.),clamp(p-1.,0.,1.),c.y);}
+`;
+const FS_CLOUDS=GLSL_HEAD+GLSL_N3+`
+uniform float uE;
+float dens(vec3 p){float h=smoothstep(.6,1.4,p.y)*smoothstep(3.3,2.2,p.y);vec3 q=p+vec3(uB*.7,0.,uB*.25);
+  float d=fb3(q*.45)-.47+.1*sin(p.x*.08+uA*.1);return clamp(d*h*3.,0.,1.);}
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*uRes)/uRes.y;
+  vec3 ro=vec3(sin(uA*.03)*4.,3.9+1.1*sin(uA*.05),uA*1.6),rd=normalize(vec3(uv.x,uv.y-.1,1.3));
+  float sh=.12+.3*(.5+.5*sin(uA*.012));vec3 sun=normalize(vec3(.55,sh,.85));
+  float low=1.-smoothstep(.05,.45,sun.y);vec3 sunc=mix(vec3(1.,.95,.85),vec3(1.,.6,.3),low)*(1.2+uKick*.4);
+  vec3 sky=mix(mix(vec3(.55,.68,.85),vec3(.95,.6,.45),low*.8),mix(vec3(.12,.3,.65),vec3(.25,.2,.45),low),clamp(rd.y*2.+.2,0.,1.));
+  float sd=max(dot(rd,sun),0.);sky+=sunc*(pow(sd,700.)*8.+pow(sd,10.)*.3);
+  vec3 acc=vec3(0.);float T=1.,t=.2+hash(gl_FragCoord.xy+fract(uTime))*.4;
+  for(int i=0;i<44;i++){vec3 p=ro+rd*t;float d=dens(p);
+    if(d>.01){float l=dens(p+sun*.5)+dens(p+sun*1.2)+dens(p+sun*2.2);float light=exp(-l*1.6);
+      float silver=pow(sd,6.)*2.5+.4;vec3 c=mix(vec3(.28,.3,.38)*(.6+.4*sun.y),sunc*silver,light)+pal(.6)*.06;
+      if(uE>.5)c+=vec3(.7,.75,1.)*step(.75,uKick)*exp(-length(p.xz-ro.xz-vec2(2.,10.))*.2)*1.5;   // lightning inside the storm clouds
+      float a=d*.55;acc+=T*c*a;T*=1.-a;if(T<.03)break;}
+    t+=.32+t*.03;if(t>34.)break;}
+  vec3 col=acc+T*sky;
+  col+=sunc*pow(sd,4.)*.12*T;                                                      // light shafts glow through the gaps
+  o=vec4(col,1.);
+}`;
+
+/* ---------- Silk Tapestry (GPU): woven silk with a brocade pattern, folding in the wind, with the sheen of real silk ---------- */
+const FS_SILK=GLSL_HEAD+GLSL_N3+`
+uniform float uE;
+float H(vec2 p){float t=uB;return .45*sin(p.x*1.2+sin(p.y*.6+t*.45)*1.6+t*.35)+.28*sin(p.y*1.9-t*.28+sin(p.x*1.1)*1.3)+(.12+.12*uBass)*sin((p.x+p.y)*3.1+t*.85)+.04*sin(p.x*6.5+t*1.3);}
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*uRes)/uRes.y*3.2;
+  float h=H(uv);vec2 e=vec2(.01,0.);vec3 n=normalize(vec3(-(H(uv+e.xy)-h)/e.x,-(H(uv+e.yx)-h)/e.x,1.)*vec3(.6,.6,1.));
+  vec2 q=uv+n.xy*.15;                                    // the pattern follows the folds
+  vec2 g=q*.9+vec2(0.,uA*.02),id=floor(g),f=fract(g)-.5;
+  float r=length(f),an=atan(f.y,f.x),pet=6.+2.*mod(id.x+id.y,2.);
+  float motif=smoothstep(.025,0.,abs(r-.22-.07*cos(an*pet+uA*.1)))+smoothstep(.03,0.,abs(r-.36))*.6+smoothstep(.06,0.,r)*.9;
+  float vine=smoothstep(.02,0.,abs(f.y-.12*sin(f.x*TAU+id.y)))*step(.38,r)*.7;
+  float border=smoothstep(.015,0.,abs(abs(f.x)-.47))+smoothstep(.015,0.,abs(abs(f.y)-.47));
+  float weave=.5+.5*sin(q.x*260.)*sin(q.y*260.);
+  vec3 base=pal(.62+uE)*.35,gold=pal(.1+uE)*1.1,accent=pal(.85+uE)*.9;
+  vec3 albedo=base*(.85+.15*weave);albedo=mix(albedo,gold,clamp(motif,0.,1.));albedo=mix(albedo,accent,clamp(vine+border*.8,0.,1.));
+  float la=uA*.2;vec3 L=normalize(vec3(cos(la)*.7,sin(la)*.5+.3,.7)),V=vec3(0.,0.,1.),Hh=normalize(L+V);
+  vec3 T=normalize(vec3(1.,0.,n.x*-1.));                                       // the thread direction
+  float th=dot(T,Hh),aniso=pow(sqrt(max(0.,1.-th*th)),70.);
+  float dif=max(dot(n,L),0.)*.75+.25;
+  vec3 col=albedo*dif+mix(vec3(1.),albedo*2.,.5)*aniso*(.35+uMid*.5)+gold*aniso*motif*.4;
+  col*=.8+.35*smoothstep(-.6,.6,h);                                            // light on the tops of the folds, shade in the valleys
+  o=vec4(col*(1.+uPulse*.06),1.);
+}`;
+
+/* ---------- Prism Light (GPU): glass prisms turning in beams of white light, splitting it into its colours ---------- */
+const FS_PRISM=GLSL_HEAD+GLSL_N3+`
+mat2 r2(float a){float c=cos(a),s=sin(a);return mat2(c,-s,s,c);}
+float sdTri(vec3 p,vec2 h){vec3 q=abs(p);return max(q.z-h.y,max(q.x*.866025+p.y*.5,-p.y)-h.x*.5);}
+float map(vec3 p){float d=1e9;for(int i=0;i<3;i++){float fi=float(i);vec3 q=p-vec3((fi-1.)*2.2,.15*sin(uA*.3+fi*2.),0.);q.xz*=r2(uA*.25*(fi==1.?-1.:1.)+fi);q.xy*=r2(.3*sin(uA*.2+fi));d=min(d,sdTri(q,vec2(.75,.9)));}return d;}
+vec3 nrm(vec3 p){vec2 e=vec2(.001,0.);return normalize(vec3(map(p+e.xyy)-map(p-e.xyy),map(p+e.yxy)-map(p-e.yxy),map(p+e.yyx)-map(p-e.yyx)));}
+vec3 env(vec3 rd){
+  vec3 c=mix(pal(.65)*.08,pal(.55)*.22,rd.y*.5+.5);
+  for(int i=0;i<3;i++){float fi=float(i),an=uB*.15+fi*2.1;vec3 bn=normalize(vec3(cos(an),.25*sin(an*1.3),sin(an)));c+=vec3(1.,.97,.92)*exp(-abs(dot(rd,bn))*90.)*(.8+uKick*.8);}
+  float a=atan(rd.x,rd.z),fan=smoothstep(.3,0.,abs(rd.y+.15-.2*sin(a*2.+uA*.1)));c+=hsv(vec3(fract(a*.5+uA*.02),.85,1.))*fan*.25;
+  return c;}
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*uRes)/uRes.y;float ca=uA*.07;
+  vec3 ro=vec3(sin(ca)*6.5,1.2+.6*sin(uA*.11),cos(ca)*6.5),f=normalize(-ro),r=normalize(cross(vec3(0.,1.,0.),f)),u=cross(f,r),rd=normalize(f*1.5+r*uv.x+u*uv.y);
+  float t=0.,d;for(int i=0;i<70;i++){d=map(ro+rd*t);if(d<.001||t>20.)break;t+=d;}
+  vec3 col=env(rd);
+  if(t<20.){vec3 p=ro+rd*t,n=nrm(p);float fr=.04+.96*pow(1.-max(dot(n,-rd),0.),5.);
+    vec3 refl=env(reflect(rd,n));vec3 tr;
+    for(int ch=0;ch<3;ch++){float ior=1.48+float(ch)*.035*(1.+uMid);vec3 r1=refract(rd,n,1./ior),q=p-n*.01;float tt=0.;
+      for(int j=0;j<20;j++){float dd=-map(q+r1*tt);if(dd<.001)break;tt+=max(dd,.02);}
+      vec3 q2=q+r1*tt,n2=-nrm(q2);vec3 r2v=refract(r1,n2,ior);if(dot(r2v,r2v)<.01)r2v=reflect(r1,n2);
+      vec3 e=env(r2v);tr[ch]=e[ch]*1.3;}
+    col=mix(tr,refl,fr)+vec3(.9,.95,1.)*pow(max(dot(reflect(rd,n),normalize(vec3(.4,.8,.3))),0.),60.)*.6;}
+  o=vec4(col,1.);
+}`;
+const NATURE3=[
+ {name:'Cloudscape',kind:'gl',fs:FS_CLOUDS,rs0:0.45,rsMax:0.8,th:0.85,dwell:2.4,
+  step(a){this.a=(this.a||0)+st.dt*(0.7+a.mid*0.8+a.bass*0.6);this.b=(this.b||0)+st.dt*(0.25+a.bass*0.8+a.build);this.e=a.energy>0.75||A.section==='DROP'?1:0;
+    if(S.names)label(18*DPR,26*DPR,'Cloudscape · 3D clouds lit by the sun: the edges toward the sun glow silver, thick parts go grey · the bass is the wind'+(this.e?' · a storm: lightning on the kicks':''),'info')}},
+ {name:'Silk Tapestry',kind:'gl',fs:FS_SILK,rs0:0.75,rsMax:1,th:0.88,dwell:2,
+  step(a){this.a=(this.a||0)+st.dt*(0.5+a.mid*0.6);this.b=(this.b||0)+st.dt*(0.45+a.bass*1.2+a.kick*0.4);this.e=Math.sin(st.t*0.02)*0.15;
+    if(S.names)label(18*DPR,26*DPR,'Silk tapestry · a brocade pattern woven in silk · silk fibres are smooth and three-sided like prisms, so they shine in long streaks along the thread','info')}},
+ {name:'Prism Light',kind:'gl',fs:FS_PRISM,rs0:0.5,rsMax:0.85,th:0.85,dwell:2,
+  step(a){this.a=(this.a||0)+st.dt*(0.4+a.mid*0.5+a.kick*0.3);this.b=(this.b||0)+st.dt*(0.3+a.bass*0.8);
+    if(S.names)label(18*DPR,26*DPR,'Prism light · glass bends each colour by a slightly different amount (dispersion), so white beams split into the spectrum · the mids widen the split','info')}}];
+
 // fb: per-frame feedback zoom/rotation (the old MilkDrop trick); trail = share of the Trails setting
 const SCENES=[
   {name:'Sunflower',draw:sunflower,fb:{zoom:1.006,rot:0.002}},
@@ -4772,10 +4903,10 @@ const SCENES=[
   ...(GLOK?[...GLSCENES,{name:'Möbius Flow',kind:'gl',fs:FS_MOBFLOW,rs0:0.8,rsMax:1,th:0.8,dwell:1.6,
    step(a){this.b=(this.b||0)+st.dt*(0.25+a.bass*0.9+a.kick*0.5)*(S.timbre&&live?TB.tempo:1);this.a=0.35+0.25*Math.sin(st.t*0.05)+a.mid*0.3;this.c=0.55+0.15*Math.sin(st.t*0.03)+a.kick*0.06;this.d=[5,6,8,12][Math.floor(A.beats/32)%4];
      if(S.names){label(18*DPR,26*DPR,'Möbius flow · z → (z − p)/(z − q): the pattern streams out of one point and spirals into another (a loxodromic Möbius map, as in the book \u201cIndra\u2019s Pearls\u201d)','info')}}},{name:'Holographic Universe',kind:'gl',fs:FS_HOLO,rs0:0.75,rsMax:1,th:0.8,dwell:1.6,
-   step(a){this.a=(this.a||0)+st.dt*(0.08+a.mid*0.35+a.kick*0.2)*st.kdir;this.b=0.35*Math.sin(st.t*0.07)+a.bass*0.15;this.c=0.5+0.5*Math.sin(st.t*0.045+(A.beats>>4));this.d=Math.sin(st.t*0.02)*0.3;
+   step(a){this.a=(this.a||0)+st.dt*(0.08+a.mid*0.35+a.kick*0.2)*st.kdirS;this.b=0.35*Math.sin(st.t*0.07)+a.bass*0.15;this.c=0.5+0.5*Math.sin(st.t*0.045+(A.beats>>4));this.d=Math.sin(st.t*0.02)*0.3;
      if(S.names){label(18*DPR,26*DPR,'Holographic universe · 9 glowing points send out light waves; with a reference wave they make this interference pattern (a hologram: every piece of it holds the whole shape)','info');label(18*DPR,48*DPR,'Dennis Gabor invented holography in 1947 · Pribram and Bohm proposed holographic models of mind and matter · the 1983 Gateway report describes the universe as a hologram','info')}}},{name:'Nature & Wonders',kind:'photo',col:'nature',dwell:1.5},{name:'Ancient & Esoteric',kind:'photo',col:'ancient',dwell:1.5},{name:'MilkDrop Classics',kind:'md'},{name:'Video Synth',kind:'hy'}]:[])
 ];
-if(GLOK)SCENES.push(...ETERNAL_SCENES,GEM_SCENE,WATER_SCENE,...NATURE2);
+if(GLOK)SCENES.push(...ETERNAL_SCENES,GEM_SCENE,WATER_SCENE,...NATURE2,...NATURE3);
 
 // scene length factor: complex scenes stay longer under Auto, simple ones change sooner
 const DWELL={'Night Sky':2,'Solar System':1.5,'Moon Phases':1.4,'Fractal Bloom':1.8,'Particle Galaxy':1.6,'Earth from Orbit':1.8,'Lunar Earthrise':1.6,'Golden Tunnel':1.1,'Nebula Flow':1.3};
@@ -4785,21 +4916,21 @@ SCENES.forEach(s=>{if(!s.dwell)s.dwell=DWELL[s.name]||(s.kind==='gl'?1.5:s.kind?
 /* ---------- music style: a best guess from tempo, drums, bass weight, distortion and tonality ---------- */
 const STYLES={
  ambient:{name:'Ambient / chill',pal:['Aurora','Glacier','Moonlight','Deep Sea','Nebula'],react:0.9,auto:55,trail:0.9,glow:0.9,
-   scenes:['Waterways EQ','Brilliant Horizons','Flock','Living Water','Aspen Grove','Gemstones & Crystals','Note Patterns','Eternal Voyage','Mirror Lake EQ','Radial Echo EQ','Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration']},
+   scenes:['Cloudscape','Silk Tapestry','Prism Light','Waterways EQ','Brilliant Horizons','Flock','Living Water','Aspen Grove','Gemstones & Crystals','Note Patterns','Eternal Voyage','Mirror Lake EQ','Radial Echo EQ','Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration']},
  edm:{name:'EDM / house / techno',pal:['Synthwave','Full Spectrum','Infrared','Golden Drift'],react:2.2,auto:21,trail:0.8,glow:1.0,
-   scenes:['Helix EQ','Brilliant Horizons','Gemstones & Crystals','Eternal Voyage','Cascade EQ','Radial Echo EQ','Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
+   scenes:['Prism Light','Helix EQ','Brilliant Horizons','Gemstones & Crystals','Eternal Voyage','Cascade EQ','Radial Echo EQ','Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
  bass:{name:'Bass music / dubstep / DnB',pal:['Infrared','Ember','Synthwave','Cosmic Dust'],react:2.7,auto:13,trail:0.7,glow:1.2,
    scenes:['Helix EQ','Retro LED EQ','Cascade EQ','Spin in Plasma','Spin in Water','Möbius Wave','Burning Ship','Mandelbox 3D','Entropy & Order','Holographic Universe','MilkDrop Classics','Golden Tunnel','Starfield','Strange Attractors','Fractal Bloom','Video Synth','Deep Space','Hypercube 4D','Alien World','Clifford Torus']},
  hiphop:{name:'Hip-hop / R&B',pal:['Gold Leaf','Red Rock','Rose Quartz','Cosmic Dust'],react:1.8,auto:34,trail:0.75,glow:0.8,
    scenes:['Helix EQ','Living Water','Retro LED EQ','Radial Echo EQ','Spin in Air','Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
  rock:{name:'Rock / metal',pal:['Ember','Solar Flare','Red Rock','Infrared'],react:2.2,auto:21,trail:0.7,glow:0.9,
-   scenes:['Brilliant Horizons','Living Water','Gemstones & Crystals','Retro LED EQ','Cascade EQ','Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
+   scenes:['Cloudscape','Brilliant Horizons','Living Water','Gemstones & Crystals','Retro LED EQ','Cascade EQ','Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
  pop:{name:'Pop',pal:['Rose Quartz','Golden Drift','Synthwave','Emerald'],react:1.6,auto:21,trail:0.8,glow:0.9,
-   scenes:['Flock','Helix EQ','Brilliant Horizons','Aspen Grove','Note Patterns','Mirror Lake EQ','Radial Echo EQ','Retro LED EQ','Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
+   scenes:['Prism Light','Cloudscape','Flock','Helix EQ','Brilliant Horizons','Aspen Grove','Note Patterns','Mirror Lake EQ','Radial Echo EQ','Retro LED EQ','Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
  classical:{name:'Classical / acoustic',pal:['Moonlight','Gold Leaf','Glacier','Deep Sea'],react:0.8,auto:55,trail:0.88,glow:0.8,
-   scenes:['Flock','Waterways EQ','Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Eternal Voyage','Mirror Lake EQ','Spin in Honey','Spin in Space','Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
+   scenes:['Silk Tapestry','Cloudscape','Flock','Waterways EQ','Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Eternal Voyage','Mirror Lake EQ','Spin in Honey','Spin in Space','Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
  jazz:{name:'Jazz / lo-fi / soul',pal:['Cosmic Dust','Rose Quartz','Emerald','Gold Leaf'],react:1.1,auto:34,trail:0.85,glow:0.8,
-   scenes:['Flock','Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Mirror Lake EQ','Retro LED EQ','Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
+   scenes:['Silk Tapestry','Flock','Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Mirror Lake EQ','Retro LED EQ','Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
 };
 const STY={cur:null,cand:null,candT:0,score:{},f:{sub:0,mid:0,high:0,tot:1e-6,ev:0,em:0},kicks:[],snares:[],alls:[],next:0,applied:null};
 for(const k in STYLES)STY.score[k]=0;
@@ -5206,7 +5337,7 @@ function eqRetro(c,a){
 /* Radial echo EQ: bars round a circle; old spectra ripple outwards in rings */
 function eqRadial(c,a){
   flyMode(EQ,3);const md=EQ.mode,M=Math.min(W,H);
-  const n=64,v=eqBands(n),cx=W/2,cy=H/2,R0=M*0.17*(1+a.kick*0.08),L=M*0.2;EQ.rot+=st.dt*0.15*st.kdir;
+  const n=64,v=eqBands(n),cx=W/2,cy=H/2,R0=M*0.17*(1+a.kick*0.08),L=M*0.2;EQ.rot+=st.dt*0.15*st.kdirS;
   c.save();c.globalAlpha=sstep(Math.min(1,EQ.mt*2));
   EQ.racc+=st.dtReal;if(EQ.racc>0.09){EQ.racc=0;EQ.rings.push({v:v.slice(),r:0,a:1,rot:EQ.rot})}
   for(const g of EQ.rings){g.r+=st.dtReal*(0.35+a.bass*0.5);g.a-=st.dtReal*0.45}EQ.rings=EQ.rings.filter(g=>g.a>0);
@@ -5333,8 +5464,12 @@ function applyFocusFilter(){
   if(!F||!F.filt){MD.filter.type='allpass';MD.filter.frequency.value=1000;return}
   MD.filter.type=F.filt[0];MD.filter.frequency.value=F.filt[1];MD.filter.Q.value=F.filt[2];
 }
+const RSM={};
+function reactSmooth(){const rate={smooth:5,balanced:13,punchy:0}[S.motion||'balanced'];if(!rate)return;const k=Math.min(1,(st.dtReal||0.016)*rate);
+  for(const key of REACT_KEYS){const v=RA[key];if(RSM[key]===undefined)RSM[key]=v;RSM[key]+=(v-RSM[key])*(v>RSM[key]?Math.min(1,k*1.8):k);RA[key]=RSM[key]}}   // rises a little faster than it falls
 function reactA(){
   for(const k in A)RA[k]=A[k];for(const k of REACT_KEYS)RA[k]=Math.min(2.5,A[k]*S.react);
+  reactSmooth();
   const F=FOCUS[S.focus];
   if(F&&F.sig){
     const f=Math.min(1.4,F.sig())*S.react,h=FSIG.hit;
@@ -5367,12 +5502,12 @@ function transitionHit(s){
 }
 function fxStep(dt){
   FX.shock=Math.min(1,FX.shock+dt*1.5);FX.foldT=Math.max(0,FX.foldT-dt);
-  FX.trans=Math.min(1,FX.trans+dt/1.1);
+  FX.trans=Math.min(1,FX.trans+dt/1.9);
   const sh=A.impact*S.react*0.006;FX.shake=[(Math.random()-0.5)*sh,(Math.random()-0.5)*sh];
   A.impact*=Math.pow(0.04,dt);A.warp=(A.warp||0)*Math.pow(0.15,dt);
   if(SCENES[S.scene].calm){FX.foldT=0;FX.shock=1;FX.shake=[0,0];A.impact=0;A.warp=0}   // real sky: keep the view still and true
 }
-function startTransition(){if(!GLOK||!G.hist||!S.hitfx||SCENES[S.scene].calm)return;const t=G.hold;G.hold=G.hist;G.hist=t;FX.trans=0;FX.ttype=Math.random()<0.45?5:Math.floor(Math.random()*5)}
+function startTransition(){if(!GLOK||!G.hist||!S.hitfx||SCENES[S.scene].calm)return;const t=G.hold;G.hold=G.hist;G.hist=t;FX.trans=0;FX.ttype=[5,5,1,2,0,3,5,2][Math.floor(Math.random()*8)]}
 /* ---------- render ---------- */
 function render2D(sc){
   // 1. feedback: last frame, slightly zoomed and turned, fades under the new frame
@@ -5466,7 +5601,7 @@ function frame(now){
   analyze(dt,now);
   fxStep(dt);focusStep(dt);
   const speed=((live?0.7+A.energy*0.45+A.build*0.5+A.drop*0.8:1)+(S.hitfx?(A.warp||0)*2.5*S.react:0))*(S.timbre&&live?(0.55+0.45*TB.tempo)*(1.12-0.24*TB.flow):1);   // faster songs move faster; flowing music glides, choppy music snaps   // louder and building music moves faster
-  st.dtReal=dt;st.dt=dt*speed;st.t+=st.dt;if(dt>0)fps=fps*0.95+(1/dt)*0.05;
+  st.dtReal=dt;st.dt=dt*speed;st.t+=st.dt;st.kdirS+=(st.kdir-st.kdirS)*Math.min(1,dt*1.4);   // direction changes ease in, never snapif(dt>0)fps=fps*0.95+(1/dt)*0.05;
   const gwOn=GW.on&&SCENES[S.scene].name==='Gateway'&&actx;if(gwOn)binauralStart();else if(GW.bin)binauralStop();
   render();if(GLOK)glAdapt(SCENES[S.scene],dt);
   lightsFrame(now,dt);guitarFrame(now,dt);
@@ -5543,6 +5678,10 @@ S.verses=true;try{if(localStorage.getItem('fibwave.verses')==='0'){S.verses=fals
 document.getElementById('verseChk').onchange=e=>{S.verses=e.target.checked;try{localStorage.setItem('fibwave.verses',S.verses?'1':'0')}catch(_){}};
 S.dyn=true;try{if(localStorage.getItem('fibwave.dyn')==='0'){S.dyn=false;document.getElementById('dynchk').checked=false}}catch(_){}
 document.getElementById('dynchk').onchange=e=>{S.dyn=e.target.checked;try{localStorage.setItem('fibwave.dyn',S.dyn?'1':'0')}catch(_){}};
+{const ms=document.getElementById('motionSel'),ss=document.getElementById('shapeSel');S.motion='balanced';S.pshape='card';
+ try{const a=localStorage.getItem('fibwave.motion'),b=localStorage.getItem('fibwave.pshape');if(a){S.motion=a;ms.value=a}if(b){S.pshape=b;ss.value=b}}catch(_){}
+ ms.onchange=()=>{S.motion=ms.value;try{localStorage.setItem('fibwave.motion',S.motion)}catch(_){}};
+ ss.onchange=()=>{S.pshape=ss.value;try{localStorage.setItem('fibwave.pshape',S.pshape)}catch(_){}toast('Photo shape: '+ss.options[ss.selectedIndex].text+' (in the photo scenes)')}}
 document.getElementById('gentle').onchange=e=>{S.gentle=e.target.checked;try{localStorage.setItem('fibwave.gentle',S.gentle?'1':'0')}catch(_){}};
 try{if(localStorage.getItem('fibwave.gentle')==='1'){S.gentle=true;document.getElementById('gentle').checked=true}}catch(_){}
 {const sp=document.getElementById('spinSel'),cp=document.getElementById('capSel'),SPN={off:'off',slow:'slow',music:'with the music',hits:'a full turn on big hits'};
