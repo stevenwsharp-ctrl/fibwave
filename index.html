@@ -164,7 +164,7 @@ body:not(.locked) #showUi{display:none}
       <select id="screenSel"><option value="auto">Auto: find it</option><option value="laptop">This computer screen</option><option value="lgb6">LG B6 55-inch 4K OLED TV</option><option value="tv4k">Other 4K TV</option><option value="tv1080">1080p TV or projector</option><option value="phone">Phone or tablet</option></select>
       <button class="btn" id="findScreens" type="button">Find my screens</button><span class="hint" id="screenHint"></span></div>
     <div class="sources">
-      <button class="src primary" id="srcTab"><b>Share a tab — YouTube or Spotify</b><span>Play music in a different Chrome tab. A small helper window opens: choose that tab there, with “Share tab audio” on. Chrome’s sharing bar then stays on the small window, not on the visuals.</span></button>
+      <button class="src primary" id="srcTab"><b>Share a tab — YouTube or Spotify</b><span>Play music in a different Chrome tab. In the share window, select that tab and turn on “Share tab audio”.</span></button>
       <button class="src" id="srcMic"><b>Microphone or BlackHole</b><span>Room sound, or select BlackHole below to take the sound of Spotify or any app straight in. No sharing bar at all.</span></button>
       <button class="src" id="srcFile"><b>Audio files</b><span>Play MP3, WAV, FLAC or M4A files from your computer.</span></button>
       <button class="src" id="srcDemo"><b>Demo beat</b><span>A built-in 118 BPM loop to test the visuals.</span></button>
@@ -5995,7 +5995,7 @@ function hideStart(){start.hidden=true;document.getElementById('closeStart').hid
 let hintShown=false;function showStartHint(){if(hintShown)return;hintShown=true;const h=document.getElementById('startHint');if(!h)return;h.hidden=false;h.style.opacity='1';setTimeout(()=>{h.style.opacity='0';setTimeout(()=>{h.hidden=true},900)},6500)}
 document.getElementById('closeStart').onclick=hideStart;
 document.getElementById('bSrc').onclick=()=>{start.hidden=false};
-document.getElementById('srcTab').onclick=()=>{CRT.gen++;critUI(false);useTabHelper()};
+document.getElementById('srcTab').onclick=()=>{CRT.gen++;critUI(false);useTab()};
 // Firefox and Safari can share a screen, but they never send its sound to the page: guide people to BlackHole instead
 const UA=navigator.userAgent,NO_TAB_AUDIO=/Firefox\//.test(UA)||(/Safari\//.test(UA)&&!/Chrome|Chromium|Edg\//.test(UA));
 if(NO_TAB_AUDIO){const b=document.getElementById('srcTab');b.classList.remove('primary');b.disabled=true;b.style.opacity=0.55;
