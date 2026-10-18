@@ -2127,40 +2127,111 @@ function flyMode(o,n){const b=Math.floor(A.beats/16);if(o.mb===undefined){o.mb=b
   o.mt=Math.min(1,o.mt+dr/2.5);return sstep(o.mt)}
 
 /* DNA: a real B-form double helix – 10.5 base pairs per turn, 0.34 nm apart, a major and a minor groove */
-const DN={z:0};const BASE=[['A',[255,95,95]],['T',[255,205,80]],['G',[90,190,255]],['C',[120,245,150]]];
-function dnaPt(z,s){const th=z*TAU/3.57+(s?2.45:0);return [Math.cos(th),Math.sin(th),z]}
-function dnaCam(m,z){
-  if(m===0){const o=st.t*0.12;return [[Math.cos(o)*3.2,Math.sin(o)*3.2,z-1],[0,0,z+1],[0,0,1]]}             // outside: the helix stands up and turns
-  if(m===1){const rl=z*0.06;return [[0.18,0,z],[0.18,0,z+6],[Math.sin(rl),Math.cos(rl),0]]}                    // inside: fly down the middle
-  const ph=z*TAU/3.57*0.35+1.2;return [[2.4*Math.cos(ph),2.4*Math.sin(ph),z],[0.4*Math.cos(ph+0.6),0.4*Math.sin(ph+0.6),z+6],[Math.cos(ph),Math.sin(ph),0]]  // along the groove
+/* pace: slow, medium or fast, changing every 8 beats (or 7 s); light beams from points in 3D */
+function flyPace(o){const b=Math.floor(A.beats/8)+Math.floor(st.t/7);if(o.pb!==b){o.pb=b;o.pt=[0.35,1,2.4][Math.floor(hh(b*3.7)*3)]}o.pace=(o.pace||1)+((o.pt||1)-(o.pace||1))*Math.min(1,(st.dtReal||0.016)*1.5);return o.pace}
+function lightBeams(c,C,p3,rgb,k){const p=camP(C,p3);if(!p||p[2]>40)return;const M=Math.min(W,H),f=clamp(1-p[2]/40,0,1)*k,n=12,rot=st.t*0.07;
+  softDot(c,p[0],p[1],M*0.12*f+DPR*6,rgbA(rgb,0.35*f));softDot(c,p[0],p[1],DPR*10,rgbA([255,255,255],0.9*f));
+  for(let i=0;i<n;i++){const an=rot+i*TAU/n+0.15*Math.sin(st.t*0.5+i),len=M*(0.35+0.4*hh(i+3))*(0.6+0.8*f),w=0.035+0.03*hh(i);
+    const g=c.createRadialGradient(p[0],p[1],0,p[0],p[1],len);g.addColorStop(0,rgbA(rgb,0.22*f));g.addColorStop(1,rgbA(rgb,0));c.fillStyle=g;
+    c.beginPath();c.moveTo(p[0],p[1]);c.lineTo(p[0]+Math.cos(an-w)*len,p[1]+Math.sin(an-w)*len);c.lineTo(p[0]+Math.cos(an+w)*len,p[1]+Math.sin(an+w)*len);c.closePath();c.fill()}}
+
+/* DNA: three real forms that morph into each other – B-DNA (the common form), A-DNA (wider, tilted base pairs) and Z-DNA (left-handed, zig-zag) */
+const DNAF=[{n:'B-DNA',r:1,rise:0.34,tw:TAU/10.5,hand:1,off:2.45,tilt:0,zig:0},{n:'A-DNA',r:1.2,rise:0.26,tw:TAU/11,hand:1,off:2.2,tilt:0.4,zig:0},{n:'Z-DNA',r:0.9,rise:0.37,tw:TAU/12,hand:-1,off:2.75,tilt:0,zig:0.2}];
+const DN={s:0,f:0,fp:0,fb:1,zp:0,sk:1};const BASE=[['A',[255,95,95]],['T',[255,205,80]],['G',[90,190,255]],['C',[120,245,150]]];
+function dnaForm(){const a=DNAF[DN.fp],b=DNAF[DN.f],t=sstep(DN.fb),o={};for(const k of ['r','rise','tw','hand','off','tilt','zig'])o[k]=a[k]+(b[k]-a[k])*t;return o}
+function dnaPtI(F,i,s){const th=F.hand*i*F.tw+(s?F.off:0),r=F.r*(1+F.zig*(i%2?1:-1)*(s?-1:1));return [Math.cos(th)*r,Math.sin(th)*r,i*F.rise+(s?-1:1)*F.tilt*0.5]}
+function dnaCam(m,zc,F,pace){
+  if(m===0){const o=st.t*0.12*pace;return [[Math.cos(o)*3.4,Math.sin(o)*3.4,zc-1],[0,0,zc+1],[0,0,1]]}
+  if(m===1){const rl=zc*0.06;return [[0.18,0,zc],[0.18,0,zc+6],[Math.sin(rl),Math.cos(rl),0]]}
+  if(m===2){const ph=zc*0.6+1.2;return [[2.4*Math.cos(ph),2.4*Math.sin(ph),zc],[0.4*Math.cos(ph+0.6),0.4*Math.sin(ph+0.6),zc+6],[Math.cos(ph),Math.sin(ph),0]]}
+  if(m===3){const i=Math.round(DN.s)+8,p=v3.mul(v3.add(dnaPtI(F,i,0),dnaPtI(F,i,1)),0.5),o=st.t*0.25*pace,d=1.2+0.9*Math.sin(DN.zp);   // close-up on one base pair
+    return [[p[0]+Math.cos(o)*d,p[1]+Math.sin(o)*d,p[2]-d*0.6],p,[0,0,1]]}
+  const o=st.t*0.05;return [[Math.cos(o)*13,6+2*Math.sin(o*0.7),zc-4],[0,0,zc+4],[0,0,1]]                                              // far out in open space
 }
 function dnaFly(c,a){
-  flyStep();const bl=flyMode(DN,3);
-  DN.z+=st.dt*(DN.mode===0?0.7:1.6)*(0.7+a.bass*1.6+a.kick*0.6)*FLY.speed;
-  const A0=dnaCam(DN.prev,DN.z),B0=dnaCam(DN.mode,DN.z),C=camLook(v3.lerp(A0[0],B0[0],bl),v3.lerp(A0[1],B0[1],bl),v3.norm(v3.lerp(A0[2],B0[2],bl)),Math.min(W,H)*0.85);
-  const items=[],i0=Math.floor((DN.z-14)/0.34),i1=Math.floor((DN.z+32)/0.34),fog=Z=>clamp(1-Z/30,0,1)*clamp((Z-0.3)/1.6,0,1),kMax=Math.min(W,H)*0.35;
+  flyStep();const bl=flyMode(DN,5),pace=flyPace(DN);
+  const fb=Math.floor(A.beats/32)+Math.floor(st.t/30);if(DN.fk!==fb){DN.fk=fb;DN.fp=DN.f;DN.f=(DN.f+1)%3;DN.fb=0}DN.fb=Math.min(1,DN.fb+st.dtReal/4);   // the form changes every 32 beats
+  const sb=Math.floor(A.beats/16)+Math.floor(st.t/14);if(DN.sb!==sb){DN.sb=sb;DN.sm=Math.floor(hh(sb*1.3)*4);if(DN.sm===3)DN.sk=0}           // solid / ghost / ebb / sketch
+  DN.sk=Math.min(1,DN.sk+st.dtReal/7);DN.zp+=st.dtReal*0.6*pace;
+  const solid=DN.sm===0?1:DN.sm===1?0.35:DN.sm===2?0.5+0.5*Math.sin(st.t*0.8*pace):0.6,sketch=DN.sm===3;
+  const F=dnaForm();DN.s+=st.dt*(DN.mode===0||DN.mode===4?2:4.5)*(0.6+a.bass*1.4+a.kick*0.5)*pace*FLY.speed;
+  const zc=DN.s*F.rise,A0=dnaCam(DN.prev,zc,F,pace),B0=dnaCam(DN.mode,zc,F,pace),zoom=1+0.18*Math.sin(DN.zp);
+  const C=camLook(v3.lerp(A0[0],B0[0],bl),v3.lerp(A0[1],B0[1],bl),v3.norm(v3.lerp(A0[2],B0[2],bl)),Math.min(W,H)*0.85*zoom);
+  const far=DN.mode===4?60:32,fog=Z=>clamp(1-Z/far,0,1)*clamp((Z-0.25)/1.4,0,1),kMax=Math.min(W,H)*0.35;
+  // light beams behind the helix
+  const L1=[2.6*Math.cos(st.t*0.3),2.6*Math.sin(st.t*0.3),zc+9],L2=[-3*Math.cos(st.t*0.21),2*Math.sin(st.t*0.17),zc+17];
+  lightBeams(c,C,L1,[255,236,200],0.5+a.energy*0.8+a.kick*0.6);lightBeams(c,C,L2,[150,190,255],0.4+a.mid*0.8+a.snare*0.5);
+  // other DNA molecules floating in open space
+  for(let k=0;k<4;k++){const base=[(hh(k)-0.5)*22,(hh(k+9)-0.5)*14,zc+8+((hh(k+4)*50-zc*0.3)%50+50)%50],ax=st.t*0.1+k,ay=st.t*0.07*(k%2?1:-1)+k,Fk=DNAF[k%3];let pA=null,pB=null;
+    for(let i=0;i<40;i++){const q0=rot3(dnaPtI(Fk,i,0).map((x,j)=>j===2?x-20*Fk.rise*0.5:x),ax,ay),q1=rot3(dnaPtI(Fk,i,1).map((x,j)=>j===2?x-20*Fk.rise*0.5:x),ax,ay),a1=camP(C,v3.add(base,q0)),b1=camP(C,v3.add(base,q1));
+      if(a1&&b1){const f=fog(a1[2])*0.6;c.strokeStyle=col(k*0.2,60,f);c.lineWidth=Math.max(0.7,a1[3]*0.05);if(pA){c.beginPath();c.moveTo(pA[0],pA[1]);c.lineTo(a1[0],a1[1]);c.moveTo(pB[0],pB[1]);c.lineTo(b1[0],b1[1]);c.stroke()}
+        if(i%2===0){c.strokeStyle=col(k*0.2+0.3,55,f*0.6);c.beginPath();c.moveTo(a1[0],a1[1]);c.lineTo(b1[0],b1[1]);c.stroke()}}pA=a1;pB=b1}}
+  // the main helix
+  const items=[],i0=Math.floor(DN.s-14/F.rise),i1=Math.floor(DN.s+(far*0.95)/F.rise),drawTo=sketch?Math.floor(DN.s+(i1-DN.s)*DN.sk):i1;
   let prevA=null,prevB=null;
-  for(let i=i0;i<=i1;i++){const z=i*0.34,pa=camP(C,dnaPt(z,0)),pb=camP(C,dnaPt(z,1)),b=Math.floor(hh(i)*4),pair=b^1;
-    if(pa&&pb){const m=[(pa[0]+pb[0])/2,(pa[1]+pb[1])/2],Z=(pa[2]+pb[2])/2;items.push({Z,t:0,pa,pb,m,b,pair})}
-    if(pa){items.push({Z:pa[2],t:1,p:pa,q:prevA,s:0})}if(pb){items.push({Z:pb[2],t:1,p:pb,q:prevB,s:1})}
+  for(let i=i0;i<=i1;i++){const pa=camP(C,dnaPtI(F,i,0)),pb=camP(C,dnaPtI(F,i,1)),b=Math.floor(hh(i)*4),pair=b^1;
+    if(i<=drawTo){if(pa&&pb){items.push({Z:(pa[2]+pb[2])/2,t:0,pa,pb,m:[(pa[0]+pb[0])/2,(pa[1]+pb[1])/2],b,pair})}
+      if(pa)items.push({Z:pa[2],t:1,p:pa,q:prevA,s:0});if(pb)items.push({Z:pb[2],t:1,p:pb,q:prevB,s:1})}
     prevA=pa;prevB=pb}
   items.sort((p,q)=>q.Z-p.Z);
-  const pulse=0.5+a.kick*0.8;
-  for(const it of items){const f=fog(it.Z);if(f<=0.01)continue;
-    if(it.t===0){const k=Math.min(kMax,(it.pa[3]+it.pb[3])/2),w=Math.max(1,k*0.09);c.lineWidth=w;
-      c.strokeStyle=rgbA(BASE[it.b][1],f*0.85);c.beginPath();c.moveTo(it.pa[0],it.pa[1]);c.lineTo(it.m[0],it.m[1]);c.stroke();
-      c.strokeStyle=rgbA(BASE[it.pair][1],f*0.85);c.beginPath();c.moveTo(it.m[0],it.m[1]);c.lineTo(it.pb[0],it.pb[1]);c.stroke();
-      if(k>40&&S.names&&it.Z<5){label(it.m[0],it.m[1]-10*DPR,BASE[it.b][0]+'–'+BASE[it.pair][0],'planet')}}
+  const pulse=0.5+a.kick*0.8,jit=()=>sketch?(Math.random()-0.5)*2.5*DPR:0;
+  for(const it of items){const f=fog(it.Z)*(0.25+0.75*solid);if(f<=0.01)continue;
+    if(it.t===0){const k=Math.min(kMax,(it.pa[3]+it.pb[3])/2),w=Math.max(1,k*(sketch?0.03:0.09*(0.4+0.6*solid)));c.lineWidth=w;
+      c.strokeStyle=sketch?rgbA([235,230,215],f*0.8):rgbA(BASE[it.b][1],f*0.85);c.beginPath();c.moveTo(it.pa[0]+jit(),it.pa[1]+jit());c.lineTo(it.m[0],it.m[1]);c.stroke();
+      c.strokeStyle=sketch?rgbA([235,230,215],f*0.8):rgbA(BASE[it.pair][1],f*0.85);c.beginPath();c.moveTo(it.m[0],it.m[1]);c.lineTo(it.pb[0]+jit(),it.pb[1]+jit());c.stroke();
+      if(k>40&&S.names&&it.Z<5&&!sketch)label(it.m[0],it.m[1]-10*DPR,BASE[it.b][0]+'–'+BASE[it.pair][0],'planet')}
     else{const k=Math.min(kMax,it.p[3]),r=Math.max(1.2,k*0.15);
-      if(it.q){c.strokeStyle=col(it.s?0.62:0.08,58,f*0.7);c.lineWidth=Math.max(1,k*0.11);c.beginPath();c.moveTo(it.q[0],it.q[1]);c.lineTo(it.p[0],it.p[1]);c.stroke()}
-      c.fillStyle=col(it.s?0.62:0.08,62+18*a.hat,f);c.beginPath();c.arc(it.p[0],it.p[1],r,0,TAU);c.fill();
-      if(r>3)softDot(c,it.p[0],it.p[1],r*2.2*pulse,col(it.s?0.62:0.08,60,f*0.1))}}
-  // ions drifting in the water round the DNA
-  for(let j=0;j<90;j++){const z=DN.z-6+((hh(j)*48-(DN.z*0.2))%48+48)%48,an=hh(j+99)*TAU+st.t*0.1,rr=1.6+hh(j+7)*4,p=camP(C,[Math.cos(an)*rr,Math.sin(an)*rr,z]);
+      if(it.q){c.strokeStyle=sketch?rgbA([245,240,225],f):col(it.s?0.62:0.08,58,f*0.7);c.lineWidth=Math.max(1,k*(sketch?0.035:0.11));c.beginPath();c.moveTo(it.q[0]+jit(),it.q[1]+jit());c.lineTo(it.p[0]+jit(),it.p[1]+jit());c.stroke()}
+      if(sketch)continue;
+      if(solid>0.6){c.fillStyle=col(it.s?0.62:0.08,62+18*a.hat,f);c.beginPath();c.arc(it.p[0],it.p[1],r,0,TAU);c.fill()}
+      else{c.strokeStyle=col(it.s?0.62:0.08,70,f);c.lineWidth=Math.max(1,r*0.25);c.beginPath();c.arc(it.p[0],it.p[1],r,0,TAU);c.stroke()}
+      if(r>3)softDot(c,it.p[0],it.p[1],r*2.2*pulse*(1.6-solid*0.6),col(it.s?0.62:0.08,60,f*0.1))}}
+  for(let j=0;j<90;j++){const z=zc-6+((hh(j)*48-(zc*0.2))%48+48)%48,an=hh(j+99)*TAU+st.t*0.1,rr=1.6+hh(j+7)*4,p=camP(C,[Math.cos(an)*rr,Math.sin(an)*rr,z]);
     if(p)softDot(c,p[0],p[1],Math.max(1.5,p[3]*0.08),col(hh(j),70,fog(p[2])*0.5))}
-  if(S.names){label(18*DPR,26*DPR,'DNA · '+['outside view: the double helix turns','inside the helix: flying down the middle','riding the major groove'][DN.mode]+' · drag to look round, scroll to change speed','info');
-    label(18*DPR,48*DPR,'B-form DNA: 10.5 base pairs per turn, 0.34 nm apart · A pairs with T (2 hydrogen bonds), G with C (3) · the two strands leave a wide major groove and a narrow minor groove','info')}
+  if(S.names){const form=DNAF[DN.f].n;label(18*DPR,26*DPR,form+' · '+['outside view','inside the helix','riding the groove','close-up on one base pair','far out in open space, with other DNA molecules'][DN.mode]+' · '+['slow','medium','fast'][[0.35,1,2.4].indexOf(DN.pt)]+' pace · '+['solid','see-through','ebbing','drawn from raw lines'][DN.sm||0]+' · drag to look, scroll for speed','info');
+    label(18*DPR,48*DPR,DN.f===0?'B-DNA, the usual form: right-handed, 10.5 base pairs per turn, 0.34 nm apart':DN.f===1?'A-DNA: right-handed, wider and shorter, 11 base pairs per turn, base pairs tilted (found in dry DNA and in RNA)':'Z-DNA: left-handed, 12 base pairs per turn, a zig-zag backbone (found in some active genes)','info')}
 }
+
+/* ---------- Aspen Grove: quaking aspen leaves in wind and sun ----------
+   An aspen leaf has a flat stem, so the leaf flips from side to side in a light wind: the dark top and the pale underside take turns,
+   and each leaf flashes when it faces the sun. The grove turns from summer green to autumn gold and back. */
+const AG={leaves:[],fall:[],trunks:[],t:0,gust:0,season:0};
+function agInit(){AG.leaves=[];AG.trunks=[];
+  for(let i=0;i<9;i++)AG.trunks.push({x:hh(i*3.1)*1.1-0.05,w:0.012+hh(i+40)*0.018,d:0.3+hh(i+20)*0.7});AG.trunks.sort((p,q)=>p.d-q.d);
+  for(let i=0;i<900;i++){const tr=AG.trunks[i%AG.trunks.length],cl=Math.floor(hh(i*0.37)*6);AG.leaves.push({x:tr.x+(hh(cl*3.3+tr.x)-0.5)*0.3+(hh(i*1.7)-0.5)*0.09,y:0.03+hh(cl*5.9+tr.x)*0.5+(hh(i*2.3)-0.5)*0.12,s:0.7+hh(i*5.1)*0.6,ph:hh(i*7.7)*TAU,fq:3+hh(i*9.3)*3,d:tr.d,ang:hh(i*11.1)*TAU,kind:hh(i*13.7)<0.82?0:hh(i)<0.5?1:2})}}
+function aspenGrove(c,a){
+  if(!AG.leaves.length)agInit();
+  const dt=st.dtReal||0.016,M=Math.min(W,H);AG.gust+=((0.3+a.bass*1.6+a.kick*0.8+a.build)-AG.gust)*Math.min(1,dt*1.5);AG.t+=dt*(0.6+AG.gust*1.4);
+  AG.season=0.5+0.5*Math.sin(st.t*0.03);const sx=W*(0.72+0.08*Math.sin(st.t*0.02)),sy=H*(0.14+0.04*Math.cos(st.t*0.02));
+  c.save();c.globalCompositeOperation='source-over';
+  const sky=c.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#24589a');sky.addColorStop(0.6,'#6e9fc8');sky.addColorStop(1,'#a9b99a');c.fillStyle=sky;c.fillRect(0,0,W,H);
+  const sg=c.createRadialGradient(sx,sy,0,sx,sy,M*0.7);sg.addColorStop(0,'rgba(255,250,225,1)');sg.addColorStop(0.05,'rgba(255,240,190,0.7)');sg.addColorStop(0.3,'rgba(255,230,170,0.12)');sg.addColorStop(1,'rgba(255,230,170,0)');c.fillStyle=sg;c.fillRect(0,0,W,H);
+  for(let i=0;i<14;i++){const an=i*TAU/14+st.t*0.02,len=M*1.2;c.fillStyle='rgba(255,245,210,'+(0.04+0.04*a.mid).toFixed(3)+')';c.beginPath();c.moveTo(sx,sy);c.lineTo(sx+Math.cos(an-0.04)*len,sy+Math.sin(an-0.04)*len);c.lineTo(sx+Math.cos(an+0.04)*len,sy+Math.sin(an+0.04)*len);c.closePath();c.fill()}
+  // ground: meadow
+  const gr=c.createLinearGradient(0,H*0.78,0,H);gr.addColorStop(0,'rgba(120,140,70,1)');gr.addColorStop(1,'rgba(60,75,35,1)');c.fillStyle=gr;c.fillRect(0,H*0.8,W,H*0.2);
+  // white trunks with dark "eyes"
+  for(const tr of AG.trunks){const x=tr.x*W+Math.sin(AG.t*0.3+tr.x*9)*AG.gust*3*DPR,w=tr.w*W*(0.6+tr.d*0.6),sh=0.75+0.25*tr.d;
+    const tg=c.createLinearGradient(x-w,0,x+w,0);tg.addColorStop(0,'rgb('+Math.round(150*sh)+','+Math.round(150*sh)+','+Math.round(140*sh)+')');tg.addColorStop(0.45,'rgb('+Math.round(215*sh)+','+Math.round(212*sh)+','+Math.round(198*sh)+')');tg.addColorStop(1,'rgb('+Math.round(170*sh)+','+Math.round(168*sh)+','+Math.round(158*sh)+')');
+    c.fillStyle=tg;c.fillRect(x-w,0,w*2,H*0.86);
+    for(let k=0;k<7;k++){const y=H*(0.12+k*0.11+hh(tr.x*100+k)*0.05);c.fillStyle='rgba(30,28,25,'+(0.55*sh).toFixed(3)+')';c.beginPath();c.ellipse(x+(hh(k+tr.x)-0.5)*w,y,w*(0.25+hh(k*3+tr.x)*0.4),w*0.12,0,0,TAU);c.fill()}}
+  // leaves
+  const summer=[[55,150,45],[105,185,55]],gold=[[230,175,30],[250,205,70]],under=[200,215,190],sunA=Math.atan2(sy-H*0.4,sx-W*0.5);
+  const mixc=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t,p[2]+(q[2]-p[2])*t].map(Math.round);
+  for(const L of AG.leaves){const sway=Math.sin(AG.t*0.7+L.x*6)*AG.gust*0.012,x=(L.x+sway)*W,y=(L.y+Math.abs(sway)*0.5)*H,sz=M*0.026*L.s*(0.7+0.5*L.d);
+    const flip=Math.sin(AG.t*L.fq+L.ph)*(0.4+AG.gust*0.9),cf=Math.cos(flip*2.2),top=cf>0,hue=hh(L.ph)*0.6+AG.season*0.4,base=mixc(summer[L.kind%2],gold[L.kind%2],clamp(AG.season*1.3-0.15+hh(L.ph*3)*0.3,0,1));
+    const colr=top?base:mixc(under,base,0.25),lit=0.78+0.3*Math.cos(L.ang+flip-sunA),w=sz*Math.max(0.12,Math.abs(cf));
+    c.fillStyle=rgbA(colr.map(v=>Math.min(255,v*lit*(0.75+0.35*L.d))),0.95);c.save();c.translate(x,y);c.rotate(L.ang+Math.sin(AG.t+L.ph)*0.3*AG.gust);
+    c.beginPath();if(L.kind===2){for(let k=0;k<5;k++){const an=-Math.PI/2+(k-2)*0.55,r=sz*(k===2?1.1:0.8);c.lineTo(Math.cos(an)*r*Math.abs(cf),Math.sin(an)*r)}c.lineTo(0,sz*0.3)}else c.ellipse(0,-sz*0.55,w,sz*0.65,0,0,TAU);c.fill();c.restore();
+    const glint=Math.pow(Math.max(0,Math.cos(flip*2.2-0.6)),24)*(0.5+a.hat);if(glint>0.25){c.fillStyle='rgba(255,252,230,'+Math.min(0.9,glint).toFixed(3)+')';c.beginPath();c.arc(x,y-sz*0.5,sz*0.35*glint,0,TAU);c.fill()}}
+  // leaves torn off by gusts drift across
+  if((a.kick>0.7||AG.gust>1)&&AG.fall.length<120)for(let k=0;k<3;k++){const L=AG.leaves[Math.floor(Math.random()*AG.leaves.length)];AG.fall.push({x:L.x*W,y:L.y*H,vx:(40+Math.random()*120)*DPR,vy:(10+Math.random()*30)*DPR,r:Math.random()*TAU,vr:(Math.random()-0.5)*8,s:M*0.014*L.s,c:hh(L.ph)})}
+  for(const f of AG.fall){f.vx+=(AG.gust*60*DPR-f.vx*0.3)*dt;f.vy+=(25*DPR-f.vy*0.4)*dt+Math.sin(st.t*3+f.r)*20*DPR*dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.r+=f.vr*dt;
+    const cc=Math.cos(f.r),colr=mixc(summer[0],gold[1],clamp(AG.season*1.2+f.c*0.2,0,1));c.fillStyle=rgbA(cc>0?colr:mixc(under,colr,0.3),0.95);c.save();c.translate(f.x,f.y);c.rotate(f.r*0.6);c.beginPath();c.ellipse(0,0,f.s*Math.max(0.1,Math.abs(cc)),f.s*0.7,0,0,TAU);c.fill();c.restore()}
+  AG.fall=AG.fall.filter(f=>f.x<W+50&&f.y<H+50);
+  c.restore();
+  if(S.names)label(18*DPR,26*DPR,'Aspen grove · an aspen leaf hangs on a flat stem, so it flips in the lightest wind (quaking aspen) and flashes when it faces the sun · the bass is the wind · the grove turns gold and back','info');
+}
+
 
 /* Chakras: fly up the spine through 7 lotus flowers in 3D */
 const CK={z:0};const YANTRA=['square','circle','tri','hex','tri','circle','circle'];
@@ -2179,8 +2250,9 @@ function lotusPetals(c,C,zc,n,r0,r1,cup,rot,rgb,alpha,lw){
 function ckPoly(c,C,zc,pts){const P=pts.map(p=>camP(C,[p[0],p[1],zc]));if(P.some(p=>!p))return;c.beginPath();P.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.stroke()}
 function chakraFly(c,a){
   flyStep();const bl=flyMode(CK,3),bands=BANDV(a),gap=11;
-  CK.z+=st.dt*(CK.mode===1?1.6:2.6)*(0.6+a.energy*0.9+a.build*0.8)*FLY.speed;
+  CK.z+=st.dt*(CK.mode===1?1.6:2.6)*(0.6+a.energy*0.9+a.build*0.8)*FLY.speed*flyPace(CK);
   const A0=ckCam(CK.prev,CK.z),B0=ckCam(CK.mode,CK.z),C=camLook(v3.lerp(A0[0],B0[0],bl),v3.lerp(A0[1],B0[1],bl),v3.norm(v3.lerp(A0[2],B0[2],bl)),Math.min(W,H)*0.8);
+  lightBeams(c,C,[3.5*Math.cos(st.t*0.2),3*Math.sin(st.t*0.27),CK.z+16],[255,230,190],0.4+a.energy*0.8+a.kick*0.5);
   // Ida (moon) and Pingala (sun) weave round the central channel and cross at every chakra
   for(let side=0;side<2;side++){let prev=null;
     for(let z=Math.floor(CK.z-6);z<CK.z+70;z+=0.5){const x=(side?1:-1)*2.6*Math.sin(Math.PI*z/gap),p=camP(C,[x,0.9*Math.cos(Math.PI*z/gap)*(side?1:-1)*0.3,z]);
@@ -2219,7 +2291,7 @@ function platonicFly(c,a){
   flyStep();flyMode(PV,4);const md=PV.mode;
   c.save();c.globalAlpha=sstep(Math.min(1,PV.mt*2));const M=Math.min(W,H),bands=BANDV(a);
   if(md===0){ // fall into nested solids for ever (each one sits inside the one before)
-    PV.nz+=st.dt*(0.18+a.bass*0.5+a.kick*0.3)*FLY.speed;const ratio=0.6,base=Math.floor(PV.nz);
+    PV.nz+=st.dt*(0.18+a.bass*0.5+a.kick*0.3)*FLY.speed*flyPace(PV);const ratio=0.6,base=Math.floor(PV.nz);
     for(let j=base-2;j<base+9;j++){const size=M*0.42*Math.pow(ratio,j-PV.nz);if(size<4*DPR||size>M*6)continue;const s=SOL.list[((j%5)+5)%5],v=bands[((j%7)+7)%7];
       const al=clamp(1.2-size/(M*5),0,1)*clamp(size/(18*DPR),0,1),ax=st.t*0.17*(j%2?1:-1)+j*0.9+FLY.pitch,ay=st.t*0.23*(j%3?1:-1)+j*0.6+FLY.yaw;
       const P=drawSolid(c,s,W/2,H/2,size,ax,ay,col(j*0.13,52+30*v,al*(0.55+v*0.45)),Math.max(1,DPR*(0.8+size/M*2+v*2)),0.18);
@@ -2237,7 +2309,7 @@ function platonicFly(c,a){
     PLATONIC.forEach((s,k)=>{const an=st.t*0.12+k*TAU/5,ox=W/2+Math.cos(an)*M*0.44*(W>H?1.4:1),oy=H/2+Math.sin(an)*M*0.38,v=bands[k+1];drawSolid(c,s,ox,oy,M*0.075*(1+v*0.4),st.t*0.4+k,st.t*0.5*(k%2?-1:1),col(k/5,55+v*30,0.4+v*0.5),DPR*(1+v*1.5),0.2)});
     if(S.names)label(18*DPR,26*DPR,'Merkaba (two counter-turning tetrahedra) inside Metatron’s cube (13 circles; all 5 Platonic solids hide in its lines) · the 5 solids circle round it','info');
   }else if(md===2){ // fly through a lattice of solids that fills the screen
-    PV.lz+=st.dt*(1.4+a.bass*2.2+a.kick)*FLY.speed;const rl=st.t*0.05,C=camLook([0,0,PV.lz],[Math.sin(st.t*0.11)*1.5,Math.cos(st.t*0.09)*1.2,PV.lz+8],[Math.sin(rl),Math.cos(rl),0],M*0.8),sp=3.2,iz0=Math.floor(PV.lz/sp);
+    PV.lz+=st.dt*(1.4+a.bass*2.2+a.kick)*FLY.speed*flyPace(PV);const rl=st.t*0.05,C=camLook([0,0,PV.lz],[Math.sin(st.t*0.11)*1.5,Math.cos(st.t*0.09)*1.2,PV.lz+8],[Math.sin(rl),Math.cos(rl),0],M*0.8),sp=3.2,iz0=Math.floor(PV.lz/sp);
     for(let iz=iz0+11;iz>=iz0;iz--)for(let ix=-2;ix<=2;ix++)for(let iy=-2;iy<=2;iy++){const ctr=[ix*sp,iy*sp,iz*sp],p=camP(C,ctr);if(!p||p[2]<0.5)continue;
       const h=hh(ix*31+iy*17+iz*7),s=[...SOL.list,SOL.icoDodeca,SOL.cubeOcta][Math.floor(h*7)],fade=clamp(1-p[2]/36,0,1)*clamp((p[2]-0.5)/2,0,1),v=bands[Math.floor(h*7)];
       drawSolid(c,s,p[0],p[1],p[3]*0.85*(1+v*0.3+a.kick*0.1),st.t*(0.3+h*0.4)+h*9,st.t*(0.25+h*0.3),col(h+iz*0.04,50+30*v,fade*(0.5+0.5*v)),Math.max(1,p[3]*0.03),0)}
@@ -4529,6 +4601,56 @@ const GEM_SCENE={name:'Gemstones & Crystals',kind:'gl',fs:FS_GEMS,rs0:0.5,rsMax:
     const g=GEMS[this.gi];if(S.names){label(18*DPR,26*DPR,'Gemstones & crystals · '+g[0]+': '+g[1],'info');label(18*DPR,48*DPR,'The crystals grow with their frequency band · a warm light and a coloured light circle them with the beat','info')}
     else if(this.gt<1||st.t%20<4)label(18*DPR,H-30*DPR,g[0],'info')}};
 
+/* ---------- Living Water (GPU): ocean, lake and river under a moving sun and moon, with tides ---------- */
+const FS_WATER=GLSL_HEAD+`
+uniform float uE,uF;
+float wv(vec2 p,vec2 d,float f,float sp,float t){return sin(dot(p,d)*f+t*sp);}
+float height(vec2 p,float t,float mode,float amp){
+  float h=0.;
+  if(mode<.5){h+=.55*wv(p,normalize(vec2(1.,.3)),.35,1.1,t)+.3*wv(p,normalize(vec2(.7,-.6)),.6,1.5,t)+.18*wv(p,normalize(vec2(-.2,1.)),1.1,2.,t)+.1*wv(p,normalize(vec2(.9,.8)),2.3,3.,t);h*=amp;h+=.06*(fbm(p*1.3+t*.3)-.5);}
+  else if(mode<1.5){h=.05*wv(p,normalize(vec2(1.,.2)),1.4,1.,t)+.03*wv(p,normalize(vec2(-.4,1.)),2.2,1.3,t);h*=amp*.6;}
+  else{vec2 q=p+vec2(0.,t*1.5);h=.12*(fbm(q*vec2(1.,.4)*1.2)-.5)+.05*wv(p,vec2(0.,1.),2.5,4.,t);h*=amp;}
+  return h;}
+vec3 skyc(vec3 rd,vec3 sun,vec3 moon,float day){
+  vec3 dayc=mix(vec3(.42,.56,.78),vec3(.1,.27,.62),clamp(rd.y*1.6,0.,1.)),night=mix(vec3(.03,.04,.09),vec3(.0,.0,.02),clamp(rd.y*2.,0.,1.));
+  float dusk=exp(-abs(sun.y)*6.);vec3 c=mix(night,dayc,day)+vec3(1.,.45,.2)*dusk*exp(-max(rd.y,0.)*4.)*.8;
+  float sd=max(dot(rd,sun),0.);c+=vec3(1.,.9,.7)*(pow(sd,900.)*20.+pow(sd,12.)*.35*day+pow(sd,4.)*.15*dusk);
+  float md=max(dot(rd,moon),0.);c+=vec3(.85,.88,1.)*(smoothstep(.9994,.9997,md)*1.5+pow(md,40.)*.08)*(1.-day*.7);
+  if(rd.y>0.)c+=stars(rd.xz/(rd.y+.3)*.8,.06,1.)*(1.-day)*.8;
+  return c;}
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*uRes)/uRes.y;float mode=uE,t=uB,amp=.7+uBass*1.2+uBuild*.5;
+  float dayA=uF;vec3 sun=normalize(vec3(cos(dayA)*.9,sin(dayA),.6)),moon=normalize(vec3(-cos(dayA)*.8,-sin(dayA)*.9+.05,.7));float day=smoothstep(-.12,.2,sun.y);
+  float tide=.25*sin(uA*.05)+.08*sin(uA*.11);                        // tides follow the moon
+  vec3 ro=vec3(0.,1.6+(mode>1.5?.6:0.)+tide*.3,uA*(mode>1.5?0.:.6)),rd=normalize(vec3(uv.x,uv.y-.12,1.2));
+  vec3 col;
+  if(rd.y<-.0005){float d=(ro.y-tide)/-rd.y;vec3 p=ro+rd*d;
+    if(mode>1.5&&abs(p.x)>5.+sin(p.z*.15)*1.5){  // river banks
+      float g=fbm(p.xz*.5);col=mix(vec3(.08,.12,.05),vec3(.2,.26,.12),g)*(.25+.75*day)+vec3(.02,.02,.04);col=mix(col,skyc(rd,sun,moon,day),smoothstep(10.,70.,d));}
+    else{
+      vec2 e=vec2(.05,0.);float h0=height(p.xz,t,mode,amp);vec3 n=normalize(vec3(h0-height(p.xz+e.xy,t,mode,amp),e.x,h0-height(p.xz+e.yx,t,mode,amp)));
+      vec2 rc=vec2(0.,10.+uA*(mode>1.5?0.:.6));float rr=length(p.xz-rc);n.xz+=normalize(p.xz-rc+.001)*sin(rr*3.-uTime*6.)*exp(-rr*.15)*.08*uKick;n=normalize(n);
+      n=normalize(mix(n,vec3(0.,1.,0.),smoothstep(10.,80.,d)));
+      vec3 rf=reflect(rd,n);rf.y=abs(rf.y);float fr=.02+.98*pow(1.-max(dot(n,-rd),0.),5.);
+      vec3 deep=mix(vec3(.0,.06,.09),vec3(.02,.2,.25),day)*(mode>1.5?vec3(1.2,1.1,.8):vec3(1.));
+      if(mode>.5&&mode<1.5)deep=mix(deep,vec3(.04,.08,.06),.5);
+      col=mix(deep*(.4+.6*max(dot(n,sun),0.)),skyc(rf,sun,moon,day),fr);
+      col+=vec3(1.,.9,.7)*pow(max(dot(rf,sun),0.),400.)*12.*day+vec3(.8,.85,1.)*pow(max(dot(rf,moon),0.),300.)*3.*(1.-day);
+      float foam=smoothstep(.55,.9,h0/max(amp,.1)+fbm(p.xz*2.+t*.2)*.4)*(mode<.5?1.:0.)+(mode>1.5?smoothstep(.62,.8,fbm((p.xz+vec2(0.,t*1.5))*vec2(2.,.6))):0.);
+      col=mix(col,vec3(.85,.9,.95)*(.3+.7*day),foam*.6);
+      col=mix(col,skyc(normalize(vec3(rd.x,.02,rd.z)),sun,moon,day),smoothstep(25.,90.,d));}}
+  else col=skyc(rd,sun,moon,day);
+  // distant hills on the horizon
+  float hz=.12*fbm(vec2(uv.x*2.,3.))+.03;float sky=uv.y-.12+(1.2*.0);if(rd.y>0.&&rd.y<hz*.5*(mode>.5?1.:.3)){col=mix(col,vec3(.05,.07,.09)*(.3+.7*day)+vec3(.15,.1,.08)*exp(-abs(sun.y)*6.),.85);}
+  o=vec4(col,1.);
+}`;
+const WATER_SCENE={name:'Living Water',kind:'gl',fs:FS_WATER,rs0:0.7,rsMax:1,th:0.85,dwell:2.4,
+  step(a){this.b=(this.b||0)+st.dt*(0.7+a.mid*0.8+a.kick*0.4);this.a=(this.a||0)+st.dt*(1+a.energy);this.f=(this.f||0.9)+st.dt*(0.02+a.build*0.05);
+    const mb=Math.floor(A.beats/32)+Math.floor(st.t/40);if(this.mb!==mb){this.mb=mb;this.mi=((this.mi===undefined?-1:this.mi)+1)%3}this.e=this.mi;
+    const ph=((this.f%TAU)+TAU)%TAU,dayName=ph<0.2||ph>5.9?'sunrise':ph<2.9?'day':ph<3.4?'sunset':'night';
+    if(S.names){label(18*DPR,26*DPR,'Living water · '+['ocean swells','a calm lake','a flowing river'][this.mi]+' · '+dayName+' · the sun and the moon move across the sky; the moon’s pull raises and lowers the tide','info');
+      label(18*DPR,48*DPR,'Waves are made of several sine waves added together · the bass makes them taller, kicks send rings across the water','info')}}};
+
 // fb: per-frame feedback zoom/rotation (the old MilkDrop trick); trail = share of the Trails setting
 const SCENES=[
   {name:'Sunflower',draw:sunflower,fb:{zoom:1.006,rot:0.002}},
@@ -4566,6 +4688,7 @@ const SCENES=[
   {name:'Cascade EQ',draw:eqCascade,fb:{zoom:1.0,rot:0,trail:0},dwell:1.6},
   {name:'Retro LED EQ',draw:eqRetro,fb:{zoom:1.0,rot:0,trail:0.25},dwell:1.4},
   {name:'Radial Echo EQ',draw:eqRadial,fb:{zoom:1.0,rot:0,trail:0.45},dwell:1.6},
+  {name:'Aspen Grove',draw:aspenGrove,fb:{zoom:1.0,rot:0,trail:0},dwell:2.2},
   {name:'Note Patterns',draw:notePatterns,fb:{zoom:1.0,rot:0,trail:0.55},dwell:2},
   {name:'Spin in Space',draw:spinSpace,fb:{zoom:1.0,rot:0,trail:0.15},dwell:2},
   {name:'Spin in Air',draw:spinAir,fb:{zoom:1.0,rot:0,trail:0.6},dwell:2},
@@ -4578,7 +4701,7 @@ const SCENES=[
    step(a){this.a=(this.a||0)+st.dt*(0.08+a.mid*0.35+a.kick*0.2)*st.kdir;this.b=0.35*Math.sin(st.t*0.07)+a.bass*0.15;this.c=0.5+0.5*Math.sin(st.t*0.045+(A.beats>>4));this.d=Math.sin(st.t*0.02)*0.3;
      if(S.names){label(18*DPR,26*DPR,'Holographic universe · 9 glowing points send out light waves; with a reference wave they make this interference pattern (a hologram: every piece of it holds the whole shape)','info');label(18*DPR,48*DPR,'Dennis Gabor invented holography in 1947 · Pribram and Bohm proposed holographic models of mind and matter · the 1983 Gateway report describes the universe as a hologram','info')}}},{name:'Nature & Wonders',kind:'photo',col:'nature',dwell:1.5},{name:'Ancient & Esoteric',kind:'photo',col:'ancient',dwell:1.5},{name:'MilkDrop Classics',kind:'md'},{name:'Video Synth',kind:'hy'}]:[])
 ];
-if(GLOK)SCENES.push(...ETERNAL_SCENES,GEM_SCENE);
+if(GLOK)SCENES.push(...ETERNAL_SCENES,GEM_SCENE,WATER_SCENE);
 
 // scene length factor: complex scenes stay longer under Auto, simple ones change sooner
 const DWELL={'Night Sky':2,'Solar System':1.5,'Moon Phases':1.4,'Fractal Bloom':1.8,'Particle Galaxy':1.6,'Earth from Orbit':1.8,'Lunar Earthrise':1.6,'Golden Tunnel':1.1,'Nebula Flow':1.3};
@@ -4588,21 +4711,21 @@ SCENES.forEach(s=>{if(!s.dwell)s.dwell=DWELL[s.name]||(s.kind==='gl'?1.5:s.kind?
 /* ---------- music style: a best guess from tempo, drums, bass weight, distortion and tonality ---------- */
 const STYLES={
  ambient:{name:'Ambient / chill',pal:['Aurora','Glacier','Moonlight','Deep Sea','Nebula'],react:0.9,auto:55,trail:0.9,glow:0.9,
-   scenes:['Gemstones & Crystals','Note Patterns','Eternal Voyage','Mirror Lake EQ','Radial Echo EQ','Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration']},
+   scenes:['Living Water','Aspen Grove','Gemstones & Crystals','Note Patterns','Eternal Voyage','Mirror Lake EQ','Radial Echo EQ','Spin in Honey','Spin in Space','Spin in Water','Möbius Wave','Pendulum Wave','Möbius Flow','Newton Fractal','Apollonian Gasket','Song Mandala','Earth Resonance','Nature & Wonders','Holographic Universe','Nebula Flow','Northern Forest','Moonlit Ocean','Glacier Fjord','Alpine Lake','Quantum Orbitals','Flower of Life','Sri Yantra','Chakras','Earth from Orbit','Moon Phases','Night Sky','Desert Dunes','Particle Galaxy','Hopf Fibration']},
  edm:{name:'EDM / house / techno',pal:['Synthwave','Full Spectrum','Infrared','Golden Drift'],react:2.2,auto:21,trail:0.8,glow:1.0,
    scenes:['Gemstones & Crystals','Eternal Voyage','Cascade EQ','Radial Echo EQ','Spin in Plasma','Spin in Air','Möbius Flow','Pendulum Wave','Mandelbrot Zoom','Mandelbox 3D','Burning Ship','Holographic Universe','Entropy & Order','Golden Tunnel','Kaleido Bloom','MilkDrop Classics','Hypercube 4D','Video Synth','Fractal Bloom','Quasicrystal','Fib Tunnel','Starfield','Julia Set','Torus Knots','Particle Galaxy']},
  bass:{name:'Bass music / dubstep / DnB',pal:['Infrared','Ember','Synthwave','Cosmic Dust'],react:2.7,auto:13,trail:0.7,glow:1.2,
    scenes:['Retro LED EQ','Cascade EQ','Spin in Plasma','Spin in Water','Möbius Wave','Burning Ship','Mandelbox 3D','Entropy & Order','Holographic Universe','MilkDrop Classics','Golden Tunnel','Starfield','Strange Attractors','Fractal Bloom','Video Synth','Deep Space','Hypercube 4D','Alien World','Clifford Torus']},
  hiphop:{name:'Hip-hop / R&B',pal:['Gold Leaf','Red Rock','Rose Quartz','Cosmic Dust'],react:1.8,auto:34,trail:0.75,glow:0.8,
-   scenes:['Retro LED EQ','Radial Echo EQ','Spin in Air','Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
+   scenes:['Living Water','Retro LED EQ','Radial Echo EQ','Spin in Air','Pendulum Wave','Lyapunov Space','Ancient & Esoteric','Entropy & Order','Spiral Scope','DNA Helix','Cymatics','Giza & Eye of Horus','Sunflower','Merkaba & Platonic Solids','Red Rock Canyon','Kaleido Bloom']},
  rock:{name:'Rock / metal',pal:['Ember','Solar Flare','Red Rock','Infrared'],react:2.2,auto:21,trail:0.7,glow:0.9,
-   scenes:['Gemstones & Crystals','Retro LED EQ','Cascade EQ','Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
+   scenes:['Living Water','Gemstones & Crystals','Retro LED EQ','Cascade EQ','Spin in Plasma','Harmonic Strings','Burning Ship','Mandelbox 3D','Nature & Wonders','Earth Resonance','Fib Tunnel','Fractal Bloom','Red Rock Canyon','Green Plains Storm','Starfield','Strange Attractors','MilkDrop Classics','Golden Spiral']},
  pop:{name:'Pop',pal:['Rose Quartz','Golden Drift','Synthwave','Emerald'],react:1.6,auto:21,trail:0.8,glow:0.9,
-   scenes:['Note Patterns','Mirror Lake EQ','Radial Echo EQ','Retro LED EQ','Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
+   scenes:['Aspen Grove','Note Patterns','Mirror Lake EQ','Radial Echo EQ','Retro LED EQ','Spin in Air','Spin in Space','Harmonic Strings','Möbius Flow','Newton Fractal','Phoenix Fractal','Nature & Wonders','Song Mandala','Kaleido Bloom','Sunflower','Flower of Life','Video Synth','Particle Galaxy','Golden Spiral','Yin-Yang & Bagua','Quantum Interference']},
  classical:{name:'Classical / acoustic',pal:['Moonlight','Gold Leaf','Glacier','Deep Sea'],react:0.8,auto:55,trail:0.88,glow:0.8,
-   scenes:['Note Patterns','Gemstones & Crystals','Eternal Voyage','Mirror Lake EQ','Spin in Honey','Spin in Space','Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
+   scenes:['Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Eternal Voyage','Mirror Lake EQ','Spin in Honey','Spin in Space','Harmonic Strings','Pendulum Wave','Mandelbrot Zoom','Apollonian Gasket','Song Mandala','Ancient & Esoteric','Nature & Wonders','Harmonograph','Night Sky','Moon Phases','Solar System','Sri Yantra','Tree of Life','Earth from Orbit','Alpine Lake','Moonlit Ocean','Cymatics','Flower of Life']},
  jazz:{name:'Jazz / lo-fi / soul',pal:['Cosmic Dust','Rose Quartz','Emerald','Gold Leaf'],react:1.1,auto:34,trail:0.85,glow:0.8,
-   scenes:['Note Patterns','Gemstones & Crystals','Mirror Lake EQ','Retro LED EQ','Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
+   scenes:['Aspen Grove','Living Water','Note Patterns','Gemstones & Crystals','Mirror Lake EQ','Retro LED EQ','Spin in Water','Spin in Honey','Harmonic Strings','Möbius Wave','Phoenix Fractal','Lyapunov Space','Song Mandala','Holographic Universe','Ancient & Esoteric','Harmonograph','Chakras','Yin-Yang & Bagua','Northern Forest','Moonlit Ocean','Cymatics','Spiral Scope','Quantum Orbitals','DNA Helix']}
 };
 const STY={cur:null,cand:null,candT:0,score:{},f:{sub:0,mid:0,high:0,tot:1e-6,ev:0,em:0},kicks:[],snares:[],alls:[],next:0,applied:null};
 for(const k in STYLES)STY.score[k]=0;
