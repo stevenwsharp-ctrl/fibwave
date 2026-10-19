@@ -177,7 +177,7 @@ body:not(.locked) #showUi{display:none}
       <button class="src primary" id="srcOffline"><b>Save an offline copy</b><span>For camping or travel. While you have internet, this downloads one file (about 5–10 MB) with MilkDrop, the video synth, the full star catalog and the fonts inside. That file works with no internet.</span></button>
     </div>
     <input type="file" id="fileIn" accept="audio/*" multiple hidden>
-    <div class="keys"><kbd>1</kbd>–<kbd>0</kbd> scene · <kbd>Space</kbd> next · <kbd>[</kbd> <kbd>]</kbd> previous/next (presets in MilkDrop) · <kbd>G</kbd> film look · <kbd>I</kbd> hit FX · <kbd>J</kbd> test a big hit · <kbd>B</kbd> photo backdrop · <kbd>U</kbd> music focus · <kbd>K</kbd> key colours · drag photos onto the window to add them to the photo scenes · <kbd>R</kbd> random · <kbd>O</kbd> random order · <kbd>P</kbd> palette · <kbd>L</kbd> names · <kbd>A</kbd> auto-change · <kbd>W</kbd> pop-out window (no sharing bar) · <kbd>Y</kbd> photo spin · <kbd>F</kbd> full screen · <kbd>T</kbd> TV mode · <kbd>C</kbd> cast help · <kbd>H</kbd> or double-click: hide controls</div>
+    <div class="keys"><kbd>1</kbd>–<kbd>0</kbd> scene · <kbd>Space</kbd> next · <kbd>[</kbd> <kbd>]</kbd> previous/next (presets in MilkDrop) · <kbd>G</kbd> film look · <kbd>I</kbd> hit FX · <kbd>J</kbd> test a big hit · <kbd>B</kbd> photo backdrop · <kbd>U</kbd> music focus · <kbd>K</kbd> key colours · drag photos onto the window to add them to the photo scenes · <kbd>R</kbd> random · <kbd>O</kbd> random order · <kbd>P</kbd> palette · <kbd>L</kbd> names · <kbd>A</kbd> auto-change · <kbd>W</kbd> pop-out window · <kbd>←</kbd> <kbd>→</kbd> scene · <kbd>↑</kbd> <kbd>↓</kbd> colours · <kbd>Y</kbd> photo spin · <kbd>F</kbd> full screen · <kbd>T</kbd> TV mode · <kbd>C</kbd> cast help · <kbd>H</kbd> or double-click: hide controls</div>
   </div>
 </div>
 
@@ -240,7 +240,8 @@ body:not(.locked) #showUi{display:none}
     <button class="btn" id="bSrc">Source</button>
     <button class="btn" id="bLights">Lights</button>
     <button class="btn" id="bCast">Cast to TV</button>
-    <button class="btn" id="bPop" title="Show the visuals in their own window, with no Chrome sharing bar (W)">Pop out</button>
+    <button class="btn" id="bPop" title="Show the visuals in their own window (W)">Pop out</button>
+    <button class="btn" id="bPip" title="Picture in picture: a floating window with no Chrome bars at all (Q)">Picture in picture</button>
     <button class="btn" id="bFs">Full screen</button>
     <button class="btn" id="bHide">Hide</button>
   </div>
@@ -6045,16 +6046,21 @@ function popOut(){
   if(w&&tv)toast('The visuals open on '+(tv.label||'the TV')+'. Click the TV picture once for full screen.');
   if(!w){toast('Chrome blocked the pop-out. Allow pop-ups for this file, then try again.');return}
   const d=w.document;d.open();d.write('<!doctype html><html><head><meta charset="utf-8"><title>Fibwave</title></head><body></body></html>');d.close();
+  popAttach(w,false);
+}
+function popAttach(w,pip){
+  const d=w.document;
   document.querySelectorAll('style').forEach(st0=>d.head.appendChild(d.importNode(st0,true)));
   const css=d.createElement('style');css.textContent='html,body{margin:0;background:#000;overflow:hidden;cursor:default}body.idle{cursor:none}#popHint{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:9;font:14px system-ui,sans-serif;color:#dfe7ff;background:rgba(10,14,30,.78);border:1px solid rgba(160,180,255,.3);padding:10px 16px;border-radius:12px;transition:opacity .6s;pointer-events:none}#popHint.off{opacity:0}';d.head.appendChild(css);
   POP.ph=document.createComment('stage');STAGE[0].before(POP.ph);
   for(const el of STAGE)d.body.appendChild(d.adoptNode(el));
-  const hint=d.createElement('div');hint.id='popHint';hint.textContent='Click for full screen · you can drag this window to the TV first · Esc leaves full screen · close this window to bring the visuals back';d.body.appendChild(hint);
+  const hint=d.createElement('div');hint.id='popHint';hint.textContent=pip?'Picture in picture: no Chrome bars · drag it to the TV · double-click to make it as large as Chrome allows · close it to bring the visuals back':'Click for full screen · you can drag this window to the TV first · Esc leaves full screen · close this window to bring the visuals back';d.body.appendChild(hint);
+  POP.pip=pip;
   POP.w=w;
   {let rt2=0;w.addEventListener('resize',()=>{clearTimeout(rt2);rt2=setTimeout(()=>{if(SCR.sel==='auto'){const was=SCR.prof;scrApply();if(SCR.prof!==was)toast('Screen: '+SCREENS[SCR.prof].name+' · visuals tuned for it')}},700)})}   // the window moved to another screen
   let idle=0;const wake=()=>{d.body.classList.remove('idle');hint.classList.toggle('off',!!d.fullscreenElement);clearTimeout(idle);idle=setTimeout(()=>{d.body.classList.add('idle');hint.classList.add('off')},4000)};
   const fs=()=>{if(!d.fullscreenElement)d.documentElement.requestFullscreen(SCR.tv?{navigationUI:'hide',screen:SCR.tv}:{navigationUI:'hide'}).catch(()=>d.documentElement.requestFullscreen({navigationUI:'hide'}).catch(()=>{}))};
-  w.addEventListener('click',fs);w.addEventListener('mousemove',wake);d.addEventListener('fullscreenchange',wake);
+  if(pip)w.addEventListener('dblclick',()=>{try{w.resizeTo(w.screen.availWidth,w.screen.availHeight)}catch(_){}});else w.addEventListener('click',fs);w.addEventListener('mousemove',wake);d.addEventListener('fullscreenchange',wake);
   const fwd=e=>{try{dispatchEvent(new window[e.constructor.name](e.type,e))}catch(_){}};   // the control keys and sky drag still work in the pop-out
   ['pointerdown','pointermove','pointerup'].forEach(t=>w.addEventListener(t,fwd));w.addEventListener('wheel',fwd,{passive:true});
   w.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k==='f'){if(d.fullscreenElement)d.exitFullscreen();else fs();return}if(k==='escape'||k==='h'||k==='t')return;if(k===' '||k.startsWith('arrow'))e.preventDefault();fwd(e)});
@@ -6063,17 +6069,25 @@ function popOut(){
   document.getElementById('popNote').hidden=false;document.getElementById('bPop').textContent='Bring back';
   if(document.fullscreenElement)document.exitFullscreen();
   resize();schedFrame();wake();
-  toast('Visuals are in the pop-out window. Click it for full screen.');
+  toast(pip?'Visuals are in the picture-in-picture window. Drag it to the TV, then double-click it to make it larger.':'Visuals are in the pop-out window. Click it for full screen.');
+}
+async function pipOut(){
+  if(!('documentPictureInPicture' in window)){toast('Picture in picture needs Chrome 116 or newer on a computer. Use Pop out instead.');return}
+  if(POP.w&&!POP.w.closed)popIn();
+  try{const sc=window.screen,w=await documentPictureInPicture.requestWindow({width:Math.round(sc.availWidth*0.9),height:Math.round(sc.availHeight*0.9)});
+    const d=w.document;const t=d.createElement('title');t.textContent='Fibwave';d.head.appendChild(t);d.body.style.margin='0';
+    popAttach(w,true);document.getElementById('bPip').textContent='Bring back'}catch(e){toast('Chrome did not open picture in picture: '+(e.message||e))}
 }
 function popIn(){
   if(!POP.ph)return;
   for(const el of STAGE)POP.ph.before(document.adoptNode(el));
   POP.ph.remove();POP.ph=null;const w=POP.w;POP.w=null;try{if(w&&!w.closed)w.close()}catch(_){}
-  document.getElementById('popNote').hidden=true;document.getElementById('bPop').textContent='Pop out';
+  document.getElementById('popNote').hidden=true;document.getElementById('bPop').textContent='Pop out';POP.pip=false;document.getElementById('bPip').textContent='Picture in picture';
   resize();schedFrame();
 }
 setInterval(()=>{if(POP.w&&POP.w.closed)popIn()},700);
 document.getElementById('bPop').onclick=()=>POP.w?popIn():popOut();
+document.getElementById('bPip').onclick=()=>POP.w&&POP.pip?popIn():pipOut();
 document.getElementById('popBack').onclick=popIn;
 
 /* ---------- cast to TV ---------- */
@@ -6141,6 +6155,7 @@ addEventListener('keydown',e=>{
   else if(k==='a'){const o=[0,8,13,21,34,55],sel=document.getElementById('auto');S.auto=o[(o.indexOf(S.auto)+1)%o.length];sel.value=S.auto;toast(S.auto?'Auto-change every '+S.auto+' beats':'Auto-change off')}
   else if(k==='f'){toggleFs()}
   else if(k==='w'){POP.w?popIn():popOut()}
+  else if(k==='q'){POP.w&&POP.pip?popIn():pipOut()}
   else if(k==='y'){const o=['off','slow','music','hits'],sp=document.getElementById('spinSel');sp.value=o[(o.indexOf(S.spin)+1)%4];sp.dispatchEvent(new Event('change'))}
   else if(k==='t'){tvMode();return}
   else if(k==='c'){castEl.hidden=!castEl.hidden}

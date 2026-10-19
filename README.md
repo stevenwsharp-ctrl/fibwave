@@ -26,7 +26,7 @@
 
 | Source | What it does | Notes |
 |---|---|---|
-| **Share a tab — YouTube or Spotify** | Takes the sound of another Chrome tab. | Chrome only. In the share window, select the music tab and keep **Share tab audio** on. Chrome shows a sharing bar at the top of the Fibwave tab. A web page cannot remove that bar. |
+| **Share a tab — YouTube or Spotify** | Takes the sound of another Chrome tab. | Chrome only. In the share window, select the music tab and keep **Share tab audio** on. Chrome shows a sharing bar at the top of the Fibwave tab. To see the visuals without it, use **Picture in picture** (Q). |
 | **Microphone or BlackHole** | Listens to a sound input. | Use the microphone for room sound, or **BlackHole** for clean sound from any Mac app **with no sharing bar** (see below). |
 | **Audio files** | Plays MP3, WAV, FLAC or M4A files from your computer. | You can also drag audio files onto the window. |
 | **Paste a link** | Plays a YouTube or Spotify link inside Fibwave. | Only on the live site (not from a local file). Chrome shares the Fibwave tab, so the sharing bar shows. |
@@ -51,6 +51,14 @@ BlackHole is a virtual audio cable. The Mac sends its sound to your speakers (or
 With a Multi-Output Device, the Mac volume keys do not work. Set the volume on the TV, the speakers or the music app. When you are done, set the Mac output back to your normal speakers.
 
 ---
+
+## Picture in picture (no sharing bar)
+
+Click **Picture in picture** (or press **Q**). The visuals move into a floating Chrome picture-in-picture window. This window has no tabs, no address bar and no sharing bar, only a thin title bar.
+
+- Drag it to the TV, then double-click it to make it as large as Chrome allows.
+- Chrome limits its maximum size and does not allow full screen in it, so it does not cover the whole screen.
+- Close it (or press **Q** again) to bring the visuals back. Needs Chrome 116 or newer on a computer.
 
 ## Playing on a TV
 
@@ -89,6 +97,7 @@ If you drag the pop-out window from one screen to another, Auto mode sets itself
 | **H** or double-click | Hide / show the controls |
 | **F** | Full screen |
 | **W** | Pop-out window |
+| **Q** | Picture in picture (a floating window with no Chrome bars) |
 | **T** | TV mode |
 | **C** | Cast help |
 | **R** | Random scene |
