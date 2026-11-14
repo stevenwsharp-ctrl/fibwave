@@ -23,6 +23,14 @@
   --mono:'VT323',ui-monospace,Menlo,monospace;
 }
 *{box-sizing:border-box}
+#labPanel{position:fixed;top:12px;right:max(12px,env(safe-area-inset-right));width:min(330px,92vw);max-height:calc(100% - 210px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;z-index:5;font-size:13px;display:flex;flex-direction:column;gap:8px;transition:opacity .5s}
+#labPanel .lr{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#labPanel .lt{font-family:var(--display);font-size:13px;letter-spacing:.06em;color:var(--gold)}
+#labPanel select,#labPanel input[type=range]{width:190px;max-width:62%}
+#labPanel .lb{display:flex;flex-wrap:wrap;gap:6px 10px}
+#labPanel .hint{margin:0;color:var(--dim);line-height:1.45}
+body.noui #labPanel{opacity:0;pointer-events:none}
+
 [hidden]{display:none!important}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);overflow:hidden}
 #c,#gl,#ov{position:fixed;inset:0;width:100%;height:100%;display:block}
@@ -235,6 +243,7 @@ body:not(.locked) #showUi{display:none}
   </div>
   <div class="grp">
     <button class="btn" id="bSrc">Source</button>
+    <button class="btn" id="bLab" title="Health Laboratory: real molecules of the body's filters, muscles, bones and blood">Health Lab</button>
     <button class="btn" id="bLights">Lights</button>
     <button class="btn" id="bCast">Cast to TV</button>
     <button class="btn" id="bPop" title="Show the visuals in their own window (W)">Pop out</button>
@@ -255,6 +264,20 @@ body:not(.locked) #showUi{display:none}
     <span class="rp"><button id="gtPlay">▶ Hear it</button> <select id="gtSpeed" aria-label="Speed"><option value="1">100%</option><option value="0.75">75%</option><option value="0.5">50%</option></select></span></div>
   <canvas id="gtTab" hidden></canvas>
   <p id="gtInfo"></p>
+</div>
+<div id="labPanel" hidden>
+  <div class="lr"><b class="lt">Health Laboratory</b><button class="btn" id="labClose">Close</button></div>
+  <label class="lr">Molecule <select id="labMol"></select></label>
+  <label class="lr">View <select id="labView"></select></label>
+  <label class="lr">Style <select id="labStyle"><option value="ball">Ball and stick</option><option value="space">Space filling</option><option value="stick">Sticks</option><option value="glow">Glow</option></select></label>
+  <label class="lr">Colours <select id="labColor"><option value="el">By element</option><option value="pal">Palette</option></select></label>
+  <label class="lr">Music link <input type="range" id="labMusic" min="0" max="2" step="0.05" value="1"></label>
+  <label class="lr">Speed <input type="range" id="labSpeed" min="0.1" max="3" step="0.05" value="1"></label>
+  <label class="lr">Next molecule <select id="labAuto"><option value="0">Manual</option><option value="16">Every 16 beats</option><option value="32">Every 32 beats</option><option value="64">Every 64 beats</option></select></label>
+  <div class="lb"><label class="chk"><input type="checkbox" id="labHyd"> Hydrogens</label><label class="chk"><input type="checkbox" id="labInfoChk"> Info</label><label class="chk"><input type="checkbox" id="labVib"> Vibrate</label><label class="chk" title="Auto does not change the scene while you are in the lab"><input type="checkbox" id="labStay"> Stay in lab</label></div>
+  <div class="lb"><button class="btn" id="labBind" title="Molecules fly in and bind: adsorption on carbon, docking in albumin, oxygen on iron, water on polar atoms">Bind</button><button class="btn" id="labExplode">Explode</button><button class="btn" id="labContract">Contract</button><button class="btn" id="labNext">Next</button><button class="btn" id="labReset">Reset look</button></div>
+  <p id="labInfo" class="hint"></p>
+  <p class="hint">Drag the screen to look round. Scroll to change the flight speed.</p>
 </div>
 <div class="panel" id="lights" hidden>
   <div class="card">
@@ -2188,10 +2211,10 @@ const v3={sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],add:(a,b)=>[a[0]+b[0],a[1]+
   norm:a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l]},lerp:(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]};
 const FLY={yaw:0,pitch:0,speed:1,drag:null,idle:0};
 function flyScene(){return !!SCENES[S.scene].fly}
-addEventListener('pointerdown',e=>{if(!flyScene()||(e.target.closest&&e.target.closest('#hud,.panel,#player,#start,#toast,#riffs,#showUi')))return;FLY.drag={x:e.clientX,y:e.clientY,yaw:FLY.yaw,pitch:FLY.pitch}});
+addEventListener('pointerdown',e=>{if(!flyScene()||(e.target.closest&&e.target.closest('#hud,.panel,#labPanel,#player,#start,#toast,#riffs,#showUi')))return;FLY.drag={x:e.clientX,y:e.clientY,yaw:FLY.yaw,pitch:FLY.pitch}});
 addEventListener('pointermove',e=>{if(!FLY.drag)return;FLY.yaw=clamp(FLY.drag.yaw+(e.clientX-FLY.drag.x)*0.004,-1.2,1.2);FLY.pitch=clamp(FLY.drag.pitch-(e.clientY-FLY.drag.y)*0.004,-1,1);FLY.idle=0});
 addEventListener('pointerup',()=>{FLY.drag=null});addEventListener('pointercancel',()=>{FLY.drag=null});
-addEventListener('wheel',e=>{if(!flyScene()||(e.target.closest&&e.target.closest('#hud,.panel,#riffs')))return;FLY.speed=clamp(FLY.speed*Math.exp(-e.deltaY*0.0012),0.2,5)},{passive:true});
+addEventListener('wheel',e=>{if(!flyScene()||(e.target.closest&&e.target.closest('#hud,.panel,#labPanel,#riffs')))return;FLY.speed=clamp(FLY.speed*Math.exp(-e.deltaY*0.0012),0.2,5)},{passive:true});
 function flyStep(){FLY.idle+=st.dtReal;if(!FLY.drag&&FLY.idle>3){const k=Math.pow(0.4,st.dtReal);FLY.yaw*=k;FLY.pitch*=k}}
 // a camera from a position, a point to look at and an up direction (plus the look offset from dragging)
 function camLook(pos,target,up,F){
@@ -5058,6 +5081,7 @@ const SCENES=[
   {name:'Spin in Water',draw:spinWater,fb:{zoom:1.0,rot:0,trail:0.75},dwell:2},
   {name:'Spin in Honey',draw:spinHoney,fb:{zoom:1.0,rot:0,trail:0.2},dwell:2.4},
   {name:'Spin in Plasma',draw:spinPlasma,fb:{zoom:1.0,rot:0,trail:0.35},dwell:2},
+  {name:'Health Laboratory',draw:labScene,fly:true,lab:true,calm:true,get noAuto(){return LAB.stay},fb:{zoom:1.0,rot:0,trail:0},dwell:3},
   ...(GLOK?[...GLSCENES,{name:'Möbius Flow',kind:'gl',fs:FS_MOBFLOW,rs0:0.8,rsMax:1,th:0.8,dwell:1.6,
    step(a){this.b=(this.b||0)+st.dt*(0.25+a.bass*0.9+a.kick*0.5)*(S.timbre&&live?TB.tempo:1);this.a=0.35+0.25*Math.sin(st.t*0.05)+a.mid*0.3;this.c=0.55+0.15*Math.sin(st.t*0.03)+a.kick*0.06;this.d=[5,6,8,12][Math.floor(A.beats/32)%4];
      if(S.names){label(18*DPR,26*DPR,'Möbius flow · z → (z − p)/(z − q): the pattern streams out of one point and spirals into another (a loxodromic Möbius map, as in the book \u201cIndra\u2019s Pearls\u201d)','info')}}},{name:'Holographic Universe',kind:'gl',fs:FS_HOLO,rs0:0.75,rsMax:1,th:0.8,dwell:1.6,
@@ -5420,6 +5444,262 @@ function helixEQ(c,a){
   // the two backbones
   for(let s=0;s<2;s++){c.strokeStyle=col(s?0.6:0.1,60,0.6);c.lineWidth=DPR*2;c.beginPath();let on=false;for(let i=0;i<=120;i++){const y=(i/120-0.5)*9,th=HX.rot+i/120*(n-1)*0.35+(s?Math.PI:0),p=camP(C,[Math.cos(th)*1.1,y,Math.sin(th)*1.1]);if(p){on?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]);on=true}}c.stroke()}
   if(S.names)label(18*DPR,26*DPR,'Helix EQ · 72 frequency bands wound up two strands, low notes at the bottom · '+['side view','three-quarter view','looking down the axis'][HX.mode]+' · drag to look round','info');
+}
+
+/* =====================================================================
+   HEALTH LABORATORY — real molecules of the body's filters, movement and blood.
+   Small molecules are built from their SMILES formula and folded into 3D with
+   real bond lengths and angles. Proteins, filaments and crystals are
+   coarse-grained (one bead per amino acid or per subunit).
+   Views: overview, travel around, inside, between, through, quantum.
+   ===================================================================== */
+const LAB_EL={H:{c:[236,236,242],r:0.31,v:1.1},C:{c:[96,98,108],r:0.76,v:1.7},N:{c:[58,96,235],r:0.71,v:1.55},O:{c:[232,48,44],r:0.66,v:1.52},
+  S:{c:[242,204,52],r:1.05,v:1.8},P:{c:[255,140,0],r:1.07,v:1.8},Fe:{c:[224,110,51],r:1.32,v:1.9},Ca:{c:[90,230,70],r:1.76,v:2.3},Cl:{c:[40,230,60],r:1.02,v:1.75},
+  Na:{c:[171,92,242],r:1.66,v:2.27},K:{c:[143,64,212],r:2.03,v:2.75},X:{c:[200,200,210],r:1.9,v:1.9}};
+const LAB_VAL={B:3,C:4,N:3,O:2,P:3,S:2,F:1,Cl:1,Br:1,I:1};
+// a small SMILES reader: atoms, brackets, charges, branches, ring closures, bond orders, aromatic atoms
+function labSmiles(s){
+  const atoms=[],bonds=[],stack=[],rings={};let prev=-1,bo=1,i=0;
+  const add=(el,arom,h,ch,br)=>{atoms.push({el,arom,h,ch,br});const k=atoms.length-1;if(prev>=0)bonds.push([prev,k,bo===1&&arom&&atoms[prev].arom?1.5:bo]);prev=k;bo=1};
+  while(i<s.length){const c=s[i];
+    if(c==='('){stack.push(prev);i++;continue}
+    if(c===')'){prev=stack.pop();i++;continue}
+    if(c==='-'){bo=1;i++;continue}if(c==='='){bo=2;i++;continue}if(c==='#'){bo=3;i++;continue}if(c===':'){bo=1.5;i++;continue}
+    if(c==='/'||c==='\\'||c==='.'){if(c==='.')prev=-1;i++;continue}
+    if(c==='['){const j=s.indexOf(']',i),t=s.slice(i+1,j),m=t.match(/^(\d*)([A-Z][a-z]?|[a-z]+)(@*)(H\d*)?([+-]+\d*)?/);
+      let el=m[2],ar=el[0]===el[0].toLowerCase();if(ar)el=el[0].toUpperCase()+el.slice(1);
+      const h=m[4]?(m[4].length>1?+m[4].slice(1):1):0;let ch=0;if(m[5]){const sg=m[5][0]==='+'?1:-1,n=m[5].slice(1);ch=sg*(n?(/\d/.test(n)?+n:n.length+1):1)}
+      add(el,ar,h,ch,true);i=j+1;continue}
+    if(/\d|%/.test(c)){let n;if(c==='%'){n=s.slice(i+1,i+3);i+=3}else{n=c;i++}
+      if(rings[n]){const r=rings[n];bonds.push([r.a,prev,Math.max(bo,r.bo)===1&&atoms[r.a].arom&&atoms[prev].arom?1.5:Math.max(bo,r.bo)]);delete rings[n]}else rings[n]={a:prev,bo};bo=1;continue}
+    const two=s.slice(i,i+2);
+    if(two==='Cl'||two==='Br'){add(two,false,null,0,false);i+=2;continue}
+    if(/[BCNOPSFI]/.test(c)){add(c,false,null,0,false);i++;continue}
+    if(/[bcnops]/.test(c)){add(c.toUpperCase(),true,null,0,false);i++;continue}
+    i++}
+  // implicit hydrogens for atoms outside brackets
+  const deg=atoms.map(()=>0);for(const b of bonds){const o=b[2]===1.5?1:b[2];deg[b[0]]+=o;deg[b[1]]+=o}
+  atoms.forEach((a,k)=>{if(a.br)return;let v=LAB_VAL[a.el]||0;if(a.arom)v-=1;if(a.el==='P'&&deg[k]>3)v=5;if(a.el==='S'&&deg[k]>2)v=deg[k]>4?6:4;a.h=Math.max(0,v-deg[k])});
+  return {atoms,bonds};
+}
+// fold a molecule graph into 3D: bond lengths, bond angles (sp3 / sp2 / sp) and atom repulsion
+function labEmbed(m,seed,flatFrom){
+  const A=[],B=[];m.atoms.forEach(a=>A.push({el:a.el,ch:a.ch,arom:a.arom}));m.bonds.forEach(b=>B.push(b.slice()));
+  const heavy=A.length;m.atoms.forEach((a,k)=>{for(let h=0;h<(a.h||0);h++){A.push({el:'H'});B.push([k,A.length-1,1])}});
+  const n=A.length,nb=A.map(()=>[]);B.forEach(([i,j,o])=>{nb[i].push([j,o]);nb[j].push([i,o])});
+  let s=seed||1;const rnd=()=>{s=(s*16807)%2147483647;return s/2147483647-0.5};
+  const P=[];const placed=new Array(n).fill(false),q=[0];P[0]=[0,0,0];placed[0]=true;
+  while(q.length){const i=q.shift();for(const [j] of nb[i])if(!placed[j]){const d=[rnd(),rnd(),rnd()],l=Math.hypot(...d)||1;P[j]=[P[i][0]+d[0]/l*1.4,P[i][1]+d[1]/l*1.4,P[i][2]+d[2]/l*1.4];placed[j]=true;q.push(j)}}
+  for(let i=0;i<n;i++)if(!placed[i])P[i]=[rnd()*8,rnd()*8,rnd()*8];
+  const cons=[];const bl=(i,j,o)=>{const r=(LAB_EL[A[i].el]||LAB_EL.X).r+(LAB_EL[A[j].el]||LAB_EL.X).r;return r*(o>=3?0.87:o>=2?0.9:o>1?0.93:1)};
+  B.forEach(([i,j,o])=>cons.push([i,j,bl(i,j,o),1]));
+  for(let k=0;k<n;k++){const L=nb[k];if(L.length<2)continue;const mx=Math.max(...L.map(x=>x[1]));
+    const th=(L.length===2&&mx>=3)||(L.length===2&&L.filter(x=>x[1]>=2&&x[1]!==1.5).length===2)?Math.PI:(mx>=1.5||A[k].arom)&&L.length<=3?2*Math.PI/3:1.911;
+    for(let a=0;a<L.length;a++)for(let b=a+1;b<L.length;b++){const i=L[a][0],j=L[b][0],da=bl(k,i,L[a][1]),db=bl(k,j,L[b][1]);cons.push([i,j,Math.sqrt(da*da+db*db-2*da*db*Math.cos(th)),0.6])}}
+  const near=new Set();cons.forEach(c=>near.add(c[0]*n+c[1]));
+  let flat=null;if(flatFrom!==undefined){const dist=new Array(n).fill(99),q2=[flatFrom];dist[flatFrom]=0;while(q2.length){const i=q2.shift();for(const [j] of nb[i])if(dist[j]>dist[i]+1){dist[j]=dist[i]+1;q2.push(j)}}flat=dist.map(d=>d<=4)}
+  for(let it=0;it<420;it++){const t=it<300?1:0.5;if(flat)for(let i=0;i<n;i++)if(flat[i])P[i][2]*=0.55;
+    for(const [i,j,d0,w] of cons){const a=P[i],b=P[j],dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],d=Math.hypot(dx,dy,dz)||1e-6,f=(d-d0)/d*0.5*w*t;a[0]+=dx*f;a[1]+=dy*f;a[2]+=dz*f;b[0]-=dx*f;b[1]-=dy*f;b[2]-=dz*f}
+    if(it%2===0)for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){if(near.has(i*n+j)||near.has(j*n+i))continue;const a=P[i],b=P[j],dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],d2=dx*dx+dy*dy+dz*dz,mn=A[i].el==='H'||A[j].el==='H'?2.3:3.1;
+      if(d2<mn*mn){const d=Math.sqrt(d2)||1e-6,f=(d-mn)/d*0.25;a[0]+=dx*f;a[1]+=dy*f;a[2]+=dz*f;b[0]-=dx*f;b[1]-=dy*f;b[2]-=dz*f}}}
+  let c=[0,0,0];P.forEach(p=>{c[0]+=p[0]/n;c[1]+=p[1]/n;c[2]+=p[2]/n});
+  return {atoms:A.map((a,i)=>({el:a.el,ch:a.ch,p:[P[i][0]-c[0],P[i][1]-c[1],P[i][2]-c[2]],h:i>=heavy})),bonds:B};
+}
+function labFormula(atoms){const n={};atoms.forEach(a=>{if(a.cg)return;n[a.el]=(n[a.el]||0)+1});const sub=d=>String(d).replace(/\d/g,x=>'₀₁₂₃₄₅₆₇₈₉'[x]);
+  const ks=Object.keys(n).sort((a,b)=>a==='C'?-1:b==='C'?1:a==='H'?-1:b==='H'?1:a<b?-1:1);return ks.map(k=>k+(n[k]>1?sub(n[k]):'')).join('')}
+const LAB_SMI={
+  urea:'NC(=O)N',creatinine:'CN1CC(=O)NC1=N',glucose:'OCC1OC(O)C(O)C(O)C1O',water:'O',lactate:'CC(O)C(=O)[O-]',
+  glutathione:'NC(CCC(=O)NC(CS)C(=O)NCC(=O)O)C(=O)O',
+  bilirubin:'CC1=C(C=C)C(=O)NC1=CC2=C(C)C(CCC(=O)O)=C(N2)CC3=C(CCC(=O)O)C(C)=C(N3)C=C4NC(=O)C(C)=C4C=C',
+  cholic:'CC(CCC(=O)O)C1CCC2C1(C)C(O)CC3C2C(O)CC4CC(O)CCC34C',
+  ach:'CC(=O)OCC[N+](C)(C)C',
+  atp:'Nc1ncnc2c1ncn2C3OC(COP(=O)(O)OP(=O)(O)OP(=O)(O)O)C(O)C3O',
+  heme:'CC1=C(CCC(=O)O)C2=CC3=C(CCC(=O)O)C(C)=C4C=C5C(C)=C(C=C)C6=CC7=C(C)C(C=C)=C(C=C1N2%10)N7[Fe]%10(N34)N56',
+  cellulose:'OCC1OC(OC2C(CO)OC(OC3C(CO)OC(O)C(O)C3O)C(O)C2O)C(O)C(O)C1O',
+  chloroform:'ClC(Cl)Cl',benzene:'c1ccccc1',o2:'O=O',
+  warfarin:'CC(=O)CC(c1ccccc1)C2=C(O)c3ccccc3OC2=O',ibuprofen:'CC(C)Cc1ccc(cc1)C(C)C(=O)O',calcium:'[Ca+2]'
+};
+const LAB_CACHE={};
+function labMol(key,seed){if(LAB_CACHE[key])return LAB_CACHE[key];const g=labSmiles(LAB_SMI[key]),fe=g.atoms.findIndex(a=>a.el==='Fe');const m=labEmbed(g,seed||7,fe>=0?fe:undefined);
+  if(key==='heme'){const fe=m.atoms.findIndex(a=>a.el==='Fe');if(fe>=0){const ns=m.bonds.filter(b=>b[0]===fe||b[1]===fe).map(b=>b[0]===fe?b[1]:b[0]);
+    // flatten the porphyrin: fit its plane and press every ring atom towards it
+    const c=[0,0,0];ns.forEach(k=>{c[0]+=m.atoms[k].p[0]/ns.length;c[1]+=m.atoms[k].p[1]/ns.length;c[2]+=m.atoms[k].p[2]/ns.length});m.atoms[fe].p=c.slice()}}
+  return LAB_CACHE[key]=m}
+// ---------- coarse-grained and crystal builders ----------
+function labCarbon(){ // activated carbon: crumpled graphene flakes with holes, oxygen groups at the edges, and slit pores between them
+  const atoms=[],bonds=[];let s=11;const r=()=>{s=(s*16807)%2147483647;return s/2147483647};
+  const flakes=[[0,0,0,0,0],[0,6.8,0.6,0.25,1.1],[1.5,-7.2,-0.8,-0.2,2.3],[9,2,4,1.1,0.4],[-9,1,-3,-1.0,2.9],[4,-2,10,0.7,1.7],[-3,3,-10,-0.6,0.9]];
+  for(const [ox,oy,oz,tilt,spin] of flakes){const base=atoms.length,R=7+r()*3,pts=[];
+    for(let i=-9;i<=9;i++)for(let j=-9;j<=9;j++)for(const k of [0,1]){const x=(i+j*0.5)*2.46,z=(j*0.866)*2.46+(k?1.42:0),xx=x+(k?0:0),d=Math.hypot(xx,z);if(d>R*(0.85+0.3*Math.sin(Math.atan2(z,xx)*3+spin)))continue;if(r()<0.06)continue;pts.push([xx,z])}
+    const ct=Math.cos(tilt),st2=Math.sin(tilt),cs=Math.cos(spin),sn=Math.sin(spin);
+    pts.forEach(([x,z])=>{const y=0.35*Math.sin(x*0.3+spin)*Math.cos(z*0.25);let X=x*cs-z*sn,Z=x*sn+z*cs,Y=y*ct-Z*st2;Z=y*st2+Z*ct;atoms.push({el:'C',p:[X+ox,Y+oy,Z+oz],n:[-st2*0,ct,st2],surf:1})});
+    const end=atoms.length;for(let a=base;a<end;a++)for(let b=a+1;b<end;b++){const p=atoms[a].p,q=atoms[b].p;if(Math.hypot(p[0]-q[0],p[1]-q[1],p[2]-q[2])<1.62)bonds.push([a,b,1.5])}
+    const cnt=new Array(end-base).fill(0);bonds.forEach(b=>{if(b[0]>=base){cnt[b[0]-base]++;cnt[b[1]-base]++}});
+    for(let a=base;a<end;a++)if(cnt[a-base]===1&&r()<0.5){const p=atoms[a].p,dir=v3.norm(v3.sub(p,[ox,oy,oz]));atoms.push({el:'O',p:v3.add(p,v3.mul(dir,1.25))});bonds.push([a,atoms.length-1,r()<0.5?2:1])}}
+  return {atoms,bonds,kind:'carbon'};
+}
+function labAlbumin(){ // human serum albumin: 585 amino acids, about 67% alpha helix, three domains (I, II, III) that make a heart shape
+  const atoms=[],bonds=[];let s=5;const r=()=>{s=(s*16807)%2147483647;return s/2147483647};
+  const dom=[[-13,8,0],[13,8,0],[0,-14,0]],per=195;let prevK=-1,prevEnd=null;
+  for(let d=0;d<3;d++){let made=0,h=0;while(made<per){const len=Math.min(per-made,10+Math.floor(r()*12));
+      const sub=h<5?-1:1,cen=v3.add(dom[d],[sub*5*Math.cos(d*2.1),sub*5*Math.sin(d*2.1),(r()-0.5)*14]);
+      const ax=v3.norm([r()-0.5,r()-0.5,r()-0.5]),u=v3.norm(v3.cross(ax,[0.3,1,0.2])),w=v3.cross(ax,u);
+      const start=v3.sub(cen,v3.mul(ax,len*0.75));
+      if(prevEnd){const loop=3;for(let k=1;k<=loop;k++){const p=v3.lerp(prevEnd,start,k/(loop+1));p[2]+=Math.sin(k)*1.5;atoms.push({el:'X',cg:1,p,dom:d,res:atoms.length});if(prevK>=0)bonds.push([prevK,atoms.length-1,1]);prevK=atoms.length-1}}
+      for(let k=0;k<len;k++){const a=k*1.745,p=v3.add(v3.add(start,v3.mul(ax,k*1.5)),v3.add(v3.mul(u,Math.cos(a)*2.3),v3.mul(w,Math.sin(a)*2.3)));
+        atoms.push({el:'X',cg:1,p,dom:d,res:atoms.length,helix:1});if(prevK>=0)bonds.push([prevK,atoms.length-1,1]);prevK=atoms.length-1}
+      prevEnd=atoms[prevK].p;made+=len+3;h++}}
+  return {atoms:atoms.slice(0,585),bonds:bonds.filter(b=>b[0]<585&&b[1]<585),kind:'protein',sites:[{name:'Sudlow site I (subdomain IIA)',p:v3.add(dom[1],[-4,-6,0]),lig:'warfarin'},{name:'Sudlow site II (subdomain IIIA)',p:v3.add(dom[2],[5,3,0]),lig:'ibuprofen'},{name:'Bilirubin site (subdomain IB)',p:v3.add(dom[0],[3,-4,0]),lig:'bilirubin'}]};
+}
+function labCollagen(){ // collagen triple helix: three chains of Gly-X-Y (X often proline, Y often hydroxyproline), wound round each other
+  const atoms=[],bonds=[];const N=90;
+  for(let c=0;c<3;c++){let prev=-1;for(let i=0;i<N;i++){const z=(i-N/2)*0.95,sup=z*0.08+c*2.094,lw=i*2.094*1.0+c*0.7,R=2.4,
+      p=[Math.cos(sup)*R+Math.cos(lw)*0.9,Math.sin(sup)*R+Math.sin(lw)*0.9,z];const t=i%3;atoms.push({el:t===0?'H':t===1?'C':'O',cg:1,p,chain:c,res:['Gly','Pro','Hyp'][t],r:t===0?0.9:1.25});if(prev>=0)bonds.push([prev,atoms.length-1,1]);prev=atoms.length-1}}
+  return {atoms,bonds,kind:'fiber'};
+}
+function labApatite(){ // hydroxyapatite Ca10(PO4)6(OH)2, hexagonal: a = 9.42 Å, c = 6.88 Å (bone and tooth mineral)
+  const atoms=[],bonds=[],a=9.42,c=6.88,hx=(u,v)=>[(u+v*0.5)*a,v*0.866*a];
+  for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)for(let k=-1;k<=1;k++){
+    const add=(u,v,w,el)=>{const [x,y]=hx(i+u,j+v);atoms.push({el,p:[x,(k+w)*c,y]});return atoms.length-1};
+    add(1/3,2/3,0,'Ca');add(1/3,2/3,0.5,'Ca');add(2/3,1/3,0,'Ca');add(2/3,1/3,0.5,'Ca');
+    for(const w of [0.25,0.75]){for(let t=0;t<3;t++){const an=t*2.094+(w>0.5?Math.PI/3:0);add(0.246*Math.cos(an),0.246*Math.sin(an),w,'Ca')}
+      for(let t=0;t<3;t++){const an=t*2.094+0.6+(w>0.5?Math.PI/3:0),pu=0.4*Math.cos(an),pv=0.4*Math.sin(an),pi=add(pu,pv,w,'P');
+        for(const d of [[1.53,0,0],[-0.5,1.45,0],[-0.5,-0.72,1.25],[-0.5,-0.72,-1.25]]){const P=atoms[pi].p;atoms.push({el:'O',p:[P[0]+d[0],P[1]+d[2],P[2]+d[1]]});bonds.push([pi,atoms.length-1,1])}}
+      const oh=add(0,0,w+0.05,'O');atoms.push({el:'H',p:v3.add(atoms[oh].p,[0,0.97,0])});bonds.push([oh,atoms.length-1,1])}}
+  return {atoms,bonds,kind:'crystal'};
+}
+function labActin(){ // sliding filaments: thin actin double helix and a thick myosin filament with heads that pull (the power stroke)
+  const atoms=[],bonds=[];
+  for(const y0 of [-7,7])for(const hf of [-1,1])for(let s=0;s<2;s++){let prev=-1;for(let i=0;i<18;i++){const x=hf*(44-i*2.75),th=i*(-166.6*Math.PI/180)+s*Math.PI;
+    atoms.push({el:'X',cg:1,p:[x,y0+Math.cos(th)*2.4,Math.sin(th)*2.4],part:'actin',hf,r:2.2});if(prev>=0)bonds.push([prev,atoms.length-1,1]);prev=atoms.length-1}}
+  for(const hf of [-1,1])for(const y0 of [-9.5,9.5])atoms.push({el:'X',cg:1,p:[hf*46,y0,0],part:'zline',hf,r:1.4});
+  let prev=-1;for(let i=0;i<34;i++){atoms.push({el:'X',cg:1,p:[-28+i*1.7,0,0],part:'rod',r:1.6});if(prev>=0)bonds.push([prev,atoms.length-1,1]);prev=atoms.length-1}
+  for(let h=0;h<18;h++){const x=-24+h*2.9,side=h%2?1:-1,base=atoms.length;atoms.push({el:'X',cg:1,p:[x,side*2,0],part:'neck',hx:x,side,r:1.3});atoms.push({el:'X',cg:1,p:[x,side*4.2,0],part:'head',hx:x,side,r:2.3,hk:h});bonds.push([base,base+1,1])}
+  return {atoms,bonds,kind:'motor'};
+}
+const LAB_LIST=[
+  {g:'Filters',k:'carbon',name:'Activated carbon',role:'Graphene-like sheets full of slit pores. Organic molecules (here chloroform) stick to the surface by van der Waals forces: adsorption.',build:labCarbon,guest:'chloroform'},
+  {g:'Filters',k:'albumin',name:'Albumin (blood carrier protein)',role:'The most common protein in blood plasma. It holds drugs, fatty acids and bilirubin in pockets and carries them to the liver and kidneys.',build:labAlbumin,info:'585 amino acids · 66.5 kDa · coarse-grained: one bead per amino acid'},
+  {g:'Filters',k:'glutathione',name:'Glutathione (liver detox)',role:'The liver joins its sulfur (S–H) group to toxins, so the body can wash them out.'},
+  {g:'Filters',k:'heme',name:'Heme of cytochrome P450 (liver)',role:'The iron at the centre of liver P450 enzymes. It adds oxygen to drugs and toxins to break them down.'},
+  {g:'Filters',k:'bilirubin',name:'Bilirubin (spleen and liver)',role:'Made when the spleen breaks down old red blood cells. Albumin carries it to the liver.'},
+  {g:'Filters',k:'cholic',name:'Cholic acid (bile)',role:'A bile acid from the liver. Fiber in the gut binds bile acids, so the body removes cholesterol.'},
+  {g:'Filters',k:'urea',name:'Urea (kidney waste)',role:'The body changes waste nitrogen into urea. The kidneys filter it out of the blood into urine.'},
+  {g:'Filters',k:'creatinine',name:'Creatinine (kidney waste)',role:'A waste product from muscle. Doctors measure it to see how well the kidneys filter.'},
+  {g:'Filters',k:'cellulose',name:'Cellulose (dietary fiber)',role:'Glucose rings in a long straight chain. Humans cannot digest it, so it moves through the gut and binds waste.'},
+  {g:'Movement',k:'actin',name:'Actin and myosin (muscle contraction)',role:'Myosin heads grab the actin filaments and pull them to the centre. The muscle gets shorter. It only pulls.',build:labActin,info:'Sliding filament model · coarse-grained: one bead per protein subunit'},
+  {g:'Movement',k:'atp',name:'ATP (muscle fuel)',role:'Each myosin power stroke uses one ATP. The energy is in the bonds between the three phosphate groups.'},
+  {g:'Movement',k:'ach',name:'Acetylcholine (nerve to muscle)',role:'The nerve releases it at the muscle. It tells the muscle fiber to contract.'},
+  {g:'Movement',k:'collagen',name:'Collagen (tendons, ligaments, bone)',role:'Three chains wound into a rope. Tendons made of collagen join muscles to bones.',build:labCollagen,info:'Gly-Pro-Hyp repeats · coarse-grained: one bead per amino acid'},
+  {g:'Movement',k:'apatite',name:'Hydroxyapatite (bone mineral)',role:'Calcium phosphate crystals make bone hard. Collagen makes bone flexible.',build:labApatite,info:'Ca₁₀(PO₄)₆(OH)₂ · hexagonal crystal, approximate positions'},
+  {g:'Movement',k:'lactate',name:'Lactate (hard exercise)',role:'Muscles make lactate when they work hard. The liver changes it back into glucose.'},
+  {g:'Blood',k:'hemeo2',name:'Heme with oxygen (hemoglobin)',role:'Red blood cells carry oxygen on the iron of heme. Every working muscle needs this oxygen.',smi:'heme',guest:'o2'},
+  {g:'Blood',k:'glucose',name:'Glucose (blood sugar)',role:'The main fuel in blood. The liver keeps the level steady.'},
+  {g:'Blood',k:'water',name:'Water',role:'About 60% of the body. Blood plasma is about 92% water.'}
+];
+const LAB_VIEWS=['Overview','Travel around','Inside','Between','Through','Quantum','Auto tour'];
+const LAB={mol:0,view:6,style:'ball',color:'el',hyd:true,info:true,music:1,speed:1,auto:0,stay:true,vib:true,
+  S:null,key:'',cam:{t:0},guests:[],bindT:-99,expl:0,explT:-99,contract:false,slide:0,tour:{},lastBeat:0,pulse:0};
+try{Object.assign(LAB,JSON.parse(localStorage.getItem('fibwave.lab')||'{}'),{S:null,key:'',guests:[],tour:{}})}catch(_){}
+function labSave(){try{const o={};['mol','view','style','color','hyd','info','music','speed','auto','stay','vib','contract'].forEach(k=>o[k]=LAB[k]);localStorage.setItem('fibwave.lab',JSON.stringify(o))}catch(_){}}
+function labLoad(){const it=LAB_LIST[LAB.mol]||LAB_LIST[0];if(LAB.key===it.k&&LAB.S)return LAB.S;
+  let S;if(it.build)S=it.build();else{const m=labMol(it.smi||it.k);S={atoms:m.atoms.map(a=>({...a,p:a.p.slice()})),bonds:m.bonds.map(b=>b.slice()),kind:'mol'}}
+  S.atoms.forEach(a=>{a.b=a.p.slice()});let R=0;S.atoms.forEach(a=>R=Math.max(R,Math.hypot(...a.p)));S.R=Math.max(R,2.2);
+  S.formula=it.build?(it.info||''):labFormula(S.atoms)+' · '+S.atoms.length+' atoms';
+  S.nb=S.atoms.map(()=>[]);S.bonds.forEach(([i,j])=>{S.nb[i].push(j);S.nb[j].push(i)});
+  if(it.k==='hemeo2'){const fe=S.atoms.findIndex(a=>a.el==='Fe');S.sites=[{name:'Iron (Fe²⁺) binds O₂',p:fe>=0?v3.add(S.atoms[fe].p,[0,0,2.4]):[0,0,2.4],lig:'o2'}]}
+  // a camera path for "between": hop from gap to gap (midpoints between atoms that are not bonded)
+  const pts=[];const N=S.atoms.length;let s=3;const r=()=>{s=(s*16807)%2147483647;return s/2147483647};
+  for(let t=0;t<14;t++){const i=Math.floor(r()*N),j=Math.floor(r()*N),p=v3.lerp(S.atoms[i].p,S.atoms[j].p,0.5);pts.push(v3.add(p,[r()-0.5,r()-0.5,r()-0.5].map(x=>x*S.R*0.25)))}
+  pts.forEach(q=>{for(let it=0;it<40;it++){let best=1e9,bi=-1;for(let k=0;k<N;k++){const a=S.atoms[k].p,d=Math.hypot(q[0]-a[0],q[1]-a[1],q[2]-a[2]);if(d<best){best=d;bi=k}}
+    const need=S.atoms[bi].cg?(S.atoms[bi].r||1.9)*1.9:3;if(best>=need)break;const a=S.atoms[bi].p,d=v3.norm(v3.sub(q,a).map(x=>x||0.01));for(let k=0;k<3;k++)q[k]=a[k]+d[k]*need}});
+  S.path=pts;LAB.S=S;LAB.key=it.k;LAB.guests=[];LAB.bindT=-99;labUiInfo();return S}
+function labCR(P,t){const n=P.length,i=Math.floor(t)%n,f=t-Math.floor(t),p0=P[(i-1+n)%n],p1=P[i],p2=P[(i+1)%n],p3=P[(i+2)%n];
+  return [0,1,2].map(k=>0.5*((2*p1[k])+(-p0[k]+p2[k])*f+(2*p0[k]-5*p1[k]+4*p2[k]-p3[k])*f*f+(-p0[k]+3*p1[k]-3*p2[k]+p3[k])*f*f*f))}
+function labCamFor(v,S,t){const R=S.R,M=Math.min(W,H);
+  if(v===0){const a=t*0.06;return [[Math.sin(a)*R*2.7,R*0.5*Math.sin(t*0.05),-Math.cos(a)*R*2.7],[0,0,0],[0,1,0]]}
+  if(v===1){const a=t*0.22,e=Math.sin(t*0.09)*0.9;return [[Math.sin(a)*Math.cos(e)*R*1.55,Math.sin(e)*R*1.55,-Math.cos(a)*Math.cos(e)*R*1.55],[0,0,0],[Math.sin(t*0.03)*0.3,1,0]]}
+  if(v===2){const a=t*0.12,p=[Math.sin(t*0.07)*R*0.22,R*0.18+Math.cos(t*0.05)*R*0.1,Math.cos(t*0.06)*R*0.2];return [p,v3.add(p,[Math.sin(a),Math.sin(t*0.08)*0.5,Math.cos(a)]),[0,1,0]]}
+  if(v===3){const u=t*0.09;return [labCR(S.path,u),labCR(S.path,u+0.35),[0,1,0]]}
+  if(v===4){const per=14,k=Math.floor(t/per),f=(t%per)/per,ax=v3.norm([Math.sin(k*2.3),Math.cos(k*1.7)*0.4,Math.cos(k*2.3)]),off=v3.mul(v3.norm(v3.cross(ax,[0,1,0])),R*0.12*Math.sin(k));
+    const p=v3.add(v3.mul(ax,(-2.2+4.4*f)*R),off);return [p,v3.add(p,ax),[0,1,0]]}
+  const a=t*0.1;return [[Math.sin(a)*R*1.9,R*0.35,-Math.cos(a)*R*1.9],[0,0,0],[0,1,0]]}
+function labRGB(a,i,S){
+  if(LAB.color==='pal'||a.cg){if(a.cg&&LAB.color!=='pal'){if(a.dom!==undefined)return [[80,140,255],[90,220,140],[255,160,70]][a.dom];if(a.part)return a.part==='actin'?[120,200,255]:a.part==='head'?[255,120,90]:[240,200,120];if(a.chain!==undefined)return a.res==='Gly'?[240,240,240]:a.res==='Pro'?[230,160,80]:[220,90,120]}
+    const c=palColor((i/S.atoms.length+(a.dom||0)*0.33)%1);return hslRGB(c[0],c[1],c[2])}
+  return (LAB_EL[a.el]||LAB_EL.X).c}
+function hslRGB(h,s,l){h/=360;s/=100;l/=100;const f=n=>{const k=(n+h*12)%12,a=s*Math.min(l,1-l);return 255*(l-a*Math.max(-1,Math.min(k-3,9-k,1)))};return [f(0),f(8),f(4)]}
+function labSphere(c,x,y,r,rgb,al){if(r<0.6){c.fillStyle='rgba('+(rgb[0]|0)+','+(rgb[1]|0)+','+(rgb[2]|0)+','+al+')';c.fillRect(x-0.6,y-0.6,1.2,1.2);return}
+  const g=c.createRadialGradient(x-r*0.35,y-r*0.38,r*0.08,x,y,r);g.addColorStop(0,'rgba('+Math.min(255,rgb[0]+110|0)+','+Math.min(255,rgb[1]+110|0)+','+Math.min(255,rgb[2]+110|0)+','+al+')');
+  g.addColorStop(0.45,'rgba('+(rgb[0]|0)+','+(rgb[1]|0)+','+(rgb[2]|0)+','+al+')');g.addColorStop(1,'rgba('+(rgb[0]*0.25|0)+','+(rgb[1]*0.25|0)+','+(rgb[2]*0.25|0)+','+al+')');
+  c.fillStyle=g;c.beginPath();c.arc(x,y,r,0,TAU);c.fill()}
+function labBind(){LAB.bindT=st.t;LAB.guests=[];const S=labLoad(),it=LAB_LIST[LAB.mol];let sites=S.sites;
+  if(!sites){if(S.kind==='carbon'){sites=[];const sf=S.atoms.filter(a=>a.surf);for(let k=0;k<10;k++){const a=sf[Math.floor(hh(k*7+3)*sf.length)];sites.push({p:v3.add(a.p,v3.mul(a.n,(hh(k)>0.5?1:-1)*3.5)),lig:'chloroform'})}}
+    else{sites=[];S.atoms.forEach((a,i)=>{if((a.el==='O'||a.el==='N')&&sites.length<10){const d=v3.norm(a.p[0]||a.p[1]||a.p[2]?a.p:[0,1,0]);sites.push({p:v3.add(a.p,v3.mul(d,2.8)),lig:'water'})}})}}
+  sites.forEach((s,k)=>{const m=labMol(s.lig),from=v3.add(s.p,v3.mul(v3.norm([hh(k+1)-0.5,hh(k+2)-0.5,hh(k+3)-0.5]),S.R*2.2));
+    LAB.guests.push({m,from,to:s.p,t0:st.t+k*0.5,dur:2.6+hh(k)*1.5,rot:[hh(k+4)*6,hh(k+5)*6],name:s.name})})}
+function labScene(c,a){
+  flyStep();const S=labLoad(),it=LAB_LIST[LAB.mol],M=Math.min(W,H),dt=st.dtReal||0.016,mus=LAB.music;
+  c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1;c.fillStyle='rgb(3,4,10)';c.fillRect(0,0,W,H);
+  LAB.cam.t+=dt*LAB.speed*(0.6+mus*(a.energy*0.8+a.bass*0.6))*(FLY.speed||1);
+  if(a.kick>0.9)LAB.pulse=1;LAB.pulse=Math.max(0,LAB.pulse-dt*2.5);
+  // auto molecule change
+  if(LAB.auto&&A.beats!==LAB.lastBeat&&A.beats>0&&A.beats%LAB.auto===0){LAB.mol=(LAB.mol+1)%LAB_LIST.length;labSave();labUiSync()}LAB.lastBeat=A.beats;
+  // view (auto tour blends between the views every 16 beats)
+  let v=LAB.view,camA,bl=1;const t=LAB.cam.t;
+  if(v===6){bl=flyMode(LAB.tour,6);const A0=labCamFor(LAB.tour.prev,S,t),B0=labCamFor(LAB.tour.mode,S,t);camA=[v3.lerp(A0[0],B0[0],bl),v3.lerp(A0[1],B0[1],bl),v3.norm(v3.lerp(A0[2],B0[2],bl))];v=bl>0.5?LAB.tour.mode:LAB.tour.prev}
+  else camA=labCamFor(v,S,t);
+  const lens=v===2||v===3||v===4?0.6:0.95;LAB.lens=(LAB.lens||lens)+(lens-(LAB.lens||lens))*Math.min(1,dt*2);const C=camLook(camA[0],camA[1],camA[2],M*LAB.lens);
+  // motion: vibration with the music, explode, muscle contraction
+  const ex=LAB.explT>0?Math.max(0,Math.sin(clamp((st.t-LAB.explT)/3,0,1)*Math.PI)):0,amp=LAB.vib?(0.04+mus*(a.bass*0.22+LAB.pulse*0.2)):0;
+  if(S.kind==='motor'){const tgt=LAB.contract?(0.5+0.5*Math.sin(st.t*0.8)):0;LAB.slide+=(tgt-LAB.slide)*Math.min(1,dt*2)}
+  S.atoms.forEach((at,i)=>{let p=at.b;
+    if(S.kind==='motor'){if(at.part==='actin'||at.part==='zline')p=[at.b[0]-at.hf*LAB.slide*12,at.b[1],at.b[2]];
+      if(at.part==='head'){const ph=LAB.contract?Math.sin(st.t*4+at.hk*0.9):0,ang=ph*0.6;p=[at.hx+Math.sin(ang)*2.2*(at.hx<0?1:-1),at.side*(2+2.2*Math.cos(ang)),0]}}
+    if(ex>0){const d=Math.hypot(...p)||1;p=v3.add(p,v3.mul(p,ex*1.4*(0.6+hh(i)*0.8)/Math.max(1,d*0.15)))}
+    if(amp){const w=st.t*(9+hh(i)*6);p=[p[0]+Math.sin(w+i)*amp,p[1]+Math.sin(w*1.13+i*2.1)*amp,p[2]+Math.cos(w*0.91+i*1.3)*amp]}
+    at.p=p});
+  const showH=LAB.hyd,style=LAB.style,quantum=v===5;
+  const items=[],proj=S.atoms.map(at=>(!showH&&at.el==='H'&&!at.cg)?null:camP(C,at.p));
+  const rad=at=>at.cg?(at.r||1.9):style==='space'?(LAB_EL[at.el]||LAB_EL.X).v:style==='stick'?0.18:at.el==='H'?0.22:(LAB_EL[at.el]||LAB_EL.X).v*0.3;
+  if(quantum){c.save();c.globalCompositeOperation='lighter';
+    const per=Math.max(3,Math.min(26,Math.floor(9000/S.atoms.length))),ex2=1+mus*(a.bass*0.6+LAB.pulse*0.5);
+    S.atoms.forEach((at,i)=>{if(!proj[i])return;const rgb=labRGB(at,i,S),sig=(at.cg?(at.r||1.9)*0.7:(LAB_EL[at.el]||LAB_EL.X).v*0.42)*ex2,k=proj[i][3];if(k*sig>M)return;
+      softDot(c,proj[i][0],proj[i][1],Math.max(2,sig*k*1.6),'rgba('+(rgb[0]|0)+','+(rgb[1]|0)+','+(rgb[2]|0)+',0.10)');
+      c.fillStyle='rgba('+Math.min(255,rgb[0]+80|0)+','+Math.min(255,rgb[1]+80|0)+','+Math.min(255,rgb[2]+80|0)+',0.55)';
+      for(let e=0;e<per;e++){const g1=Math.random()+Math.random()+Math.random()-1.5,g2=Math.random()+Math.random()+Math.random()-1.5,g3=Math.random()+Math.random()+Math.random()-1.5;
+        const q=camP(C,[at.p[0]+g1*sig,at.p[1]+g2*sig,at.p[2]+g3*sig]);if(q){const s2=Math.max(1,DPR*0.9);c.fillRect(q[0]-s2/2,q[1]-s2/2,s2,s2)}}
+      c.fillStyle='rgba(255,255,255,0.9)';const nr=Math.max(0.8,k*0.05);c.fillRect(proj[i][0]-nr/2,proj[i][1]-nr/2,nr,nr)});
+    c.fillStyle='rgba(180,220,255,0.35)';
+    S.bonds.forEach(([i,j,o])=>{if(!proj[i]||!proj[j])return;const P=S.atoms[i].p,Q=S.atoms[j].p;for(let e=0;e<Math.ceil(o*4);e++){const f=Math.random(),g=(Math.random()-0.5)*0.5,q=camP(C,[P[0]+(Q[0]-P[0])*f+g,P[1]+(Q[1]-P[1])*f+(Math.random()-0.5)*0.5,P[2]+(Q[2]-P[2])*f+(Math.random()-0.5)*0.5]);if(q)c.fillRect(q[0],q[1],DPR,DPR)}});
+    c.restore()}
+  else{
+    S.atoms.forEach((at,i)=>{const p=proj[i];if(!p)return;const r=rad(at)*p[3];if(r>M*1.2||p[2]<rad(at)*1.25)return;items.push({Z:p[2],t:0,i,p,r})});
+    if(style!=='space')S.bonds.forEach(b=>{const p=proj[b[0]],q=proj[b[1]];if(!p||!q||p[2]<0.7||q[2]<0.7)return;items.push({Z:(p[2]+q[2])/2+0.01,t:1,b,p,q})});
+    items.sort((x,y)=>y.Z-x.Z);
+    const fog=Z=>clamp(1.15-Z/(S.R*5.5),0.25,1);
+    for(const it2 of items){if(it2.t===0){const at=S.atoms[it2.i],rgb=labRGB(at,it2.i,S);labSphere(c,it2.p[0],it2.p[1],it2.r,rgb,fog(it2.Z).toFixed(3));
+        if(style==='glow'&&it2.r>1)softDot(c,it2.p[0],it2.p[1],it2.r*2.6,'rgba('+(rgb[0]|0)+','+(rgb[1]|0)+','+(rgb[2]|0)+',0.22)')}
+      else{const [i,j,o]=it2.b,A1=S.atoms[i],B1=S.atoms[j],p=it2.p,q=it2.q,k=(p[3]+q[3])/2,w=Math.max(1,(A1.cg||B1.cg?0.55:style==='stick'?0.36:0.17)*k),mx=(p[0]+q[0])/2,my=(p[1]+q[1])/2,al=fog(it2.Z);
+        const ca=labRGB(A1,i,S),cb=labRGB(B1,j,S),dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L,lines=o>=3?[-1,0,1]:o>=2?[-0.8,0.8]:o>1?[-0.6,0.6]:[0],ww=lines.length>1?w*0.6:w;
+        c.lineCap='round';c.lineWidth=ww;
+        lines.forEach((off,li)=>{const ox=nx*off*w*1.1,oy=ny*off*w*1.1;if(o>1&&o<2&&li===1)c.setLineDash([ww*1.5,ww*1.5]);
+          c.strokeStyle='rgba('+(ca[0]|0)+','+(ca[1]|0)+','+(ca[2]|0)+','+al+')';c.beginPath();c.moveTo(p[0]+ox,p[1]+oy);c.lineTo(mx+ox,my+oy);c.stroke();
+          c.strokeStyle='rgba('+(cb[0]|0)+','+(cb[1]|0)+','+(cb[2]|0)+','+al+')';c.beginPath();c.moveTo(mx+ox,my+oy);c.lineTo(q[0]+ox,q[1]+oy);c.stroke();c.setLineDash([])})}}}
+  // guests: molecules that fly in and bind (adsorb on carbon, dock in albumin, O2 on iron, water round polar atoms)
+  if(LAB.guests.length){let all=true;for(const g of LAB.guests){const f=clamp((st.t-g.t0)/g.dur,0,1),e=sstep(f);if(f<1)all=false;
+      const ctr=v3.lerp(g.from,g.to,e),spin=(1-e)*5+st.t*0.3*(1-e),cs=Math.cos(g.rot[0]+spin),sn=Math.sin(g.rot[0]+spin),jig=f>=1?Math.sin(st.t*7+g.t0)*0.12*(1+a.bass):0;
+      const gp=g.m.atoms.map(at=>{const x=at.p[0]*cs-at.p[2]*sn,z=at.p[0]*sn+at.p[2]*cs;return camP(C,[ctr[0]+x+jig,ctr[1]+at.p[1],ctr[2]+z])});
+      c.strokeStyle='rgba(220,220,230,0.8)';c.lineWidth=Math.max(1,DPR*1.2);g.m.bonds.forEach(([i,j])=>{if(gp[i]&&gp[j]){c.beginPath();c.moveTo(gp[i][0],gp[i][1]);c.lineTo(gp[j][0],gp[j][1]);c.stroke()}});
+      g.m.atoms.forEach((at,i)=>{if(gp[i])labSphere(c,gp[i][0],gp[i][1],Math.max(1.5,(LAB_EL[at.el]||LAB_EL.X).v*0.32*gp[i][3]),(LAB_EL[at.el]||LAB_EL.X).c,0.95)});
+      if(f>=1){const q=camP(C,g.to);if(q&&q[3]*0.5>1)softDot(c,q[0],q[1],q[3]*3.5,'rgba(255,230,120,'+(0.18+0.25*LAB.pulse).toFixed(3)+')');if(g.name&&q&&LAB.info)label(q[0]+12*DPR,q[1],g.name,'con')}}
+    if(all&&st.t-LAB.bindT>22)LAB.guests=[]}
+  if(LAB.info){label(18*DPR,26*DPR,'Health Laboratory · '+it.name+' · '+LAB_VIEWS[LAB.view===6?6:LAB.view]+(LAB.view===6?' ('+LAB_VIEWS[v]+')':''),'big');
+    label(18*DPR,50*DPR,S.formula,'info');label(18*DPR,72*DPR,it.role,'info');
+    if(quantum)label(18*DPR,94*DPR,'Quantum view: each dot is a place where an electron can be found (a probability cloud). Electrons do not move in orbits. Bass makes the clouds bigger.','info');
+    else if(S.kind==='mol'||S.kind==='crystal'||S.kind==='carbon'){const used=[...new Set(S.atoms.map(x=>x.el))].filter(e=>LAB_EL[e]);label(18*DPR,94*DPR,used.map(e=>({H:'H hydrogen',C:'C carbon',N:'N nitrogen',O:'O oxygen',S:'S sulfur',P:'P phosphorus',Fe:'Fe iron',Ca:'Ca calcium',Cl:'Cl chlorine'}[e]||e)).join(' · '),'info')}
+    if(S.kind==='motor')label(18*DPR,94*DPR,LAB.contract?'Contracting: the heads pull the actin filaments to the centre. Muscles only pull.':'Relaxed. Push "Contract" in the lab panel.','info')}
+  c.restore();
 }
 
 /* ---------- Flock: birds that move as one (a murmuration), and geometric energy pulses launched by the beat ---------- */
@@ -5914,6 +6194,7 @@ function setScene(i){
   if(pk!=='photo')PHL.hidden=true;
   if(SCENES[i].kind==='gl'){G.perf=1/55}
   if(SCENES[i].draw===nightsky)sky.pickHL=true;
+  {const lp=document.getElementById('labPanel');if(lp)lp.hidden=!(SCENES[i].lab&&LAB.panel)}
 }
 setScene(0);
 const namesBox=document.getElementById('names');
@@ -6106,6 +6387,29 @@ ltLoad();
 const lightsEl=document.getElementById('lights');
 document.getElementById('bLights').onclick=()=>{lightsEl.hidden=false;renderLights();if(location.protocol==='https:')document.getElementById('lightsNote').textContent='Chrome blocks a web address (https) from talking to lights on your home network. Open Fibwave from the file on your computer to use lights.'};
 document.getElementById('lightsClose').onclick=()=>{lightsEl.hidden=true};
+/* ---------- Health Laboratory panel ---------- */
+function labUiInfo(){const e=document.getElementById('labInfo');if(e){const it=LAB_LIST[LAB.mol];e.textContent=it.role+(LAB.S&&LAB.S.formula?' ('+LAB.S.formula+')':'')}}
+function labUiSync(){const g=id=>document.getElementById(id);if(!g('labMol'))return;
+  g('labMol').value=LAB.mol;g('labView').value=LAB.view;g('labStyle').value=LAB.style;g('labColor').value=LAB.color;g('labHyd').checked=LAB.hyd;g('labInfoChk').checked=LAB.info;
+  g('labVib').checked=LAB.vib;g('labStay').checked=LAB.stay;g('labMusic').value=LAB.music;g('labSpeed').value=LAB.speed;g('labAuto').value=LAB.auto;
+  g('labContract').textContent=LAB.contract?'Relax':'Contract';g('labContract').hidden=LAB_LIST[LAB.mol].k!=='actin';labUiInfo()}
+function labOpen(){const i=SCENES.findIndex(s=>s.lab);if(i<0)return;LAB.panel=true;if(S.scene!==i)setScene(i);document.getElementById('labPanel').hidden=false;labUiSync()}
+(function labUiInit(){const g=id=>document.getElementById(id);if(!g('labPanel'))return;
+  const ms=g('labMol');let og=null,last='';LAB_LIST.forEach((it,i)=>{if(it.g!==last){og=document.createElement('optgroup');og.label=it.g;ms.appendChild(og);last=it.g}const o=document.createElement('option');o.value=i;o.textContent=it.name;og.appendChild(o)});
+  LAB_VIEWS.forEach((v,i)=>{const o=document.createElement('option');o.value=i;o.textContent=v;g('labView').appendChild(o)});
+  const on=(id,ev,f)=>g(id).addEventListener(ev,e=>{f(e.target);labSave();labUiSync()});
+  on('labMol','change',t=>{LAB.mol=+t.value;LAB.guests=[]});on('labView','change',t=>{LAB.view=+t.value;FLY.yaw=FLY.pitch=0});
+  on('labStyle','change',t=>LAB.style=t.value);on('labColor','change',t=>LAB.color=t.value);on('labHyd','change',t=>LAB.hyd=t.checked);on('labInfoChk','change',t=>LAB.info=t.checked);
+  on('labVib','change',t=>LAB.vib=t.checked);on('labStay','change',t=>LAB.stay=t.checked);on('labMusic','input',t=>LAB.music=+t.value);on('labSpeed','input',t=>LAB.speed=+t.value);on('labAuto','change',t=>LAB.auto=+t.value);
+  g('labBind').onclick=()=>{labBind();toast('Binding: molecules fly in and stick')};
+  g('labExplode').onclick=()=>{LAB.explT=st.t;toast('Explode and come back together')};
+  g('labContract').onclick=()=>{LAB.contract=!LAB.contract;labSave();labUiSync()};
+  g('labNext').onclick=()=>{LAB.mol=(LAB.mol+1)%LAB_LIST.length;LAB.guests=[];labSave();labUiSync();toast(LAB_LIST[LAB.mol].name)};
+  g('labReset').onclick=()=>{FLY.yaw=FLY.pitch=0;FLY.speed=1;LAB.cam.t=0};
+  g('labClose').onclick=()=>{LAB.panel=false;g('labPanel').hidden=true};
+  g('bLab').onclick=()=>{if(SCENES[S.scene].lab&&!g('labPanel').hidden){g('labPanel').hidden=true;LAB.panel=false}else labOpen()};
+  labUiSync()})();
+
 document.getElementById('lightsOn').onchange=e=>{lightsOn(e.target.checked);toast(LT.on?'Lights follow Fibwave.':'Lights back to their own settings.')};
 document.getElementById('lightsBri').oninput=e=>{LT.bri=+e.target.value;ltSave()};
 document.getElementById('wledAdd').onclick=()=>wledAdd(document.getElementById('wledIp').value);
@@ -6126,7 +6430,7 @@ function setLocked(on){
 }
 document.getElementById('bHide').onclick=()=>setLocked(true);
 document.getElementById('showUi').onclick=()=>setLocked(false);
-addEventListener('dblclick',e=>{if(e.target.closest&&e.target.closest('#hud,.panel,#player,#start,#toast'))return;setLocked(!uiLocked)});
+addEventListener('dblclick',e=>{if(e.target.closest&&e.target.closest('#hud,.panel,#labPanel,#player,#start,#toast'))return;setLocked(!uiLocked)});
 player.addEventListener('mouseleave',()=>{if(document.activeElement===pFrame){pFrame.blur();window.focus()}});
 setInterval(()=>{if(document.activeElement===pFrame&&!player.matches(':hover')){pFrame.blur();window.focus()}},1500);
 function poke(){
@@ -6236,10 +6540,10 @@ if(embedded('lib-butterchurn')){const b=document.getElementById('srcOffline');b.
 /* ---------- Live Night Sky: drag to look, scroll to zoom ---------- */
 const isLive=()=>SCENES[S.scene].name==='Live Night Sky';
 let skyDrag=null;
-addEventListener('pointerdown',e=>{if(!isLive()||(e.target.closest&&e.target.closest('#hud,.panel,#player,#start,#toast,#showUi')))return;if(sky.anim)sky.anim.t=1;skyDrag={x:e.clientX,y:e.clientY,az:sky.lookAz,alt:sky.lookAlt};document.body.style.cursor='grabbing'});
+addEventListener('pointerdown',e=>{if(!isLive()||(e.target.closest&&e.target.closest('#hud,.panel,#labPanel,#player,#start,#toast,#showUi')))return;if(sky.anim)sky.anim.t=1;skyDrag={x:e.clientX,y:e.clientY,az:sky.lookAz,alt:sky.lookAlt};document.body.style.cursor='grabbing'});
 addEventListener('pointermove',e=>{if(!skyDrag)return;const k=sky.fov*DEG/Math.max(VW().innerWidth,VW().innerHeight);sky.lookAz=skyDrag.az-(e.clientX-skyDrag.x)*k;sky.lookAlt=clamp(skyDrag.alt+(e.clientY-skyDrag.y)*k,-0.35,1.55)});
 addEventListener('pointerup',()=>{skyDrag=null;document.body.style.cursor=''});
-addEventListener('wheel',e=>{if(!isLive()||(e.target.closest&&e.target.closest('#hud,.panel,#start')))return;sky.fov=clamp(sky.fov*Math.exp(e.deltaY*0.0012),12,150)},{passive:true});
+addEventListener('wheel',e=>{if(!isLive()||(e.target.closest&&e.target.closest('#hud,.panel,#labPanel,#start')))return;sky.fov=clamp(sky.fov*Math.exp(e.deltaY*0.0012),12,150)},{passive:true});
 document.getElementById('goMoon').onclick=()=>skyGoto('Moon');
 document.getElementById('goPol').onclick=()=>skyGoto('North Star');
 const gotoSel=document.getElementById('gotoSel');

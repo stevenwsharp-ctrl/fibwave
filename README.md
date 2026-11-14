@@ -4,7 +4,7 @@
 
 **Live site:** https://stevenwsharp-ctrl.github.io/fibwave/
 
-- 87 scenes and 17 colour palettes
+- 88 scenes and 17 colour palettes, plus a Health Laboratory with 18 molecules of the body
 - No install, no account, no server: it runs in your browser
 - Works on a laptop, on a 4K TV, and (with the microphone) on a phone
 
@@ -19,6 +19,32 @@
 2. Choose a **sound source** (see below).
 3. Double-click the screen (or press **H**) to hide the controls. Double-click again to show them.
 4. Use **← →** to change the scene and **↑ ↓** to change the colours.
+
+---
+
+## Health Laboratory
+
+Click **Health Lab** in the controls (or choose the scene **Health Laboratory**). A panel opens on the right.
+
+**Molecules** (real structures, built from their chemical formulas with real bond lengths and angles):
+
+| Group | Molecules |
+|---|---|
+| Filters | Activated carbon, albumin, glutathione, heme of cytochrome P450, bilirubin, cholic acid, urea, creatinine, cellulose |
+| Movement | Actin and myosin, ATP, acetylcholine, collagen, hydroxyapatite, lactate |
+| Blood | Heme with oxygen, glucose, water |
+
+Albumin, collagen, actin and myosin are coarse-grained (one bead for each amino acid or protein subunit). Hydroxyapatite is a hexagonal crystal with approximate positions.
+
+**Views:** Overview, Travel around, Inside, Between (the camera flies through the gaps between atoms), Through, Quantum (electron probability clouds) and Auto tour (changes view every 16 beats).
+
+**Things to play with:**
+- **Bind**: molecules fly in and stick. Chloroform adsorbs on carbon, drugs and bilirubin dock in albumin, oxygen binds to the iron of heme, water bonds to oxygen and nitrogen atoms.
+- **Explode**: the atoms move apart and come back together.
+- **Contract** (actin and myosin): the myosin heads pull the actin filaments to the centre. Muscles only pull.
+- **Vibrate**: the atoms move with the bass.
+- Style (ball and stick, space filling, sticks, glow), colours (by element or palette), hydrogens, info, music link, speed, and an automatic change to the next molecule.
+- Drag the screen to look round. Scroll to change the flight speed.
 
 ---
 
