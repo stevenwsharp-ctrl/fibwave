@@ -5626,9 +5626,8 @@ function labCamFor(v,S,t){const R=S.R,M=Math.min(W,H);
   const a=t*0.1;return [[Math.sin(a)*R*1.9,R*0.35,-Math.cos(a)*R*1.9],[0,0,0],[0,1,0]]}
 function labRGB(a,i,S){
   if(LAB.color==='pal'||a.cg){if(a.cg&&LAB.color!=='pal'){if(a.dom!==undefined)return [[80,140,255],[90,220,140],[255,160,70]][a.dom];if(a.part)return a.part==='actin'?[120,200,255]:a.part==='head'?[255,120,90]:[240,200,120];if(a.chain!==undefined)return a.res==='Gly'?[240,240,240]:a.res==='Pro'?[230,160,80]:[220,90,120]}
-    const c=palColor((i/S.atoms.length+(a.dom||0)*0.33)%1);return hslRGB(c[0],c[1],c[2])}
+    const c=hslRGB(palColor((i/S.atoms.length+(a.dom||0)*0.33)%1));return [c[0]*255,c[1]*255,c[2]*255]}
   return (LAB_EL[a.el]||LAB_EL.X).c}
-function hslRGB(h,s,l){h/=360;s/=100;l/=100;const f=n=>{const k=(n+h*12)%12,a=s*Math.min(l,1-l);return 255*(l-a*Math.max(-1,Math.min(k-3,9-k,1)))};return [f(0),f(8),f(4)]}
 function labSphere(c,x,y,r,rgb,al){if(r<0.6){c.fillStyle='rgba('+(rgb[0]|0)+','+(rgb[1]|0)+','+(rgb[2]|0)+','+al+')';c.fillRect(x-0.6,y-0.6,1.2,1.2);return}
   const g=c.createRadialGradient(x-r*0.35,y-r*0.38,r*0.08,x,y,r);g.addColorStop(0,'rgba('+Math.min(255,rgb[0]+110|0)+','+Math.min(255,rgb[1]+110|0)+','+Math.min(255,rgb[2]+110|0)+','+al+')');
   g.addColorStop(0.45,'rgba('+(rgb[0]|0)+','+(rgb[1]|0)+','+(rgb[2]|0)+','+al+')');g.addColorStop(1,'rgba('+(rgb[0]*0.25|0)+','+(rgb[1]*0.25|0)+','+(rgb[2]*0.25|0)+','+al+')');
