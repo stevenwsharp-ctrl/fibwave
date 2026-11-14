@@ -275,6 +275,7 @@ body:not(.locked) #showUi{display:none}
   <label class="lr">Speed <input type="range" id="labSpeed" min="0.1" max="3" step="0.05" value="1"></label>
   <label class="lr">Next molecule <select id="labAuto"><option value="0">Manual</option><option value="16">Every 16 beats</option><option value="32">Every 32 beats</option><option value="64">Every 64 beats</option></select></label>
   <div class="lb"><label class="chk"><input type="checkbox" id="labHyd"> Hydrogens</label><label class="chk"><input type="checkbox" id="labInfoChk"> Info</label><label class="chk"><input type="checkbox" id="labVib"> Vibrate</label><label class="chk" title="Auto does not change the scene while you are in the lab"><input type="checkbox" id="labStay"> Stay in lab</label></div>
+  <div class="lb"><label class="chk" title="Near and far things are out of focus, like a film camera"><input type="checkbox" id="labDof"> Depth of field</label><label class="chk" title="Wide-screen film bars (2.39 : 1)"><input type="checkbox" id="labBars"> Cinema bars</label><label class="chk" title="A title for each molecule"><input type="checkbox" id="labTitles"> Titles</label><label class="chk" title="Fluid, fibers or blood cells round the molecule"><input type="checkbox" id="labEnv"> Environment</label></div>
   <div class="lb"><button class="btn" id="labBind" title="Molecules fly in and bind: adsorption on carbon, docking in albumin, oxygen on iron, water on polar atoms">Bind</button><button class="btn" id="labExplode">Explode</button><button class="btn" id="labContract">Contract</button><button class="btn" id="labNext">Next</button><button class="btn" id="labReset">Reset look</button></div>
   <p id="labInfo" class="hint"></p>
   <p class="hint">Drag the screen to look round. Scroll to change the flight speed.</p>
@@ -5453,7 +5454,7 @@ function helixEQ(c,a){
    coarse-grained (one bead per amino acid or per subunit).
    Views: overview, travel around, inside, between, through, quantum.
    ===================================================================== */
-const LAB_EL={H:{c:[236,236,242],r:0.31,v:1.1},C:{c:[96,98,108],r:0.76,v:1.7},N:{c:[58,96,235],r:0.71,v:1.55},O:{c:[232,48,44],r:0.66,v:1.52},
+const LAB_EL={H:{c:[236,236,242],r:0.31,v:1.1},C:{c:[112,118,132],r:0.76,v:1.7},N:{c:[58,96,235],r:0.71,v:1.55},O:{c:[232,48,44],r:0.66,v:1.52},
   S:{c:[242,204,52],r:1.05,v:1.8},P:{c:[255,140,0],r:1.07,v:1.8},Fe:{c:[224,110,51],r:1.32,v:1.9},Ca:{c:[90,230,70],r:1.76,v:2.3},Cl:{c:[40,230,60],r:1.02,v:1.75},
   Na:{c:[171,92,242],r:1.66,v:2.27},K:{c:[143,64,212],r:2.03,v:2.75},X:{c:[200,200,210],r:1.9,v:1.9}};
 const LAB_VAL={B:3,C:4,N:3,O:2,P:3,S:2,F:1,Cl:1,Br:1,I:1};
@@ -5554,7 +5555,7 @@ function labAlbumin(){ // human serum albumin: 585 amino acids, about 67% alpha 
 function labCollagen(){ // collagen triple helix: three chains of Gly-X-Y (X often proline, Y often hydroxyproline), wound round each other
   const atoms=[],bonds=[];const N=90;
   for(let c=0;c<3;c++){let prev=-1;for(let i=0;i<N;i++){const z=(i-N/2)*0.95,sup=z*0.08+c*2.094,lw=i*2.094*1.0+c*0.7,R=2.4,
-      p=[Math.cos(sup)*R+Math.cos(lw)*0.9,Math.sin(sup)*R+Math.sin(lw)*0.9,z];const t=i%3;atoms.push({el:t===0?'H':t===1?'C':'O',cg:1,p,chain:c,res:['Gly','Pro','Hyp'][t],r:t===0?0.9:1.25});if(prev>=0)bonds.push([prev,atoms.length-1,1]);prev=atoms.length-1}}
+      p=[Math.cos(sup)*R+Math.cos(lw)*0.9,z,Math.sin(sup)*R+Math.sin(lw)*0.9];const t=i%3;atoms.push({el:t===0?'H':t===1?'C':'O',cg:1,p,chain:c,res:['Gly','Pro','Hyp'][t],r:t===0?0.9:1.25});if(prev>=0)bonds.push([prev,atoms.length-1,1]);prev=atoms.length-1}}
   return {atoms,bonds,kind:'fiber'};
 }
 function labApatite(){ // hydroxyapatite Ca10(PO4)6(OH)2, hexagonal: a = 9.42 Å, c = 6.88 Å (bone and tooth mineral)
@@ -5598,13 +5599,13 @@ const LAB_LIST=[
   {g:'Blood',k:'water',name:'Water',role:'About 60% of the body. Blood plasma is about 92% water.'}
 ];
 const LAB_VIEWS=['Overview','Travel around','Inside','Between','Through','Quantum','Auto tour'];
-const LAB={mol:0,view:6,style:'ball',color:'el',hyd:true,info:true,music:1,speed:1,auto:0,stay:true,vib:true,
+const LAB={mol:0,view:6,style:'ball',color:'el',hyd:true,info:false,dof:true,bars:true,titles:true,env:true,music:1,speed:1,auto:0,stay:true,vib:true,
   S:null,key:'',cam:{t:0},guests:[],bindT:-99,expl:0,explT:-99,contract:false,slide:0,tour:{},lastBeat:0,pulse:0};
 try{Object.assign(LAB,JSON.parse(localStorage.getItem('fibwave.lab')||'{}'),{S:null,key:'',guests:[],tour:{}})}catch(_){}
-function labSave(){try{const o={};['mol','view','style','color','hyd','info','music','speed','auto','stay','vib','contract'].forEach(k=>o[k]=LAB[k]);localStorage.setItem('fibwave.lab',JSON.stringify(o))}catch(_){}}
+function labSave(){try{const o={};['mol','view','style','color','hyd','info','music','speed','auto','stay','vib','contract','dof','bars','titles','env'].forEach(k=>o[k]=LAB[k]);localStorage.setItem('fibwave.lab',JSON.stringify(o))}catch(_){}}
 function labLoad(){const it=LAB_LIST[LAB.mol]||LAB_LIST[0];if(LAB.key===it.k&&LAB.S)return LAB.S;
   let S;if(it.build)S=it.build();else{const m=labMol(it.smi||it.k);S={atoms:m.atoms.map(a=>({...a,p:a.p.slice()})),bonds:m.bonds.map(b=>b.slice()),kind:'mol'}}
-  S.atoms.forEach(a=>{a.b=a.p.slice()});let R=0;S.atoms.forEach(a=>R=Math.max(R,Math.hypot(...a.p)));S.R=Math.max(R,2.2);
+  S.atoms.forEach(a=>{a.b=a.p.slice()});let R=0,rms=0;S.atoms.forEach(a=>{const d=Math.hypot(...a.p);R=Math.max(R,d);rms+=d*d});rms=Math.sqrt(rms/S.atoms.length);S.R=Math.max(R,2.2);S.long=R>rms*1.55;
   S.formula=it.build?(it.info||''):labFormula(S.atoms)+' · '+S.atoms.length+' atoms';
   S.nb=S.atoms.map(()=>[]);S.bonds.forEach(([i,j])=>{S.nb[i].push(j);S.nb[j].push(i)});
   if(it.k==='hemeo2'){const fe=S.atoms.findIndex(a=>a.el==='Fe');S.sites=[{name:'Iron (Fe²⁺) binds O₂',p:fe>=0?v3.add(S.atoms[fe].p,[0,0,2.4]):[0,0,2.4],lig:'o2'}]}
@@ -5617,7 +5618,7 @@ function labLoad(){const it=LAB_LIST[LAB.mol]||LAB_LIST[0];if(LAB.key===it.k&&LA
 function labCR(P,t){const n=P.length,i=Math.floor(t)%n,f=t-Math.floor(t),p0=P[(i-1+n)%n],p1=P[i],p2=P[(i+1)%n],p3=P[(i+2)%n];
   return [0,1,2].map(k=>0.5*((2*p1[k])+(-p0[k]+p2[k])*f+(2*p0[k]-5*p1[k]+4*p2[k]-p3[k])*f*f+(-p0[k]+3*p1[k]-3*p2[k]+p3[k])*f*f*f))}
 function labCamFor(v,S,t){const R=S.R,M=Math.min(W,H);
-  if(v===0){const a=t*0.06;return [[Math.sin(a)*R*2.7,R*0.5*Math.sin(t*0.05),-Math.cos(a)*R*2.7],[0,0,0],[0,1,0]]}
+  if(v===0){const a=t*0.06,d=R*(S.long?1.75:2.5);return [[Math.sin(a)*d,R*0.45*Math.sin(t*0.05),-Math.cos(a)*d],[0,0,0],[0,1,0]]}
   if(v===1){const a=t*0.22,e=Math.sin(t*0.09)*0.9;return [[Math.sin(a)*Math.cos(e)*R*1.55,Math.sin(e)*R*1.55,-Math.cos(a)*Math.cos(e)*R*1.55],[0,0,0],[Math.sin(t*0.03)*0.3,1,0]]}
   if(v===2){const a=t*0.12,p=[Math.sin(t*0.07)*R*0.22,R*0.18+Math.cos(t*0.05)*R*0.1,Math.cos(t*0.06)*R*0.2];return [p,v3.add(p,[Math.sin(a),Math.sin(t*0.08)*0.5,Math.cos(a)]),[0,1,0]]}
   if(v===3){const u=t*0.09;return [labCR(S.path,u),labCR(S.path,u+0.35),[0,1,0]]}
@@ -5637,67 +5638,166 @@ function labBind(){LAB.bindT=st.t;LAB.guests=[];const S=labLoad(),it=LAB_LIST[LA
     else{sites=[];S.atoms.forEach((a,i)=>{if((a.el==='O'||a.el==='N')&&sites.length<10){const d=v3.norm(a.p[0]||a.p[1]||a.p[2]?a.p:[0,1,0]);sites.push({p:v3.add(a.p,v3.mul(d,2.8)),lig:'water'})}})}}
   sites.forEach((s,k)=>{const m=labMol(s.lig),from=v3.add(s.p,v3.mul(v3.norm([hh(k+1)-0.5,hh(k+2)-0.5,hh(k+3)-0.5]),S.R*2.2));
     LAB.guests.push({m,from,to:s.p,t0:st.t+k*0.5,dur:2.6+hh(k)*1.5,rot:[hh(k+4)*6,hh(k+5)*6],name:s.name})})}
+/* ---------- Health Laboratory: cinematic renderer ----------
+   pre-lit sphere sprites (key light, rim light, specular, ambient occlusion), depth of field,
+   a living environment for each body system (fluid, fibers or blood cells) with parallax bokeh,
+   light shafts, title cards, cinema bars and a vignette */
+const LAB_ENV={
+  Filters:{bg:[[6,34,44],[1,6,12]],fog:[60,170,175],rim:[150,240,255],part:[150,230,220],kind:'debris',shaft:[120,220,230]},
+  Movement:{bg:[[52,14,14],[8,2,4]],fog:[210,90,60],rim:[255,190,140],part:[255,160,120],kind:'fibers',shaft:[255,190,140]},
+  Blood:{bg:[[60,4,12],[10,0,3]],fog:[220,50,60],rim:[255,160,160],part:[200,30,45],kind:'cells',shaft:[255,140,130]}};
+const LABSPR={};
+function labCan(n){const cv=document.createElement('canvas');cv.width=cv.height=n;return cv}
+const LAB_HAS_FILTER=(()=>{try{const g=labCan(2).getContext('2d');g.filter='blur(2px)';return g.filter==='blur(2px)'}catch(_){return false}})();
+// a lit sphere: key light from the upper left, a coloured rim light from behind, a sharp specular spot
+function labSpr(rgb,rim,ao,bl){
+  const q=[rgb[0]>>3<<3,rgb[1]>>3<<3,rgb[2]>>3<<3],k=q.join(',')+'|'+rim.join(',')+'|'+ao+'|'+bl;let cv=LABSPR[k];if(cv)return cv;
+  const R=48,pad=bl?bl*9+4:3,N=(R+pad)*2;cv=labCan(N);const g=cv.getContext('2d');g.translate(N/2,N/2);
+  if(bl&&LAB_HAS_FILTER)g.filter='blur('+(bl*3.2)+'px)';
+  const m=[0.55,0.78,1][ao],L=x=>Math.min(255,x|0),cl=(c,f,add)=>'rgb('+L(c[0]*f+add)+','+L(c[1]*f+add)+','+L(c[2]*f+add)+')';
+  const lay=document.createElement('canvas');lay.width=lay.height=R*2+4;const h=lay.getContext('2d');h.translate(R+2,R+2);
+  let gr=h.createRadialGradient(-R*0.36,-R*0.42,R*0.02,-R*0.12,-R*0.14,R*1.18);
+  gr.addColorStop(0,cl(q,m*1.25,60));gr.addColorStop(0.28,cl(q,m*1.05,8));gr.addColorStop(0.68,cl(q,m*0.55,0));gr.addColorStop(1,cl(q,m*0.14,0));
+  h.fillStyle=gr;h.beginPath();h.arc(0,0,R,0,TAU);h.fill();
+  h.globalCompositeOperation='source-atop';
+  const rg=h.createRadialGradient(-R*0.32,-R*0.36,R*0.55,-R*0.06,-R*0.08,R*1.12);rg.addColorStop(0,'rgba(0,0,0,0)');rg.addColorStop(0.82,'rgba(0,0,0,0)');
+  rg.addColorStop(1,'rgba('+rim[0]+','+rim[1]+','+rim[2]+','+(0.75*m).toFixed(2)+')');h.fillStyle=rg;h.fillRect(-R,-R,R*2,R*2);
+  const sp=h.createRadialGradient(-R*0.4,-R*0.46,0,-R*0.4,-R*0.46,R*0.3);sp.addColorStop(0,'rgba(255,255,255,'+(0.9*m).toFixed(2)+')');sp.addColorStop(0.35,'rgba(255,255,255,'+(0.3*m).toFixed(2)+')');sp.addColorStop(1,'rgba(255,255,255,0)');
+  h.fillStyle=sp;h.fillRect(-R,-R,R*2,R*2);
+  g.drawImage(lay,-R-2,-R-2);if(!LAB_HAS_FILTER&&bl)cv.al=1-bl*0.18;
+  cv.f=N/(2*R);return LABSPR[k]=cv}
+function labBokeh(rgb,cell){const k='bk'+rgb.join(',')+(cell?'c':'');let cv=LABSPR[k];if(cv)return cv;cv=labCan(128);const g=cv.getContext('2d');g.translate(64,64);
+  if(cell){g.filter=LAB_HAS_FILTER?'blur(1.5px)':'none';const gr=g.createRadialGradient(0,0,8,0,0,60);gr.addColorStop(0,'rgba('+(rgb[0]*0.45|0)+','+(rgb[1]*0.4|0)+','+(rgb[2]*0.4|0)+',0.85)');
+    gr.addColorStop(0.55,'rgba('+rgb.join(',')+',0.95)');gr.addColorStop(0.85,'rgba('+Math.min(255,rgb[0]+40)+','+(rgb[1]+30)+','+(rgb[2]+30)+',1)');gr.addColorStop(1,'rgba('+rgb.join(',')+',0)');g.fillStyle=gr;g.beginPath();g.arc(0,0,60,0,TAU);g.fill()}
+  else{const gr=g.createRadialGradient(0,0,0,0,0,60);gr.addColorStop(0,'rgba('+rgb.join(',')+',0.32)');gr.addColorStop(0.78,'rgba('+rgb.join(',')+',0.42)');gr.addColorStop(0.92,'rgba('+rgb.join(',')+',0.75)');gr.addColorStop(1,'rgba('+rgb.join(',')+',0)');
+    g.fillStyle=gr;g.beginPath();g.arc(0,0,60,0,TAU);g.fill()}
+  return LABSPR[k]=cv}
+function labParts(S,env){const P=[],n=env.kind==='cells'?70:env.kind==='fibers'?60:140,B=S.R*7+20;
+  for(let i=0;i<n;i++){const p=[(hh(i*3.1)-0.5)*B,(hh(i*5.7)-0.5)*B,(hh(i*7.3)-0.5)*B];P.push({p,s:0.5+hh(i*9.1)*1.5,rot:hh(i*2.2)*TAU,tilt:0.25+hh(i*4.4)*0.75,ph:hh(i)*TAU,dir:v3.norm([hh(i+1)-0.5,hh(i+2)-0.5,hh(i+3)-0.5])})}
+  return {P,B}}
+function labAO(S){const N=S.atoms.length,ao=new Array(N);const cell=S.atoms[0]&&S.atoms[0].cg?7:3.4,grid={},key=(p)=>Math.floor(p[0]/cell)+','+Math.floor(p[1]/cell)+','+Math.floor(p[2]/cell);
+  S.atoms.forEach((a,i)=>{const k=key(a.b);(grid[k]=grid[k]||[]).push(i)});
+  S.atoms.forEach((a,i)=>{let n=0;const gx=Math.floor(a.b[0]/cell),gy=Math.floor(a.b[1]/cell),gz=Math.floor(a.b[2]/cell);
+    for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){const L=grid[(gx+x)+','+(gy+y)+','+(gz+z)];if(L)for(const j of L){if(j===i)continue;const b=S.atoms[j].b;if(Math.hypot(a.b[0]-b[0],a.b[1]-b[1],a.b[2]-b[2])<cell)n++}}
+    ao[i]=n>9?0:n>4?1:2});return ao}
+function labTitle(c,it,S,age){const M=Math.min(W,H),k=age<1.2?sstep(age/1.2):age<6.5?1:1-sstep((age-6.5)/1.6);if(k<=0)return;
+  const x=W*0.07,y=H*0.7,idx=LAB.mol+1;c.save();c.globalAlpha=k;c.textBaseline='alphabetic';c.shadowColor='rgba(0,0,0,0.85)';c.shadowBlur=M*0.02;
+  c.fillStyle='rgba(242,184,75,0.95)';c.font='600 '+(M*0.017|0)+'px "Chakra Petch",system-ui,sans-serif';try{c.letterSpacing=(M*0.006|0)+'px'}catch(_){}
+  c.fillText(it.g.toUpperCase()+'  ·  '+String(idx).padStart(2,'0')+' / '+LAB_LIST.length,x,y);
+  c.fillStyle='rgba(250,246,236,1)';const fs=M*0.052;c.font=(fs|0)+'px Syncopate,"Arial Black",sans-serif';try{c.letterSpacing=(fs*0.08|0)+'px'}catch(_){}
+  const title=it.name.replace(/ \(.*\)$/,''),sub=(it.name.match(/\((.*)\)$/)||[])[1];c.fillText(title.toUpperCase(),x,y+fs*1.25);
+  const lw=Math.min(W*0.5,c.measureText(title.toUpperCase()).width)*sstep(Math.min(1,age/1.6));c.fillStyle='rgba(242,184,75,0.9)';c.fillRect(x,y+fs*1.55,lw,Math.max(1,M*0.002));
+  try{c.letterSpacing='0px'}catch(_){}c.fillStyle='rgba(236,230,214,0.92)';c.font=(M*0.02|0)+'px "Chakra Petch",system-ui,sans-serif';
+  const line2=(sub?sub.charAt(0).toUpperCase()+sub.slice(1)+'  ·  ':'')+(S.formula||'');c.fillText(line2,x,y+fs*1.55+M*0.04);
+  c.fillStyle='rgba(236,230,214,0.78)';c.font=(M*0.0175|0)+'px "Chakra Petch",system-ui,sans-serif';
+  const words=it.role.split(' '),maxW=W*0.55;let ln='',yy=y+fs*1.55+M*0.075;for(const w of words){const tt=ln?ln+' '+w:w;if(c.measureText(tt).width>maxW){c.fillText(ln,x,yy);ln=w;yy+=M*0.028}else ln=tt}if(ln)c.fillText(ln,x,yy);
+  c.restore()}
 function labScene(c,a){
-  flyStep();const S=labLoad(),it=LAB_LIST[LAB.mol],M=Math.min(W,H),dt=st.dtReal||0.016,mus=LAB.music;
-  c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1;c.fillStyle='rgb(3,4,10)';c.fillRect(0,0,W,H);
-  LAB.cam.t+=dt*LAB.speed*(0.6+mus*(a.energy*0.8+a.bass*0.6))*(FLY.speed||1);
-  if(a.kick>0.9)LAB.pulse=1;LAB.pulse=Math.max(0,LAB.pulse-dt*2.5);
-  // auto molecule change
+  flyStep();const S=labLoad(),it=LAB_LIST[LAB.mol],M=Math.min(W,H),dt=st.dtReal||0.016,mus=LAB.music,env=LAB_ENV[it.g]||LAB_ENV.Filters;
+  if(!S.ao)S.ao=labAO(S);if(!S.parts)S.parts=labParts(S,env);if(LAB.titleKey!==it.k){LAB.titleKey=it.k;LAB.titleT=st.t}
+  c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1;
+  LAB.cam.t+=dt*LAB.speed*(0.45+mus*(a.energy*0.6+a.bass*0.45))*(FLY.speed||1);
+  if(a.kick>0.9)LAB.pulse=1;LAB.pulse=Math.max(0,LAB.pulse-dt*2.2);
   if(LAB.auto&&A.beats!==LAB.lastBeat&&A.beats>0&&A.beats%LAB.auto===0){LAB.mol=(LAB.mol+1)%LAB_LIST.length;labSave();labUiSync()}LAB.lastBeat=A.beats;
-  // view (auto tour blends between the views every 16 beats)
-  let v=LAB.view,camA,bl=1;const t=LAB.cam.t;
-  if(v===6){bl=flyMode(LAB.tour,6);const A0=labCamFor(LAB.tour.prev,S,t),B0=labCamFor(LAB.tour.mode,S,t);camA=[v3.lerp(A0[0],B0[0],bl),v3.lerp(A0[1],B0[1],bl),v3.norm(v3.lerp(A0[2],B0[2],bl))];v=bl>0.5?LAB.tour.mode:LAB.tour.prev}
+  // camera: one of the views, or the auto tour that glides between them
+  let v=LAB.view,camA;const t=LAB.cam.t;
+  if(v===6){const bl=flyMode(LAB.tour,6),A0=labCamFor(LAB.tour.prev,S,t),B0=labCamFor(LAB.tour.mode,S,t);camA=[v3.lerp(A0[0],B0[0],bl),v3.lerp(A0[1],B0[1],bl),v3.norm(v3.lerp(A0[2],B0[2],bl))];v=bl>0.5?LAB.tour.mode:LAB.tour.prev}
   else camA=labCamFor(v,S,t);
+  // a slight hand-held float, like a real camera on a slider
+  const hf=S.R*0.012;camA[0]=v3.add(camA[0],[Math.sin(st.t*0.71)*hf,Math.sin(st.t*0.53+1)*hf,Math.sin(st.t*0.37+2)*hf]);
   const lens=v===2||v===3||v===4?0.6:0.95;LAB.lens=(LAB.lens||lens)+(lens-(LAB.lens||lens))*Math.min(1,dt*2);const C=camLook(camA[0],camA[1],camA[2],M*LAB.lens);
-  // motion: vibration with the music, explode, muscle contraction
-  const ex=LAB.explT>0?Math.max(0,Math.sin(clamp((st.t-LAB.explT)/3,0,1)*Math.PI)):0,amp=LAB.vib?(0.04+mus*(a.bass*0.22+LAB.pulse*0.2)):0;
+  // ---- environment: deep background, light shafts and drifting particles with parallax ----
+  const bg=c.createRadialGradient(W*0.38,H*0.32,0,W*0.5,H*0.5,Math.hypot(W,H)*0.62),ex0=1+0.25*LAB.pulse*mus;
+  bg.addColorStop(0,'rgb('+(env.bg[0][0]*ex0|0)+','+(env.bg[0][1]*ex0|0)+','+(env.bg[0][2]*ex0|0)+')');bg.addColorStop(1,'rgb('+env.bg[1].join(',')+')');
+  c.fillStyle=LAB.env?bg:'rgb(3,4,10)';c.fillRect(0,0,W,H);
+  if(LAB.env){c.globalCompositeOperation='lighter';
+    for(let i=0;i<5;i++){const an=0.55+i*0.11+Math.sin(st.t*0.05+i)*0.05,len=Math.hypot(W,H)*1.1,w=0.025+0.02*hh(i+7),ox=-W*0.05+i*W*0.06,oy=-H*0.1;
+      const g=c.createLinearGradient(ox,oy,ox+Math.cos(an)*len,oy+Math.sin(an)*len);const al=(0.035+0.03*Math.sin(st.t*0.21+i*1.7)+0.03*a.mid*mus).toFixed(3);
+      g.addColorStop(0,'rgba('+env.shaft.join(',')+','+al+')');g.addColorStop(1,'rgba('+env.shaft.join(',')+',0)');c.fillStyle=g;
+      c.beginPath();c.moveTo(ox,oy);c.lineTo(ox+Math.cos(an-w)*len,oy+Math.sin(an-w)*len);c.lineTo(ox+Math.cos(an+w)*len,oy+Math.sin(an+w)*len);c.closePath();c.fill()}
+    c.globalCompositeOperation='source-over'}
+  const focus=v===2||v===3||v===4?S.R*0.7:Math.max(1,v3.dot(v3.sub([0,0,0],C.pos),C.f));LAB.focus=(LAB.focus||focus)+(focus-(LAB.focus||focus))*Math.min(1,dt*1.5);
+  const coc=Z=>LAB.dof?clamp(Math.abs(Z-LAB.focus)/Math.max(Z,0.5)*(v===2||v===3||v===4?2.2:3.2),0,3):0;
+  const drawParts=front=>{if(!LAB.env)return;const B=S.parts.B,flow=st.t*(0.6+mus*a.energy*0.8);
+    for(const pt of S.parts.P){const p=[0,1,2].map(k=>{let x=pt.p[k]+pt.dir[k]*flow*pt.s*1.4;x=((x+B/2)%B+B)%B-B/2;return x});
+      const q=camP(C,p);if(!q)continue;if(front!==(q[2]<LAB.focus*0.85))continue;const fog=clamp(1.25-q[2]/(S.R*6),0,1);if(fog<=0)continue;
+      const blur=coc(q[2]);
+      if(env.kind==='fibers'){const d=pt.dir,L2=S.R*0.9*pt.s,q2=camP(C,v3.add(p,v3.mul(d,L2)));if(!q2)continue;c.strokeStyle='rgba('+env.part.join(',')+','+(0.22*fog/(1+blur)).toFixed(3)+')';
+        c.lineWidth=Math.max(1,(0.6+blur*1.6)*q[3]*0.35);c.lineCap='round';c.beginPath();c.moveTo(q[0],q[1]);c.lineTo(q2[0],q2[1]);c.stroke();continue}
+      const cell=env.kind==='cells',spr=labBokeh(env.part,cell),r=(cell?3.6:0.35+blur*0.5)*pt.s*q[3]*(cell?1:1+blur*0.8);if(r<0.4||r>M*1.4)continue;
+      c.globalAlpha=(cell?(0.55*fog/(1+blur*0.7)):(0.5*fog/(1+blur*0.4)))*(front?0.8:1);
+      if(cell){c.save();c.translate(q[0],q[1]);c.rotate(pt.rot+st.t*0.05*pt.s);c.scale(1,pt.tilt);if(LAB_HAS_FILTER&&blur>0.8)c.filter='blur('+(blur*2*DPR|0)+'px)';c.drawImage(spr,-r,-r,r*2,r*2);c.restore()}
+      else c.drawImage(spr,q[0]-r,q[1]-r,r*2,r*2)}c.globalAlpha=1};
+  drawParts(false);
+  // ---- motion: vibration with the music, explode, muscle contraction ----
+  const ex=LAB.explT>0?Math.max(0,Math.sin(clamp((st.t-LAB.explT)/3,0,1)*Math.PI)):0,amp=LAB.vib?(0.03+mus*(a.bass*0.18+LAB.pulse*0.16)):0;
   if(S.kind==='motor'){const tgt=LAB.contract?(0.5+0.5*Math.sin(st.t*0.8)):0;LAB.slide+=(tgt-LAB.slide)*Math.min(1,dt*2)}
+  const stroke=[];
   S.atoms.forEach((at,i)=>{let p=at.b;
     if(S.kind==='motor'){if(at.part==='actin'||at.part==='zline')p=[at.b[0]-at.hf*LAB.slide*12,at.b[1],at.b[2]];
-      if(at.part==='head'){const ph=LAB.contract?Math.sin(st.t*4+at.hk*0.9):0,ang=ph*0.6;p=[at.hx+Math.sin(ang)*2.2*(at.hx<0?1:-1),at.side*(2+2.2*Math.cos(ang)),0]}}
+      if(at.part==='head'){const ph=LAB.contract?Math.sin(st.t*4+at.hk*0.9):0,ang=ph*0.6;p=[at.hx+Math.sin(ang)*2.2*(at.hx<0?1:-1),at.side*(2+2.2*Math.cos(ang)),0];if(LAB.contract&&Math.cos(st.t*4+at.hk*0.9)>0.6)stroke.push(i)}}
     if(ex>0){const d=Math.hypot(...p)||1;p=v3.add(p,v3.mul(p,ex*1.4*(0.6+hh(i)*0.8)/Math.max(1,d*0.15)))}
     if(amp){const w=st.t*(9+hh(i)*6);p=[p[0]+Math.sin(w+i)*amp,p[1]+Math.sin(w*1.13+i*2.1)*amp,p[2]+Math.cos(w*0.91+i*1.3)*amp]}
     at.p=p});
   const showH=LAB.hyd,style=LAB.style,quantum=v===5;
-  const items=[],proj=S.atoms.map(at=>(!showH&&at.el==='H'&&!at.cg)?null:camP(C,at.p));
-  const rad=at=>at.cg?(at.r||1.9):style==='space'?(LAB_EL[at.el]||LAB_EL.X).v:style==='stick'?0.18:at.el==='H'?0.22:(LAB_EL[at.el]||LAB_EL.X).v*0.3;
+  const proj=S.atoms.map(at=>(!showH&&at.el==='H'&&!at.cg)?null:camP(C,at.p));
+  const rad=at=>at.cg?(at.r||1.9):style==='space'?(LAB_EL[at.el]||LAB_EL.X).v:style==='stick'?0.2:at.el==='H'?0.24:(LAB_EL[at.el]||LAB_EL.X).v*0.32;
+  const fogA=Z=>clamp(1.2-Z/(S.R*5.2),0.18,1);
   if(quantum){c.save();c.globalCompositeOperation='lighter';
     const per=Math.max(3,Math.min(26,Math.floor(9000/S.atoms.length))),ex2=1+mus*(a.bass*0.6+LAB.pulse*0.5);
     S.atoms.forEach((at,i)=>{if(!proj[i])return;const rgb=labRGB(at,i,S),sig=(at.cg?(at.r||1.9)*0.7:(LAB_EL[at.el]||LAB_EL.X).v*0.42)*ex2,k=proj[i][3];if(k*sig>M)return;
-      softDot(c,proj[i][0],proj[i][1],Math.max(2,sig*k*1.6),'rgba('+(rgb[0]|0)+','+(rgb[1]|0)+','+(rgb[2]|0)+',0.10)');
-      c.fillStyle='rgba('+Math.min(255,rgb[0]+80|0)+','+Math.min(255,rgb[1]+80|0)+','+Math.min(255,rgb[2]+80|0)+',0.55)';
+      softDot(c,proj[i][0],proj[i][1],Math.max(2,sig*k*1.7),'rgba('+(rgb[0]|0)+','+(rgb[1]|0)+','+(rgb[2]|0)+',0.12)');
+      c.fillStyle='rgba('+Math.min(255,rgb[0]*0.5+150|0)+','+Math.min(255,rgb[1]*0.5+150|0)+','+Math.min(255,rgb[2]*0.5+150|0)+',0.7)';
       for(let e=0;e<per;e++){const g1=Math.random()+Math.random()+Math.random()-1.5,g2=Math.random()+Math.random()+Math.random()-1.5,g3=Math.random()+Math.random()+Math.random()-1.5;
         const q=camP(C,[at.p[0]+g1*sig,at.p[1]+g2*sig,at.p[2]+g3*sig]);if(q){const s2=Math.max(1,DPR*0.9);c.fillRect(q[0]-s2/2,q[1]-s2/2,s2,s2)}}
-      c.fillStyle='rgba(255,255,255,0.9)';const nr=Math.max(0.8,k*0.05);c.fillRect(proj[i][0]-nr/2,proj[i][1]-nr/2,nr,nr)});
-    c.fillStyle='rgba(180,220,255,0.35)';
-    S.bonds.forEach(([i,j,o])=>{if(!proj[i]||!proj[j])return;const P=S.atoms[i].p,Q=S.atoms[j].p;for(let e=0;e<Math.ceil(o*4);e++){const f=Math.random(),g=(Math.random()-0.5)*0.5,q=camP(C,[P[0]+(Q[0]-P[0])*f+g,P[1]+(Q[1]-P[1])*f+(Math.random()-0.5)*0.5,P[2]+(Q[2]-P[2])*f+(Math.random()-0.5)*0.5]);if(q)c.fillRect(q[0],q[1],DPR,DPR)}});
+      c.fillStyle='rgba(255,255,255,0.9)';c.beginPath();c.arc(proj[i][0],proj[i][1],Math.max(0.8,Math.min(k*0.022,3*DPR)),0,TAU);c.fill()});
+    c.fillStyle='rgba(190,225,255,0.4)';
+    S.bonds.forEach(([i,j,o])=>{if(!proj[i]||!proj[j])return;const P=S.atoms[i].p,Q=S.atoms[j].p;for(let e=0;e<Math.ceil(o*4);e++){const f=Math.random(),q=camP(C,[P[0]+(Q[0]-P[0])*f+(Math.random()-0.5)*0.5,P[1]+(Q[1]-P[1])*f+(Math.random()-0.5)*0.5,P[2]+(Q[2]-P[2])*f+(Math.random()-0.5)*0.5]);if(q)c.fillRect(q[0],q[1],DPR,DPR)}});
     c.restore()}
-  else{
+  else{const items=[];
     S.atoms.forEach((at,i)=>{const p=proj[i];if(!p)return;const r=rad(at)*p[3];if(r>M*1.2||p[2]<rad(at)*1.25)return;items.push({Z:p[2],t:0,i,p,r})});
     if(style!=='space')S.bonds.forEach(b=>{const p=proj[b[0]],q=proj[b[1]];if(!p||!q||p[2]<0.7||q[2]<0.7)return;items.push({Z:(p[2]+q[2])/2+0.01,t:1,b,p,q})});
     items.sort((x,y)=>y.Z-x.Z);
-    const fog=Z=>clamp(1.15-Z/(S.R*5.5),0.25,1);
-    for(const it2 of items){if(it2.t===0){const at=S.atoms[it2.i],rgb=labRGB(at,it2.i,S);labSphere(c,it2.p[0],it2.p[1],it2.r,rgb,fog(it2.Z).toFixed(3));
-        if(style==='glow'&&it2.r>1)softDot(c,it2.p[0],it2.p[1],it2.r*2.6,'rgba('+(rgb[0]|0)+','+(rgb[1]|0)+','+(rgb[2]|0)+',0.22)')}
-      else{const [i,j,o]=it2.b,A1=S.atoms[i],B1=S.atoms[j],p=it2.p,q=it2.q,k=(p[3]+q[3])/2,w=Math.max(1,(A1.cg||B1.cg?0.55:style==='stick'?0.36:0.17)*k),mx=(p[0]+q[0])/2,my=(p[1]+q[1])/2,al=fog(it2.Z);
-        const ca=labRGB(A1,i,S),cb=labRGB(B1,j,S),dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L,lines=o>=3?[-1,0,1]:o>=2?[-0.8,0.8]:o>1?[-0.6,0.6]:[0],ww=lines.length>1?w*0.6:w;
-        c.lineCap='round';c.lineWidth=ww;
-        lines.forEach((off,li)=>{const ox=nx*off*w*1.1,oy=ny*off*w*1.1;if(o>1&&o<2&&li===1)c.setLineDash([ww*1.5,ww*1.5]);
-          c.strokeStyle='rgba('+(ca[0]|0)+','+(ca[1]|0)+','+(ca[2]|0)+','+al+')';c.beginPath();c.moveTo(p[0]+ox,p[1]+oy);c.lineTo(mx+ox,my+oy);c.stroke();
-          c.strokeStyle='rgba('+(cb[0]|0)+','+(cb[1]|0)+','+(cb[2]|0)+','+al+')';c.beginPath();c.moveTo(mx+ox,my+oy);c.lineTo(q[0]+ox,q[1]+oy);c.stroke();c.setLineDash([])})}}}
-  // guests: molecules that fly in and bind (adsorb on carbon, dock in albumin, O2 on iron, water round polar atoms)
+    for(const e of items){const al=fogA(e.Z),bl=Math.round(coc(e.Z));
+      if(e.t===0){const at=S.atoms[e.i],rgb=labRGB(at,e.i,S),spr=labSpr(rgb,env.rim,S.ao[e.i],bl),rr=e.r*spr.f;
+        c.globalAlpha=al*(spr.al||1);c.drawImage(spr,e.p[0]-rr,e.p[1]-rr,rr*2,rr*2);
+        if(style==='glow'&&e.r>1){c.globalAlpha=1;softDot(c,e.p[0],e.p[1],e.r*2.6,'rgba('+(rgb[0]|0)+','+(rgb[1]|0)+','+(rgb[2]|0)+',0.2)')}}
+      else{const [i,j,o]=e.b,A1=S.atoms[i],B1=S.atoms[j],p=e.p,q=e.q,k=(p[3]+q[3])/2,w=Math.max(1,(A1.cg||B1.cg?0.55:style==='stick'?0.38:0.17)*k),mx=(p[0]+q[0])/2,my=(p[1]+q[1])/2;
+        const ca=labRGB(A1,i,S),cb=labRGB(B1,j,S),dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L,lines=o>=3?[-1,0,1]:o>=2?[-0.8,0.8]:o>1?[-0.6,0.6]:[0],ww=lines.length>1?w*0.62:w;
+        const sp=bl*0.6+1;c.globalAlpha=al/sp;c.lineCap='round';
+        lines.forEach((off,li)=>{const ox=nx*off*w*1.15,oy=ny*off*w*1.15;
+          // a lit cylinder: dark edge, body colour, then a thin highlight towards the key light
+          for(const [col0,x0,y0,x1,y1] of [[ca,p[0],p[1],mx,my],[cb,mx,my,q[0],q[1]]]){
+            c.lineWidth=ww*sp;c.strokeStyle='rgb('+(col0[0]*0.28|0)+','+(col0[1]*0.28|0)+','+(col0[2]*0.28|0)+')';c.beginPath();c.moveTo(x0+ox,y0+oy);c.lineTo(x1+ox,y1+oy);c.stroke();
+            c.lineWidth=ww*0.7*sp;c.strokeStyle='rgb('+(col0[0]*0.8|0)+','+(col0[1]*0.8|0)+','+(col0[2]*0.8|0)+')';c.beginPath();c.moveTo(x0+ox,y0+oy);c.lineTo(x1+ox,y1+oy);c.stroke();
+            const hx=-Math.sign(nx||1)*Math.abs(nx)*ww*0.18,hy=-Math.abs(ny)*ww*0.18;
+            c.lineWidth=Math.max(0.6,ww*0.22*sp);c.strokeStyle='rgba('+Math.min(255,col0[0]+120|0)+','+Math.min(255,col0[1]+120|0)+','+Math.min(255,col0[2]+120|0)+',0.55)';c.beginPath();c.moveTo(x0+ox+hx,y0+oy+hy);c.lineTo(x1+ox+hx,y1+oy+hy);c.stroke()}})}}
+    c.globalAlpha=1}
+  // the myosin heads glow during the power stroke (each stroke uses one ATP)
+  if(stroke.length){c.globalCompositeOperation='lighter';for(const i of stroke){const p=proj[i];if(p)softDot(c,p[0],p[1],p[3]*4,'rgba(255,200,120,0.35)')}c.globalCompositeOperation='source-over'}
+  // explode: a shock ring from the centre
+  if(LAB.explT>0&&st.t-LAB.explT<1.4){const q=camP(C,[0,0,0]),f=(st.t-LAB.explT)/1.4;if(q){c.strokeStyle='rgba('+env.rim.join(',')+','+(0.6*(1-f)).toFixed(3)+')';c.lineWidth=M*0.006*(1-f)+1;c.beginPath();c.arc(q[0],q[1],M*0.6*sstep(f),0,TAU);c.stroke()}}
+  // guests: molecules that fly in with a light trail and bind (a ring of light when they land)
   if(LAB.guests.length){let all=true;for(const g of LAB.guests){const f=clamp((st.t-g.t0)/g.dur,0,1),e=sstep(f);if(f<1)all=false;
-      const ctr=v3.lerp(g.from,g.to,e),spin=(1-e)*5+st.t*0.3*(1-e),cs=Math.cos(g.rot[0]+spin),sn=Math.sin(g.rot[0]+spin),jig=f>=1?Math.sin(st.t*7+g.t0)*0.12*(1+a.bass):0;
+      const ctr=v3.lerp(g.from,g.to,e),spin=(1-e)*5,cs=Math.cos(g.rot[0]+spin),sn=Math.sin(g.rot[0]+spin),jig=f>=1?Math.sin(st.t*7+g.t0)*0.1*(1+a.bass):0;
+      if(f>0&&f<1){c.globalCompositeOperation='lighter';c.strokeStyle='rgba('+env.rim.join(',')+',0.22)';c.lineCap='round';let pp=null;
+        for(let s2=0;s2<=12;s2++){const e2=sstep(Math.max(0,f-s2*0.02)),q=camP(C,v3.lerp(g.from,g.to,e2));if(q&&pp){c.lineWidth=Math.max(1,q[3]*0.5*(1-s2/12));c.beginPath();c.moveTo(pp[0],pp[1]);c.lineTo(q[0],q[1]);c.stroke()}pp=q}c.globalCompositeOperation='source-over'}
       const gp=g.m.atoms.map(at=>{const x=at.p[0]*cs-at.p[2]*sn,z=at.p[0]*sn+at.p[2]*cs;return camP(C,[ctr[0]+x+jig,ctr[1]+at.p[1],ctr[2]+z])});
-      c.strokeStyle='rgba(220,220,230,0.8)';c.lineWidth=Math.max(1,DPR*1.2);g.m.bonds.forEach(([i,j])=>{if(gp[i]&&gp[j]){c.beginPath();c.moveTo(gp[i][0],gp[i][1]);c.lineTo(gp[j][0],gp[j][1]);c.stroke()}});
-      g.m.atoms.forEach((at,i)=>{if(gp[i])labSphere(c,gp[i][0],gp[i][1],Math.max(1.5,(LAB_EL[at.el]||LAB_EL.X).v*0.32*gp[i][3]),(LAB_EL[at.el]||LAB_EL.X).c,0.95)});
-      if(f>=1){const q=camP(C,g.to);if(q&&q[3]*0.5>1)softDot(c,q[0],q[1],q[3]*3.5,'rgba(255,230,120,'+(0.18+0.25*LAB.pulse).toFixed(3)+')');if(g.name&&q&&LAB.info)label(q[0]+12*DPR,q[1],g.name,'con')}}
+      g.m.bonds.forEach(([i,j])=>{if(gp[i]&&gp[j]){c.strokeStyle='rgba(225,225,235,0.85)';c.lineWidth=Math.max(1,gp[i][3]*0.16);c.beginPath();c.moveTo(gp[i][0],gp[i][1]);c.lineTo(gp[j][0],gp[j][1]);c.stroke()}});
+      g.m.atoms.forEach((at,i)=>{const q=gp[i];if(!q)return;const spr=labSpr((LAB_EL[at.el]||LAB_EL.X).c,env.rim,2,Math.round(coc(q[2]))),rr=Math.max(1.5,(LAB_EL[at.el]||LAB_EL.X).v*0.34*q[3])*spr.f;c.drawImage(spr,q[0]-rr,q[1]-rr,rr*2,rr*2)});
+      const land=st.t-(g.t0+g.dur);if(land>0&&land<1.2){const q=camP(C,g.to);if(q){c.strokeStyle='rgba(255,236,170,'+(0.7*(1-land/1.2)).toFixed(3)+')';c.lineWidth=Math.max(1,q[3]*0.15);c.beginPath();c.arc(q[0],q[1],q[3]*(1+land*5),0,TAU);c.stroke()}}
+      if(f>=1){const q=camP(C,g.to);if(q&&q[3]*0.5>1){c.globalCompositeOperation='lighter';softDot(c,q[0],q[1],q[3]*3.2,'rgba(255,225,140,'+(0.14+0.22*LAB.pulse).toFixed(3)+')');c.globalCompositeOperation='source-over'}if(g.name&&q&&LAB.info)label(q[0]+12*DPR,q[1],g.name,'con')}}
     if(all&&st.t-LAB.bindT>22)LAB.guests=[]}
-  if(LAB.info){label(18*DPR,26*DPR,'Health Laboratory · '+it.name+' · '+LAB_VIEWS[LAB.view===6?6:LAB.view]+(LAB.view===6?' ('+LAB_VIEWS[v]+')':''),'big');
+  drawParts(true);
+  // ---- grade: a beat-driven exposure lift, a vignette, cinema bars and the title card ----
+  if(LAB.env&&LAB.pulse>0.05&&mus>0){c.globalCompositeOperation='lighter';c.fillStyle='rgba('+env.fog.join(',')+','+(0.05*LAB.pulse*mus).toFixed(3)+')';c.fillRect(0,0,W,H);c.globalCompositeOperation='source-over'}
+  const vg=c.createRadialGradient(W/2,H/2,Math.min(W,H)*0.35,W/2,H/2,Math.hypot(W,H)*0.6);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.62)');c.fillStyle=vg;c.fillRect(0,0,W,H);
+  LAB.barK=(LAB.barK||0)+((LAB.bars?1:0)-(LAB.barK||0))*Math.min(1,dt*2);const bh=Math.max(0,(H-W/2.39)/2)*LAB.barK;if(bh>0.5){c.fillStyle='#000';c.fillRect(0,0,W,bh);c.fillRect(0,H-bh,W,bh)}
+  if(LAB.titles)labTitle(c,it,S,st.t-LAB.titleT);
+  if(LAB.info){label(18*DPR,26*DPR,'Health Laboratory · '+it.name+' · '+LAB_VIEWS[LAB.view]+(LAB.view===6?' ('+LAB_VIEWS[v]+')':''),'big');
     label(18*DPR,50*DPR,S.formula,'info');label(18*DPR,72*DPR,it.role,'info');
     if(quantum)label(18*DPR,94*DPR,'Quantum view: each dot is a place where an electron can be found (a probability cloud). Electrons do not move in orbits. Bass makes the clouds bigger.','info');
-    else if(S.kind==='mol'||S.kind==='crystal'||S.kind==='carbon'){const used=[...new Set(S.atoms.map(x=>x.el))].filter(e=>LAB_EL[e]);label(18*DPR,94*DPR,used.map(e=>({H:'H hydrogen',C:'C carbon',N:'N nitrogen',O:'O oxygen',S:'S sulfur',P:'P phosphorus',Fe:'Fe iron',Ca:'Ca calcium',Cl:'Cl chlorine'}[e]||e)).join(' · '),'info')}
-    if(S.kind==='motor')label(18*DPR,94*DPR,LAB.contract?'Contracting: the heads pull the actin filaments to the centre. Muscles only pull.':'Relaxed. Push "Contract" in the lab panel.','info')}
+    else if(S.kind==='motor')label(18*DPR,94*DPR,LAB.contract?'Contracting: the heads pull the actin filaments to the centre. Each glow is one power stroke, powered by one ATP.':'Relaxed. Push "Contract" in the lab panel.','info')}
   c.restore();
 }
 
@@ -6390,16 +6490,16 @@ document.getElementById('lightsClose').onclick=()=>{lightsEl.hidden=true};
 function labUiInfo(){const e=document.getElementById('labInfo');if(e){const it=LAB_LIST[LAB.mol];e.textContent=it.role+(LAB.S&&LAB.S.formula?' ('+LAB.S.formula+')':'')}}
 function labUiSync(){const g=id=>document.getElementById(id);if(!g('labMol'))return;
   g('labMol').value=LAB.mol;g('labView').value=LAB.view;g('labStyle').value=LAB.style;g('labColor').value=LAB.color;g('labHyd').checked=LAB.hyd;g('labInfoChk').checked=LAB.info;
-  g('labVib').checked=LAB.vib;g('labStay').checked=LAB.stay;g('labMusic').value=LAB.music;g('labSpeed').value=LAB.speed;g('labAuto').value=LAB.auto;
+  g('labVib').checked=LAB.vib;g('labDof').checked=LAB.dof;g('labBars').checked=LAB.bars;g('labTitles').checked=LAB.titles;g('labEnv').checked=LAB.env;g('labStay').checked=LAB.stay;g('labMusic').value=LAB.music;g('labSpeed').value=LAB.speed;g('labAuto').value=LAB.auto;
   g('labContract').textContent=LAB.contract?'Relax':'Contract';g('labContract').hidden=LAB_LIST[LAB.mol].k!=='actin';labUiInfo()}
 function labOpen(){const i=SCENES.findIndex(s=>s.lab);if(i<0)return;LAB.panel=true;if(S.scene!==i)setScene(i);document.getElementById('labPanel').hidden=false;labUiSync()}
 (function labUiInit(){const g=id=>document.getElementById(id);if(!g('labPanel'))return;
   const ms=g('labMol');let og=null,last='';LAB_LIST.forEach((it,i)=>{if(it.g!==last){og=document.createElement('optgroup');og.label=it.g;ms.appendChild(og);last=it.g}const o=document.createElement('option');o.value=i;o.textContent=it.name;og.appendChild(o)});
   LAB_VIEWS.forEach((v,i)=>{const o=document.createElement('option');o.value=i;o.textContent=v;g('labView').appendChild(o)});
   const on=(id,ev,f)=>g(id).addEventListener(ev,e=>{f(e.target);labSave();labUiSync()});
-  on('labMol','change',t=>{LAB.mol=+t.value;LAB.guests=[]});on('labView','change',t=>{LAB.view=+t.value;FLY.yaw=FLY.pitch=0});
+  on('labMol','change',t=>{LAB.mol=+t.value;LAB.guests=[];LAB.titleKey=''});on('labView','change',t=>{LAB.view=+t.value;FLY.yaw=FLY.pitch=0});
   on('labStyle','change',t=>LAB.style=t.value);on('labColor','change',t=>LAB.color=t.value);on('labHyd','change',t=>LAB.hyd=t.checked);on('labInfoChk','change',t=>LAB.info=t.checked);
-  on('labVib','change',t=>LAB.vib=t.checked);on('labStay','change',t=>LAB.stay=t.checked);on('labMusic','input',t=>LAB.music=+t.value);on('labSpeed','input',t=>LAB.speed=+t.value);on('labAuto','change',t=>LAB.auto=+t.value);
+  on('labVib','change',t=>LAB.vib=t.checked);on('labDof','change',t=>LAB.dof=t.checked);on('labBars','change',t=>LAB.bars=t.checked);on('labTitles','change',t=>{LAB.titles=t.checked;LAB.titleT=st.t});on('labEnv','change',t=>LAB.env=t.checked);on('labStay','change',t=>LAB.stay=t.checked);on('labMusic','input',t=>LAB.music=+t.value);on('labSpeed','input',t=>LAB.speed=+t.value);on('labAuto','change',t=>LAB.auto=+t.value);
   g('labBind').onclick=()=>{labBind();toast('Binding: molecules fly in and stick')};
   g('labExplode').onclick=()=>{LAB.explT=st.t;toast('Explode and come back together')};
   g('labContract').onclick=()=>{LAB.contract=!LAB.contract;labSave();labUiSync()};
