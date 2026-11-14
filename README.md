@@ -26,6 +26,22 @@
 
 Click **Health Lab** in the controls (or choose the scene **Health Laboratory**). A panel opens on the right.
 
+**Five body systems**, each from the whole body down to the atom:
+
+| System | Levels |
+|---|---|
+| Breathe | Lungs, heart and blood → alveoli → red blood cell → heme and oxygen → electron clouds |
+| Move | Muscles and bones → muscle fibers → actin and myosin → ATP → electron clouds |
+| Signal | Brain and nerves → neuron → nerve meets muscle → acetylcholine → electron clouds |
+| Clean | Liver, kidneys and lymph → liver lobule → kidney filter → albumin → urea |
+| Fuel | Food to energy → mitochondrion → glucose → ATP → electron clouds |
+
+**Views:** **Overview** (the whole body, with the systems working together), **Zoom in** (from the body down through each level, with how that part works) and **Journey** (a random mix of the two). **Molecule lab** gives the free molecule explorer below.
+
+**On the screen:** the real rhythm of each level in hertz (breathing, heartbeat, nerve firing, bond vibrations, the light heme absorbs), optimal ranges, a scale ladder, and an **Activate** line that guides your attention to that part of your body. The **Breath pacer** guides slow breathing at 6 breaths a minute (0.1 Hz).
+
+### Molecule lab
+
 **Molecules** (real structures, built from their chemical formulas with real bond lengths and angles):
 
 | Group | Molecules |

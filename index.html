@@ -28,6 +28,7 @@
 #labPanel .lt{font-family:var(--display);font-size:13px;letter-spacing:.06em;color:var(--gold)}
 #labPanel select,#labPanel input[type=range]{width:190px;max-width:62%}
 #labPanel .lb{display:flex;flex-wrap:wrap;gap:6px 10px}
+#labPanel details summary{cursor:pointer;color:var(--gold);margin:4px 0}#labPanel .lab2{display:flex;flex-direction:column;gap:8px;margin-top:8px}
 #labPanel .hint{margin:0;color:var(--dim);line-height:1.45}
 body.noui #labPanel{opacity:0;pointer-events:none}
 
@@ -267,16 +268,21 @@ body:not(.locked) #showUi{display:none}
 </div>
 <div id="labPanel" hidden>
   <div class="lr"><b class="lt">Health Laboratory</b><button class="btn" id="labClose">Close</button></div>
+  <label class="lr">System <select id="bodySys"><option value="all">All systems</option><option value="breathe">Breathe</option><option value="move">Move</option><option value="signal">Signal</option><option value="clean">Clean</option><option value="fuel">Fuel</option></select></label>
+  <label class="lr">View <select id="bodyView"><option value="overview">Overview</option><option value="zoom">Zoom in</option><option value="journey">🎲 Journey (random)</option><option value="lab">Molecule lab</option></select></label>
+  <label class="lr">Music link <input type="range" id="labMusic" min="0" max="2" step="0.05" value="1"></label>
+  <label class="lr">Speed <input type="range" id="labSpeed" min="0.1" max="3" step="0.05" value="1"></label>
+  <div class="lb"><label class="chk"><input type="checkbox" id="bodyHz"> Rhythms (Hz)</label><label class="chk"><input type="checkbox" id="bodyOk"> Optimal ranges</label><label class="chk"><input type="checkbox" id="bodyAct"> Activate</label><label class="chk" title="Slow breathing: 6 breaths a minute"><input type="checkbox" id="bodyBreath"> Breath pacer</label><label class="chk"><input type="checkbox" id="bodyTitles"> Titles</label><label class="chk"><input type="checkbox" id="bodyCine"> Cinematic</label></div>
+  <details id="labAdv"><summary>Molecule lab</summary><div class="lab2">
   <label class="lr">Molecule <select id="labMol"></select></label>
   <label class="lr">View <select id="labView"></select></label>
   <label class="lr">Style <select id="labStyle"><option value="ball">Ball and stick</option><option value="space">Space filling</option><option value="stick">Sticks</option><option value="glow">Glow</option></select></label>
   <label class="lr">Colours <select id="labColor"><option value="el">By element</option><option value="pal">Palette</option></select></label>
-  <label class="lr">Music link <input type="range" id="labMusic" min="0" max="2" step="0.05" value="1"></label>
-  <label class="lr">Speed <input type="range" id="labSpeed" min="0.1" max="3" step="0.05" value="1"></label>
   <label class="lr">Next molecule <select id="labAuto"><option value="-1">🎲 Random journey</option><option value="0">Manual</option><option value="16">Every 16 beats</option><option value="32">Every 32 beats</option><option value="64">Every 64 beats</option></select></label>
   <div class="lb"><label class="chk"><input type="checkbox" id="labHyd"> Hydrogens</label><label class="chk"><input type="checkbox" id="labInfoChk"> Info</label><label class="chk"><input type="checkbox" id="labVib"> Vibrate</label><label class="chk" title="Auto does not change the scene while you are in the lab"><input type="checkbox" id="labStay"> Stay in lab</label></div>
   <div class="lb"><label class="chk" title="Near and far things are out of focus, like a film camera"><input type="checkbox" id="labDof"> Depth of field</label><label class="chk" title="Wide-screen film bars (2.39 : 1)"><input type="checkbox" id="labBars"> Cinema bars</label><label class="chk" title="A title for each molecule"><input type="checkbox" id="labTitles"> Titles</label><label class="chk" title="Fluid, fibers or blood cells round the molecule"><input type="checkbox" id="labEnv"> Environment</label></div>
   <div class="lb"><button class="btn" id="labBind" title="Molecules fly in and bind: adsorption on carbon, docking in albumin, oxygen on iron, water on polar atoms">Bind</button><button class="btn" id="labExplode">Explode</button><button class="btn" id="labContract">Contract</button><button class="btn" id="labNext">Next</button><button class="btn" id="labReset">Reset look</button></div>
+  </div></details>
   <p id="labInfo" class="hint"></p>
   <p class="hint">Drag the screen to look round. Scroll to change the flight speed.</p>
 </div>
@@ -5082,7 +5088,7 @@ const SCENES=[
   {name:'Spin in Water',draw:spinWater,fb:{zoom:1.0,rot:0,trail:0.75},dwell:2},
   {name:'Spin in Honey',draw:spinHoney,fb:{zoom:1.0,rot:0,trail:0.2},dwell:2.4},
   {name:'Spin in Plasma',draw:spinPlasma,fb:{zoom:1.0,rot:0,trail:0.35},dwell:2},
-  {name:'Health Laboratory',draw:labScene,fly:true,lab:true,calm:true,get noAuto(){return LAB.stay},fb:{zoom:1.0,rot:0,trail:0},dwell:3},
+  {name:'Health Laboratory',draw:bodyLabScene,fly:true,lab:true,calm:true,get noAuto(){return LAB.stay},fb:{zoom:1.0,rot:0,trail:0},dwell:3},
   ...(GLOK?[...GLSCENES,{name:'Möbius Flow',kind:'gl',fs:FS_MOBFLOW,rs0:0.8,rsMax:1,th:0.8,dwell:1.6,
    step(a){this.b=(this.b||0)+st.dt*(0.25+a.bass*0.9+a.kick*0.5)*(S.timbre&&live?TB.tempo:1);this.a=0.35+0.25*Math.sin(st.t*0.05)+a.mid*0.3;this.c=0.55+0.15*Math.sin(st.t*0.03)+a.kick*0.06;this.d=[5,6,8,12][Math.floor(A.beats/32)%4];
      if(S.names){label(18*DPR,26*DPR,'Möbius flow · z → (z − p)/(z − q): the pattern streams out of one point and spirals into another (a loxodromic Möbius map, as in the book \u201cIndra\u2019s Pearls\u201d)','info')}}},{name:'Holographic Universe',kind:'gl',fs:FS_HOLO,rs0:0.75,rsMax:1,th:0.8,dwell:1.6,
@@ -5618,7 +5624,12 @@ function labLoad(){const it=LAB_LIST[LAB.mol]||LAB_LIST[0];if(LAB.key===it.k&&LA
   S.path=pts;LAB.S=S;LAB.key=it.k;LAB.guests=[];LAB.bindT=-99;labUiInfo();return S}
 function labCR(P,t){const n=P.length,i=Math.floor(t)%n,f=t-Math.floor(t),p0=P[(i-1+n)%n],p1=P[i],p2=P[(i+1)%n],p3=P[(i+2)%n];
   return [0,1,2].map(k=>0.5*((2*p1[k])+(-p0[k]+p2[k])*f+(2*p0[k]-5*p1[k]+4*p2[k]-p3[k])*f*f+(-p0[k]+3*p1[k]-3*p2[k]+p3[k])*f*f*f))}
+function labFocus(S){if(S.fp&&S.fpK===(LAB.ext&&LAB.ext.focus))return S.fp;const f=LAB.ext&&LAB.ext.focus;let p=[0,0,0];
+  if(f==='site'&&S.sites)p=S.sites[0].p;else if(f==='head'){const h=S.atoms.filter(a=>a.part==='head');if(h.length)p=h[Math.floor(h.length/2)].b}
+  else if(f){let best=-1,bd=f==='P'?-1:1e9;S.atoms.forEach((a,i)=>{if(a.el!==f)return;const d=Math.hypot(...a.b);if(f==='P'?d>bd:d<bd){bd=d;best=i}});if(best>=0)p=S.atoms[best].b}
+  S.fpK=f;return S.fp=p.slice()}
 function labCamFor(v,S,t){const R=S.R,M=Math.min(W,H);
+  if(LAB.ext&&(v===7||v===5)){const cgK=S.atoms[0]&&S.atoms[0].cg,F=cgK?v3.mul(labFocus(S),0.45):labFocus(S),d=v===5?(cgK?R*0.9:4.2):cgK?R*1.7:Math.max(6,R*0.5),an=t*0.12,e=0.3+0.25*Math.sin(t*0.07);return [v3.add(F,[Math.sin(an)*Math.cos(e)*d,Math.sin(e)*d,-Math.cos(an)*Math.cos(e)*d]),F,[0,1,0]]}
   if(v===0){const a=t*0.06,d=R*(S.long?1.75:2.5);return [[Math.sin(a)*d,R*0.45*Math.sin(t*0.05),-Math.cos(a)*d],[0,0,0],[0,1,0]]}
   if(v===1){const a=t*0.22,e=Math.sin(t*0.09)*0.9;return [[Math.sin(a)*Math.cos(e)*R*1.55,Math.sin(e)*R*1.55,-Math.cos(a)*Math.cos(e)*R*1.55],[0,0,0],[Math.sin(t*0.03)*0.3,1,0]]}
   if(v===2){const a=t*0.12,p=[Math.sin(t*0.07)*R*0.22,R*0.18+Math.cos(t*0.05)*R*0.1,Math.cos(t*0.06)*R*0.2];return [p,v3.add(p,[Math.sin(a),Math.sin(t*0.08)*0.5,Math.cos(a)]),[0,1,0]]}
@@ -5667,8 +5678,8 @@ function labSpr(rgb,rim,ao,bl){
   h.fillStyle=sp;h.fillRect(-R,-R,R*2,R*2);
   g.drawImage(lay,-R-2,-R-2);if(!LAB_HAS_FILTER&&bl)cv.al=1-bl*0.18;
   cv.f=N/(2*R);return LABSPR[k]=cv}
-function labBokeh(rgb,cell){const k='bk'+rgb.join(',')+(cell?'c':'');let cv=LABSPR[k];if(cv)return cv;cv=labCan(128);const g=cv.getContext('2d');g.translate(64,64);
-  if(cell){g.filter=LAB_HAS_FILTER?'blur(1.5px)':'none';const gr=g.createRadialGradient(0,0,8,0,0,60);gr.addColorStop(0,'rgba('+(rgb[0]*0.45|0)+','+(rgb[1]*0.4|0)+','+(rgb[2]*0.4|0)+',0.85)');
+function labBokeh(rgb,cell,bl){bl=bl||0;const k='bk'+rgb.join(',')+(cell?'c':'')+bl;let cv=LABSPR[k];if(cv)return cv;cv=labCan(128);const g=cv.getContext('2d');g.translate(64,64);g.scale(0.82,0.82);
+  if(cell){g.filter=LAB_HAS_FILTER?'blur('+(1.5+bl*5)+'px)':'none';const gr=g.createRadialGradient(0,0,8,0,0,60);gr.addColorStop(0,'rgba('+(rgb[0]*0.45|0)+','+(rgb[1]*0.4|0)+','+(rgb[2]*0.4|0)+',0.85)');
     gr.addColorStop(0.55,'rgba('+rgb.join(',')+',0.95)');gr.addColorStop(0.85,'rgba('+Math.min(255,rgb[0]+40)+','+(rgb[1]+30)+','+(rgb[2]+30)+',1)');gr.addColorStop(1,'rgba('+rgb.join(',')+',0)');g.fillStyle=gr;g.beginPath();g.arc(0,0,60,0,TAU);g.fill()}
   else{const gr=g.createRadialGradient(0,0,0,0,0,60);gr.addColorStop(0,'rgba('+rgb.join(',')+',0.32)');gr.addColorStop(0.78,'rgba('+rgb.join(',')+',0.42)');gr.addColorStop(0.92,'rgba('+rgb.join(',')+',0.75)');gr.addColorStop(1,'rgba('+rgb.join(',')+',0)');
     g.fillStyle=gr;g.beginPath();g.arc(0,0,60,0,TAU);g.fill()}
@@ -5711,14 +5722,14 @@ function labJourney(){const J=LAB.rj||(LAB.rj={next:st.t+20,q:[],act:0});
   if(Math.random()<0.55)J.act=st.t+3+Math.random()*7;
   labUiSync()}
 function labScene(c,a){
-  flyStep();const S=labLoad(),it=LAB_LIST[LAB.mol],M=Math.min(W,H),dt=st.dtReal||0.016,mus=LAB.music,env=LAB_ENV[it.g]||LAB_ENV.Filters;
-  if(!S.ao)S.ao=labAO(S);if(!S.parts)S.parts=labParts(S,env);if(LAB.titleKey!==it.k){LAB.titleKey=it.k;LAB.titleT=st.t}
+  flyStep();const S=labLoad(),it=LAB_LIST[LAB.mol],M=Math.min(W,H),dt=st.dtReal||0.016,mus=LAB.music,env=(LAB.ext&&LAB_ENV[LAB.ext.env])||LAB_ENV[it.g]||LAB_ENV.Filters;
+  if(!S.ao)S.ao=labAO(S);if(!S.parts||S.partsKind!==env.kind){S.parts=labParts(S,env);S.partsKind=env.kind}if(LAB.titleKey!==it.k){LAB.titleKey=it.k;LAB.titleT=st.t}
   c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1;
   LAB.cam.t+=dt*LAB.speed*(0.45+mus*(a.energy*0.6+a.bass*0.45))*(FLY.speed||1);
   if(a.kick>0.9)LAB.pulse=1;LAB.pulse=Math.max(0,LAB.pulse-dt*2.2);
-  if(LAB.auto===-1)labJourney();else if(LAB.auto>0&&A.beats!==LAB.lastBeat&&A.beats>0&&A.beats%LAB.auto===0){LAB.mol=(LAB.mol+1)%LAB_LIST.length;labSave();labUiSync()}LAB.lastBeat=A.beats;
+  if(LAB.ext){}else if(LAB.auto===-1)labJourney();else if(LAB.auto>0&&A.beats!==LAB.lastBeat&&A.beats>0&&A.beats%LAB.auto===0){LAB.mol=(LAB.mol+1)%LAB_LIST.length;labSave();labUiSync()}LAB.lastBeat=A.beats;
   // camera: one of the views, or the auto tour that glides between them
-  let v=LAB.view,camA;const t=LAB.cam.t;
+  let v=LAB.ext?LAB.ext.view:LAB.view,camA;const t=LAB.cam.t;
   if(v===6){const bl=flyMode(LAB.tour,6),A0=labCamFor(LAB.tour.prev,S,t),B0=labCamFor(LAB.tour.mode,S,t);camA=[v3.lerp(A0[0],B0[0],bl),v3.lerp(A0[1],B0[1],bl),v3.norm(v3.lerp(A0[2],B0[2],bl))];v=bl>0.5?LAB.tour.mode:LAB.tour.prev}
   else camA=labCamFor(v,S,t);
   // a slight hand-held float, like a real camera on a slider
@@ -5734,7 +5745,7 @@ function labScene(c,a){
       g.addColorStop(0,'rgba('+env.shaft.join(',')+','+al+')');g.addColorStop(1,'rgba('+env.shaft.join(',')+',0)');c.fillStyle=g;
       c.beginPath();c.moveTo(ox,oy);c.lineTo(ox+Math.cos(an-w)*len,oy+Math.sin(an-w)*len);c.lineTo(ox+Math.cos(an+w)*len,oy+Math.sin(an+w)*len);c.closePath();c.fill()}
     c.globalCompositeOperation='source-over'}
-  const focus=v===2||v===3||v===4?S.R*0.7:Math.max(1,v3.dot(v3.sub([0,0,0],C.pos),C.f));LAB.focus=(LAB.focus||focus)+(focus-(LAB.focus||focus))*Math.min(1,dt*1.5);
+  const focus=v===2||v===3||v===4?S.R*0.7:Math.max(1,v3.dot(v3.sub(LAB.ext?labFocus(S):[0,0,0],C.pos),C.f));LAB.focus=(LAB.focus||focus)+(focus-(LAB.focus||focus))*Math.min(1,dt*1.5);
   const coc=Z=>LAB.dof?clamp(Math.abs(Z-LAB.focus)/Math.max(Z,0.5)*(v===2||v===3||v===4?2.2:3.2),0,3):0;
   const drawParts=front=>{if(!LAB.env)return;const B=S.parts.B,flow=st.t*(0.6+mus*a.energy*0.8);
     for(const pt of S.parts.P){const p=[0,1,2].map(k=>{let x=pt.p[k]+pt.dir[k]*flow*pt.s*1.4;x=((x+B/2)%B+B)%B-B/2;return x});
@@ -5742,9 +5753,9 @@ function labScene(c,a){
       const blur=coc(q[2]);
       if(env.kind==='fibers'){const d=pt.dir,L2=S.R*0.9*pt.s,q2=camP(C,v3.add(p,v3.mul(d,L2)));if(!q2)continue;c.strokeStyle='rgba('+env.part.join(',')+','+(0.22*fog/(1+blur)).toFixed(3)+')';
         c.lineWidth=Math.max(1,(0.6+blur*1.6)*q[3]*0.35);c.lineCap='round';c.beginPath();c.moveTo(q[0],q[1]);c.lineTo(q2[0],q2[1]);c.stroke();continue}
-      const cell=env.kind==='cells',spr=labBokeh(env.part,cell),r=(cell?3.6:0.35+blur*0.5)*pt.s*q[3]*(cell?1:1+blur*0.8);if(r<0.4||r>M*1.4)continue;
+      const cell=env.kind==='cells',spr=labBokeh(env.part,cell,cell?Math.min(3,Math.round(blur)):0),r=(cell?3.6:0.35+blur*0.5)*pt.s*q[3]*(cell?1:1+blur*0.8);if(r<0.4||r>M*1.4)continue;
       c.globalAlpha=(cell?(0.55*fog/(1+blur*0.7)):(0.5*fog/(1+blur*0.4)))*(front?0.8:1);
-      if(cell){c.save();c.translate(q[0],q[1]);c.rotate(pt.rot+st.t*0.05*pt.s);c.scale(1,pt.tilt);if(LAB_HAS_FILTER&&blur>0.8)c.filter='blur('+(blur*2*DPR|0)+'px)';c.drawImage(spr,-r,-r,r*2,r*2);c.restore()}
+      if(cell){c.save();c.translate(q[0],q[1]);c.rotate(pt.rot+st.t*0.05*pt.s);c.scale(1,pt.tilt);c.drawImage(spr,-r*1.22,-r*1.22,r*2.44,r*2.44);c.restore()}
       else c.drawImage(spr,q[0]-r,q[1]-r,r*2,r*2)}c.globalAlpha=1};
   drawParts(false);
   // ---- motion: vibration with the music, explode, muscle contraction ----
@@ -5763,12 +5774,19 @@ function labScene(c,a){
   const fogA=Z=>clamp(1.2-Z/(S.R*5.2),0.18,1);
   if(quantum){c.save();c.globalCompositeOperation='lighter';
     const per=Math.max(3,Math.min(26,Math.floor(9000/S.atoms.length))),ex2=1+mus*(a.bass*0.6+LAB.pulse*0.5);
-    S.atoms.forEach((at,i)=>{if(!proj[i])return;const rgb=labRGB(at,i,S),sig=(at.cg?(at.r||1.9)*0.7:(LAB_EL[at.el]||LAB_EL.X).v*0.42)*ex2,k=proj[i][3];if(k*sig>M)return;
+    S.atoms.forEach((at,i)=>{if(!proj[i])return;const rgb=labRGB(at,i,S),sig=(at.cg?(at.r||1.9)*0.7:(LAB_EL[at.el]||LAB_EL.X).v*0.42)*ex2,k=proj[i][3];if(k*sig>M*4||proj[i][2]<0.6)return;
       softDot(c,proj[i][0],proj[i][1],Math.max(2,sig*k*1.7),'rgba('+(rgb[0]|0)+','+(rgb[1]|0)+','+(rgb[2]|0)+',0.12)');
       c.fillStyle='rgba('+Math.min(255,rgb[0]*0.5+150|0)+','+Math.min(255,rgb[1]*0.5+150|0)+','+Math.min(255,rgb[2]*0.5+150|0)+',0.7)';
-      for(let e=0;e<per;e++){const g1=Math.random()+Math.random()+Math.random()-1.5,g2=Math.random()+Math.random()+Math.random()-1.5,g3=Math.random()+Math.random()+Math.random()-1.5;
+      const near=LAB.ext&&Math.hypot(at.p[0]-labFocus(S)[0],at.p[1]-labFocus(S)[1],at.p[2]-labFocus(S)[2])<2.2,pe=near?per*8+60:per;
+      for(let e=0;e<pe;e++){const g1=Math.random()+Math.random()+Math.random()-1.5,g2=Math.random()+Math.random()+Math.random()-1.5,g3=Math.random()+Math.random()+Math.random()-1.5;
         const q=camP(C,[at.p[0]+g1*sig,at.p[1]+g2*sig,at.p[2]+g3*sig]);if(q){const s2=Math.max(1,DPR*0.9);c.fillRect(q[0]-s2/2,q[1]-s2/2,s2,s2)}}
       c.fillStyle='rgba(255,255,255,0.9)';c.beginPath();c.arc(proj[i][0],proj[i][1],Math.max(0.8,Math.min(k*0.022,3*DPR)),0,TAU);c.fill()});
+    c.fillStyle='rgba(190,225,255,0.4)';
+    // orbital lobes round the focus atom: three p orbitals (dumbbells) and the round s cloud
+    if(LAB.ext){const F=labFocus(S),q0=camP(C,F);if(q0){const k=q0[3],cols=['rgba(120,200,255,0.55)','rgba(255,170,120,0.55)','rgba(180,255,170,0.55)'],ex3=1+mus*(a.bass*0.4+LAB.pulse*0.4);
+      for(let ax=0;ax<3;ax++){c.fillStyle=cols[ax];for(let e=0;e<260;e++){let r=-Math.log(Math.random()*Math.random())*0.38*ex3;const sgn=Math.random()<0.5?-1:1,th=Math.acos(Math.pow(Math.random(),0.35)),ph2=Math.random()*TAU,
+        along=sgn*Math.cos(th)*r,o1=Math.sin(th)*Math.cos(ph2)*r,o2=Math.sin(th)*Math.sin(ph2)*r,d=ax===0?[along,o1,o2]:ax===1?[o1,along,o2]:[o1,o2,along],q=camP(C,v3.add(F,d));if(q)c.fillRect(q[0],q[1],Math.max(1,DPR),Math.max(1,DPR))}}
+      softDot(c,q0[0],q0[1],k*0.9,'rgba(255,255,255,0.12)')}}
     c.fillStyle='rgba(190,225,255,0.4)';
     S.bonds.forEach(([i,j,o])=>{if(!proj[i]||!proj[j])return;const P=S.atoms[i].p,Q=S.atoms[j].p;for(let e=0;e<Math.ceil(o*4);e++){const f=Math.random(),q=camP(C,[P[0]+(Q[0]-P[0])*f+(Math.random()-0.5)*0.5,P[1]+(Q[1]-P[1])*f+(Math.random()-0.5)*0.5,P[2]+(Q[2]-P[2])*f+(Math.random()-0.5)*0.5]);if(q)c.fillRect(q[0],q[1],DPR,DPR)}});
     c.restore()}
@@ -5811,14 +5829,242 @@ function labScene(c,a){
   if(LAB.env&&LAB.pulse>0.05&&mus>0){c.globalCompositeOperation='lighter';c.fillStyle='rgba('+env.fog.join(',')+','+(0.05*LAB.pulse*mus).toFixed(3)+')';c.fillRect(0,0,W,H);c.globalCompositeOperation='source-over'}
   const vg=c.createRadialGradient(W/2,H/2,Math.min(W,H)*0.35,W/2,H/2,Math.hypot(W,H)*0.6);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.62)');c.fillStyle=vg;c.fillRect(0,0,W,H);
   LAB.barK=(LAB.barK||0)+((LAB.bars?1:0)-(LAB.barK||0))*Math.min(1,dt*2);const bh=Math.max(0,(H-W/2.39)/2)*LAB.barK;if(bh>0.5){c.fillStyle='#000';c.fillRect(0,0,W,bh);c.fillRect(0,H-bh,W,bh)}
-  if(LAB.titles)labTitle(c,it,S,st.t-LAB.titleT);
-  if(LAB.cap){const age=st.t-LAB.cap.t,k=age<0.8?age/0.8:age<4?1:1-(age-4)/1.2;if(age<5.2){c.save();c.globalAlpha=k;c.textAlign='right';c.shadowColor='rgba(0,0,0,0.85)';c.shadowBlur=M*0.015;
+  if(LAB.titles&&!LAB.ext)labTitle(c,it,S,st.t-LAB.titleT);
+  if(LAB.cap&&!LAB.ext){const age=st.t-LAB.cap.t,k=age<0.8?age/0.8:age<4?1:1-(age-4)/1.2;if(age<5.2){c.save();c.globalAlpha=k;c.textAlign='right';c.shadowColor='rgba(0,0,0,0.85)';c.shadowBlur=M*0.015;
     c.fillStyle='rgba(242,184,75,0.95)';c.font=(M*0.02|0)+'px "Chakra Petch",system-ui,sans-serif';try{c.letterSpacing=(M*0.004|0)+'px'}catch(_){}c.fillText(LAB.cap.text.toUpperCase(),W*0.93,H-Math.max(bh,0)-H*0.06);c.restore()}else LAB.cap=null}
-  if(LAB.info){label(18*DPR,26*DPR,'Health Laboratory · '+it.name+' · '+LAB_VIEWS[LAB.view]+(LAB.view===6?' ('+LAB_VIEWS[v]+')':''),'big');
+  if(LAB.info&&!LAB.ext){label(18*DPR,26*DPR,'Health Laboratory · '+it.name+' · '+LAB_VIEWS[LAB.view]+(LAB.view===6?' ('+LAB_VIEWS[v]+')':''),'big');
     label(18*DPR,50*DPR,S.formula,'info');label(18*DPR,72*DPR,it.role,'info');
     if(quantum)label(18*DPR,94*DPR,'Quantum view: each dot is a place where an electron can be found (a probability cloud). Electrons do not move in orbits. Bass makes the clouds bigger.','info');
     else if(S.kind==='motor')label(18*DPR,94*DPR,LAB.contract?'Contracting: the heads pull the actin filaments to the centre. Each glow is one power stroke, powered by one ATP.':'Relaxed. Push "Contract" in the lab panel.','info')}
   c.restore();
+}
+/* =====================================================================
+   BODY SYSTEMS — five systems from the whole body down to the atom.
+   Overview: the whole body, with the systems working together.
+   Zoom in: from the body to the organ, tissue, cell, molecule and atom.
+   Journey: a random mix of both. Real rhythms (Hz), colours and healthy ranges,
+   an "Activate" line of guided attention for each level and a breath pacer.
+   ===================================================================== */
+const BODY_PATH={
+  armL:'M -46 116 C -58 122 -62 140 -62 165 C -64 190 -66 205 -66 215 C -68 245 -68 270 -66 290 C -70 300 -68 318 -60 320 C -54 318 -52 304 -54 292 C -54 270 -54 245 -52 218 C -50 200 -48 180 -46 160 Z',
+  armR:'M 46 116 C 58 122 62 140 62 165 C 64 190 66 205 66 215 C 68 245 68 270 66 290 C 70 300 68 318 60 320 C 54 318 52 304 54 292 C 54 270 54 245 52 218 C 50 200 48 180 46 160 Z',
+  trunk:'M -9 86 C -9 96 -10 100 -14 104 C -30 108 -44 110 -50 120 C -54 128 -52 140 -48 152 C -44 175 -38 200 -34 220 C -32 240 -40 262 -44 285 C -46 305 -42 330 -36 360 C -32 385 -30 400 -30 410 C -32 440 -28 470 -26 490 L -34 502 C -34 506 -14 506 -12 502 L -12 490 C -10 450 -10 420 -8 405 C -6 370 -4 340 -2 318 Q 0 312 2 318 C 4 340 6 370 8 405 C 10 420 10 450 12 490 L 12 502 C 14 506 34 506 34 502 L 26 490 C 28 470 32 440 30 410 C 30 400 32 385 36 360 C 42 330 46 305 44 285 C 40 262 32 240 34 220 C 38 200 44 175 48 152 C 52 140 54 128 50 120 C 44 110 30 108 14 104 C 10 100 9 96 9 86 Z',
+  liver:'M -36 188 Q -28 180 4 184 Q 22 186 20 196 Q 10 210 -28 208 Q -38 200 -36 188 Z'};
+const BP2={};function bp(k){return BP2[k]||(BP2[k]=new Path2D(BODY_PATH[k]))}
+const BSYS=[
+ {k:'breathe',name:'Breathe',col:[255,96,96],env:'Blood',levels:[
+  {lv:'Body',scale:'1.7 m',kind:'body',title:'Lungs, heart and blood',text:'Each breath fills the lungs. The heart sends the oxygen-rich blood to every one of your cells.',act:'Breathe in slowly. Feel the lungs open, and the heart send the new oxygen everywhere.',hz:[['Breathing',0.25,'12–20 breaths a minute'],['Heartbeat',1.1,'60–100 beats a minute']],ok:['Breathing at rest: 12–20 a minute','Heart at rest: 60–100 beats a minute','Oxygen saturation: 95–100%']},
+  {lv:'Tissue',scale:'0.2 mm',kind:'alveoli',title:'Alveoli',text:'About 480 million air sacs. Oxygen moves through a wall about 1 µm thin into the blood. Carbon dioxide moves out.',act:'Feel 480 million air sacs open together with this breath.',hz:[['Breathing',0.25,'one breath about every 4 s']],ok:['Gas-exchange area: about 50–75 m²','Blood passes each sac in about 0.75 s']},
+  {lv:'Cell',scale:'7.5 µm',kind:'rbc',title:'Red blood cell',text:'A flexible disc with no nucleus. It holds about 270 million hemoglobin molecules, and each one carries 4 oxygen molecules.',act:'Feel your blood bright and full, flowing easily through every vessel.',hz:[['Heartbeat',1.1,'each beat pushes the cells forward']],ok:['Red cells live about 120 days','Hemoglobin: about 12–17 g/dL']},
+  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'hemeo2',focus:'Fe',bind:1,title:'Heme and oxygen',text:'Oxygen binds to the iron at the centre of heme. At a working muscle, the oxygen comes off again.',act:'Each iron atom takes oxygen in, and gives it to the cells that need it.',hz:[['Fe–O₂ bond vibration',1.7e13,'']],ok:['Oxygen saturation: 95–100%']},
+  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'hemeo2',focus:'Fe',title:'The colour of life',text:'Heme absorbs violet-blue light (414 nm) and green-yellow light (541 and 577 nm). The light it leaves is red: this is why oxygen-rich blood is bright red.',act:'Light, electrons and oxygen, working together at the smallest scale.',hz:[['Light absorbed by heme',7.2e14,'414 nm']],ok:['Electron clouds: each dot is a place an electron can be']}]},
+ {k:'move',name:'Move',col:[255,176,80],env:'Movement',levels:[
+  {lv:'Body',scale:'1.7 m',kind:'body',title:'Muscles and bones',text:'Muscles pull on bones across the joints. They work in pairs: one pulls, the other relaxes.',act:'Feel your strength: every muscle ready, every joint free and easy.',hz:[['Walking steps',1.8,'100–120 steps a minute']],ok:['Activity: at least 150 minutes a week','Muscle: about 30–40% of body mass']},
+  {lv:'Tissue',scale:'0.1 mm',kind:'muscle',title:'Muscle fibers',text:'A nerve fires and thousands of fibers contract together. The stripes are millions of tiny motors in rows.',act:'Feel the fibers shorten together, smooth and powerful.',hz:[['Motor nerve firing',20,'about 8–50 Hz']],ok:['Natural tremor: 8–12 Hz']},
+  {lv:'Molecule',scale:'10 nm',kind:'mol',mol:'actin',focus:'head',contract:1,title:'Actin and myosin',text:'Myosin heads grab the actin filament and pull it about 5–10 nm. Each pull uses one ATP. Muscles only pull.',act:'Millions of tiny heads pull in rhythm. This is your power.',hz:[['Power strokes',5,'many each second']],ok:['Sarcomere length: about 2–2.5 µm']},
+  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'atp',focus:'P',title:'ATP: the energy molecule',text:'Breaking the last phosphate bond releases the energy for each pull. Your body recycles about its own weight in ATP every day.',act:'Feel energy ready in every cell.',hz:[['P–O bond vibration',3.5e13,'']],ok:['About your body weight of ATP is made each day']},
+  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'atp',focus:'P',title:'Inside the phosphate',text:'The nucleus is about 100,000 times smaller than the electron cloud round it. Atoms are almost all space and energy.',act:'Solid strength, made of energy and space.',hz:[['P–O bond vibration',3.5e13,'']],ok:['Each dot is a place an electron can be']}]},
+ {k:'signal',name:'Signal',col:[170,140,255],env:'Filters',levels:[
+  {lv:'Body',scale:'1.7 m',kind:'body',title:'Brain and nerves',text:'The brain sends signals down the spinal cord and out through the nerves to every muscle and organ.',act:'Feel the signals clear and fast, from the brain to every part of you.',hz:[['Alpha brain waves',10,'8–12 Hz, relaxed and alert']],ok:['Fast nerves: up to about 120 m/s','The brain uses about 20% of your energy']},
+  {lv:'Cell',scale:'20 µm',kind:'neuron',title:'Neuron',text:'The signal (action potential) jumps from gap to gap along the myelin. The voltage goes from −70 mV to about +30 mV in 1 ms.',act:'Each signal jumps, quick and clean.',hz:[['Nerve firing',8,'up to several hundred a second']],ok:['Resting voltage: about −70 mV']},
+  {lv:'Synapse',scale:'1 µm',kind:'synapse',title:'Nerve meets muscle',text:'Calcium comes in. Vesicles release acetylcholine, about 10,000 molecules each. It binds to the muscle and the fiber fires. An enzyme clears it in about 1 ms.',act:'The message arrives, and the muscle answers at once.',hz:[['Signals',2,'shown slower']],ok:['Clearing time: about 1 ms']},
+  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'ach',focus:'N',title:'Acetylcholine',text:'The messenger between nerve and muscle. Its positive nitrogen fits the receptor like a key.',act:'One small molecule, one clear message.',hz:[['C=O bond vibration',5.2e13,'']],ok:['Made from choline (eggs, fish, beans)']},
+  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'ach',focus:'N',title:'Charge and electrons',text:'The signal is moving charge. Electrons and ions move, and the message travels.',act:'Feel the spark of the signal.',hz:[['C=O bond vibration',5.2e13,'']],ok:['Each dot is a place an electron can be']}]},
+ {k:'clean',name:'Clean',col:[90,220,200],env:'Filters',levels:[
+  {lv:'Body',scale:'1.7 m',kind:'body',title:'Liver, kidneys and lymph',text:'The liver changes toxins. The kidneys filter the blood. Lymph nodes and the spleen catch microbes.',act:'Feel the body clear and clean, every filter working with ease.',hz:[['Heartbeat',1.1,'each beat pushes blood through the filters']],ok:['Kidneys filter about 180 L a day','Kidney filtering (GFR): 90 mL/min or more']},
+  {lv:'Tissue',scale:'1 mm',kind:'liver',title:'Liver lobule',text:'Blood flows past rows of liver cells to the central vein. The cells take out toxins and change them. Bile flows the other way.',act:'Fresh blood flows in, clean blood flows out.',hz:[['Liver blood flow',1.1,'about 1.5 L a minute']],ok:['Albumin (made by the liver): 3.5–5.0 g/dL']},
+  {lv:'Tissue',scale:'0.2 mm',kind:'glom',title:'Kidney filter',text:'Pressure pushes water and small molecules through the filter. Cells and big proteins stay in the blood. Each kidney has about 1 million filters.',act:'One million filters in each kidney, clearing the blood.',hz:[['Heartbeat',1.1,'drives the filtering']],ok:['Urine: about 1–2 L a day','Creatinine: about 0.6–1.2 mg/dL']},
+  {lv:'Molecule',scale:'8 nm',kind:'mol',mol:'albumin',focus:'site',bind:1,title:'Albumin, the carrier',text:'The most common protein in blood. It holds drugs, fatty acids and bilirubin in pockets and carries them to the liver and kidneys.',act:'Each carrier picks up what the body does not need.',hz:[['Heartbeat',1.1,'carries it round the body']],ok:['Albumin: 3.5–5.0 g/dL']},
+  {lv:'Molecule',scale:'0.5 nm',kind:'mol',mol:'urea',focus:'C',title:'Urea',text:'Waste nitrogen leaves the body as urea, through the kidneys.',act:'Waste goes out easily.',hz:[['C=O bond vibration',5.0e13,'']],ok:['Blood urea nitrogen: about 7–20 mg/dL']}]},
+ {k:'fuel',name:'Fuel',col:[255,214,90],env:'Blood',levels:[
+  {lv:'Body',scale:'1.7 m',kind:'body',title:'Food to energy',text:'The gut takes in glucose. The blood carries it to the muscles and the brain, where it becomes energy.',act:'Feel steady energy flowing to every muscle and to the brain.',hz:[['Stomach waves',0.05,'about 3 a minute']],ok:['Fasting glucose: 70–99 mg/dL','The brain uses about 120 g of glucose a day']},
+  {lv:'Organelle',scale:'1 µm',kind:'mito',title:'Mitochondrion',text:'Food energy pumps protons across the inner membrane. They flow back through ATP synthase and turn it like a water wheel. Each turn makes 3 ATP.',act:'Thousands of power plants in each cell, turning with ease.',hz:[['ATP synthase turns',100,'up to about 100 a second']],ok:['Hundreds to thousands per cell']},
+  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'glucose',focus:'O',title:'Glucose',text:'A ring of 6 carbon atoms. Its bonds hold the energy from food.',act:'Clean fuel, ready to burn.',hz:[['O–H bond vibration',1.0e14,'']],ok:['Fasting glucose: 70–99 mg/dL']},
+  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'atp',focus:'P',title:'ATP',text:'The energy from glucose is stored in ATP. Every cell uses it.',act:'Energy in every cell.',hz:[['P–O bond vibration',3.5e13,'']],ok:['About your body weight of ATP is made each day']},
+  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'glucose',focus:'C',title:'Carbon, the frame of life',text:'Carbon makes 4 bonds, so it builds the rings and chains of every living molecule.',act:'You are built from light-weight atoms in perfect order.',hz:[['O–H bond vibration',1.0e14,'']],ok:['Each dot is a place an electron can be']}]}];
+const BODY_OPT=['Body temperature: 36.5–37.5 °C','Blood pH: 7.35–7.45','Heart at rest: 60–100 a minute','Breathing at rest: 12–20 a minute','Oxygen saturation: 95–100%','Fasting glucose: 70–99 mg/dL','Blood pressure: below 120/80 mmHg'];
+const BODY={sys:'all',view:'journey',hz:true,ok:true,act:true,breath:false,titles:true,cine:true,s:0,l:0,t0:0,hold:16,trans:null,tr:0,snap:null,lastS:-1};
+try{Object.assign(BODY,JSON.parse(localStorage.getItem('fibwave.body')||'{}'),{trans:null,snap:null})}catch(_){}
+function bodySave(){try{const o={};['sys','view','hz','ok','act','breath','titles','cine'].forEach(k=>o[k]=BODY[k]);localStorage.setItem('fibwave.body',JSON.stringify(o))}catch(_){}}
+const fmtHz=hz=>{if(hz>=1e6){const e=Math.floor(Math.log10(hz)),m=hz/Math.pow(10,e);return m.toFixed(1)+'×10'+String(e).replace(/\d/g,d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d])+' Hz'}return (hz<1?hz.toFixed(2):hz<10?hz.toFixed(1):Math.round(hz))+' Hz'};
+// the shown rhythm: real if it can be seen (0.03–12 Hz), otherwise a slowed copy
+const showHz=hz=>hz>=0.03&&hz<=12?hz:hz>12&&hz<1000?2.5:0.7;
+function bodyPhase(hz){return st.t*showHz(hz)*TAU}
+// ---------- the body level ----------
+function bodyDraw(c,box,sysK,a){
+  const sc=box.h*0.9/470,ox=box.x+box.w*0.6,oy=box.y+box.h*0.5-272*sc;c.save();c.translate(ox,oy);c.scale(sc,sc);const lw=1/sc;
+  const hb=0.5+0.5*Math.sin(st.t*1.1*TAU),br=0.5+0.5*Math.sin(st.t*0.25*TAU-1.5);
+  // glass body
+  const g=c.createLinearGradient(-60,40,60,500);g.addColorStop(0,'rgba(120,160,200,0.16)');g.addColorStop(1,'rgba(60,80,120,0.08)');
+  c.fillStyle=g;c.strokeStyle='rgba(170,210,255,0.45)';c.lineWidth=1.2*lw;
+  for(const k of ['armL','armR','trunk']){c.fill(bp(k));c.stroke(bp(k))}
+  c.beginPath();c.ellipse(0,62,20,25,0,0,TAU);c.fill();c.stroke();
+  const on=k=>sysK==='all'||sysK===k,dim=k=>sysK==='all'?(BODY.hl===k?1:0.45):1;
+  const glow=(x,y,r,rgb,al)=>{softDot(c,x,y,r,'rgba('+rgb.join(',')+','+al.toFixed(3)+')')};
+  const flow=(pts,rgb,speed,n,size,al)=>{let L=0;const seg=[];for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(d);L+=d}
+    c.strokeStyle='rgba('+rgb.join(',')+','+(al*0.35).toFixed(3)+')';c.lineWidth=1.4*lw;c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.stroke();
+    c.fillStyle='rgba('+rgb.join(',')+','+al.toFixed(3)+')';for(let j=0;j<n;j++){let d=((st.t*speed+j*L/n)%L+L)%L,i=0;while(i<seg.length-1&&d>seg[i]){d-=seg[i];i++}const f=d/(seg[i]||1),x=pts[i][0]+(pts[i+1][0]-pts[i][0])*f,y=pts[i][1]+(pts[i+1][1]-pts[i][1])*f;c.beginPath();c.arc(x,y,size,0,TAU);c.fill()}};
+  c.globalCompositeOperation='lighter';
+  if(on('move')){const k=dim('move');c.strokeStyle='rgba(235,225,200,'+(0.55*k).toFixed(3)+')';c.lineWidth=3;c.lineCap='round';
+    for(const s of [-1,1]){[[s*50,124,s*58,212],[s*58,216,s*60,292],[s*20,306,s*20,402],[s*19,414,s*20,492],[s*6,114,s*44,116]].forEach(l=>{c.beginPath();c.moveTo(l[0],l[1]);c.lineTo(l[2],l[3]);c.stroke()})}
+    c.beginPath();c.moveTo(0,84);c.lineTo(0,292);c.stroke();
+    const st2=0.5+0.5*Math.sin(st.t*1.8*TAU/2);for(const s of [-1,1]){glow(s*57,172,22,[255,110,80],(0.25+0.3*st2)*k);glow(s*24,352,34,[255,110,80],(0.2+0.3*(s>0?st2:1-st2))*k);glow(s*20,134,24,[255,110,80],0.18*k);glow(s*21,448,22,[255,110,80],(0.15+0.25*(s>0?1-st2:st2))*k)}}
+  if(on('breathe')){const k=dim('breathe'),sL=1+0.08*br;
+    for(const [x,y,rx,ry] of [[-18,152,16,32],[19,154,14,30]]){c.fillStyle='rgba(255,140,150,'+(0.22*k).toFixed(3)+')';c.beginPath();c.ellipse(x,y,rx*sL,ry*sL,0,0,TAU);c.fill();glow(x,y,ry*1.2*sL,[255,120,130],0.12*k)}
+    glow(6,150,10+8*hb,[255,60,70],(0.4+0.4*hb)*k);
+    flow([[6,150],[2,110],[0,80],[0,60]],[255,70,70],40,3,1.6,0.8*k);flow([[6,150],[2,200],[2,290],[18,330],[20,420],[20,490]],[255,70,70],70,7,1.6,0.8*k);flow([[6,150],[-40,130],[-56,210],[-60,300]],[255,70,70],60,5,1.6,0.8*k);flow([[-20,490],[-20,400],[-16,320],[-2,290],[-2,170],[4,152]],[90,110,255],60,7,1.6,0.7*k)}
+  if(on('signal')){const k=dim('signal');glow(0,56,26,[170,140,255],0.35*k);c.fillStyle='rgba(190,170,255,'+(0.3*k).toFixed(3)+')';c.beginPath();c.ellipse(0,54,15,13,0,0,TAU);c.fill();
+    const ab=0.5+0.5*Math.sin(st.t*TAU*1.2);glow(0,54,18,[220,200,255],0.25*ab*k);
+    flow([[0,66],[0,292]],[200,180,255],120,4,1.6,0.9*k);for(const s of [-1,1]){flow([[0,118],[s*48,128],[s*56,210],[s*60,300]],[200,180,255],110,3,1.4,0.9*k);flow([[0,290],[s*16,312],[s*22,405],[s*22,492]],[200,180,255],110,3,1.4,0.9*k)}}
+  if(on('clean')){const k=dim('clean'),p=0.5+0.5*Math.sin(st.t*1.1*TAU);c.fillStyle='rgba(120,60,50,'+(0.7*k).toFixed(3)+')';c.fill(bp('liver'));glow(-12,196,30,[90,220,200],(0.18+0.1*p)*k);
+    for(const s of [-1,1]){c.fillStyle='rgba(160,82,45,'+(0.7*k).toFixed(3)+')';c.beginPath();c.ellipse(s*16,232,7,12,0,0,TAU);c.fill();glow(s*16,232,16,[90,220,200],(0.2+0.15*p)*k)}
+    glow(34,194,10,[150,90,140],0.4*k);for(const [x,y] of [[-9,98],[9,98],[-42,134],[42,134],[-18,300],[18,300]])glow(x,y,6+2*p,[90,230,140],0.7*k);
+    flow([[2,200],[-12,196],[-16,232],[-16,262]],[90,220,200],30,4,1.4,0.8*k);flow([[2,210],[16,232],[16,262]],[90,220,200],30,3,1.4,0.8*k)}
+  if(on('fuel')){const k=dim('fuel'),w=0.5+0.5*Math.sin(st.t*0.05*TAU*6);c.fillStyle='rgba(217,160,102,'+(0.35*k).toFixed(3)+')';c.beginPath();c.roundRect(-27,216,54,52,16);c.fill();glow(22,200,14,[255,214,90],(0.2+0.2*w)*k);
+    flow([[0,240],[2,180],[0,100],[0,60]],[255,214,90],50,4,1.7,0.9*k);for(const s of [-1,1]){flow([[0,240],[s*18,320],[s*24,360],[s*22,440]],[255,214,90],50,4,1.7,0.9*k);flow([[0,200],[s*46,128],[s*57,172]],[255,214,90],40,3,1.7,0.9*k)}}
+  c.restore();c.globalCompositeOperation='source-over'}
+// ---------- tissue, cell and organelle levels (all drawn live, sizes from the box) ----------
+function lvAlveoli(c,b){const cx=b.x+b.w*0.58,cy=b.y+b.h*0.52,R=Math.min(b.w,b.h)*0.34,br=0.5+0.5*Math.sin(st.t*0.25*TAU-1.5),s=1+0.07*br;
+  c.strokeStyle='rgba(255,190,200,0.35)';c.lineWidth=R*0.12;c.lineCap='round';c.beginPath();c.moveTo(b.x+b.w*0.05,b.y+b.h*0.1);c.quadraticCurveTo(cx-R*1.2,cy-R*1.2,cx-R*0.3,cy-R*0.2);c.stroke();
+  const sacs=[];for(let i=0;i<13;i++){const an=i*2.39996,rr=R*(0.25+0.65*Math.sqrt((i+0.5)/13));sacs.push([cx+Math.cos(an)*rr,cy+Math.sin(an)*rr*0.85,R*0.3])}
+  sacs.forEach(([x,y,r],i)=>{r*=s*(0.9+0.2*hh(i));const g=c.createRadialGradient(x-r*0.3,y-r*0.3,r*0.1,x,y,r);g.addColorStop(0,'rgba(255,215,220,0.16)');g.addColorStop(0.85,'rgba(255,160,175,0.22)');g.addColorStop(1,'rgba(255,200,210,0.55)');c.fillStyle=g;c.beginPath();c.arc(x,y,r,0,TAU);c.fill()});
+  c.globalCompositeOperation='lighter';
+  sacs.forEach(([x,y,r],i)=>{r*=s;for(let k=0;k<2;k++){const ph=st.t*0.6+i+k*3;c.strokeStyle='rgba(220,40,60,0.55)';c.lineWidth=Math.max(1.5,R*0.018);c.beginPath();
+      for(let a2=0;a2<=1.001;a2+=0.05){const an=ph*0.1+k*1.6+a2*4.2,rr=r*(1.02+0.05*Math.sin(a2*13+i)),px=x+Math.cos(an)*rr,py=y+Math.sin(an)*rr;a2?c.lineTo(px,py):c.moveTo(px,py)}c.stroke();
+      for(let j=0;j<3;j++){const u=((st.t*0.18+j/3+hh(i*7+k))%1),an=ph*0.1+k*1.6+u*4.2,px=x+Math.cos(an)*r*1.03,py=y+Math.sin(an)*r*1.03,ox=clamp(u*1.4,0,1);
+        c.fillStyle='rgb('+(140+115*ox|0)+','+(20+30*ox|0)+','+(50-10*ox|0)+')';c.beginPath();c.ellipse(px,py,R*0.03,R*0.018,an+1.57,0,TAU);c.fill()}}
+    for(let j=0;j<5;j++){const u=((st.t*0.4+j/5+hh(i))%1),an=hh(i*3+j)*TAU,px=x+Math.cos(an)*r*u,py=y+Math.sin(an)*r*u;softDot(c,px,py,R*0.025,'rgba(120,220,255,'+(0.8*(1-u*0.5)).toFixed(3)+')')}});
+  c.globalCompositeOperation='source-over'}
+function lvRBC(c,b,a){const cy=b.y+b.h*0.55,top=cy-b.h*0.26,bot=cy+b.h*0.26,pulse=Math.pow(0.5+0.5*Math.sin(st.t*1.1*TAU),3);
+  const wall=c.createLinearGradient(0,top-b.h*0.06,0,top);wall.addColorStop(0,'rgba(120,20,30,0)');wall.addColorStop(1,'rgba(200,60,70,0.5)');c.fillStyle=wall;c.fillRect(b.x,top-b.h*0.06,b.w,b.h*0.06);
+  const w2=c.createLinearGradient(0,bot,0,bot+b.h*0.06);w2.addColorStop(0,'rgba(200,60,70,0.5)');w2.addColorStop(1,'rgba(120,20,30,0)');c.fillStyle=w2;c.fillRect(b.x,bot,b.w,b.h*0.06);
+  BODY.rbcX=(BODY.rbcX||0)+(st.dtReal||0.016)*(0.06+0.25*pulse);const spr=labBokeh([215,30,45],true),n=14;
+  for(let i=0;i<n;i++){const u=((hh(i*3)+BODY.rbcX*(0.6+0.5*hh(i)))%1),x=b.x-b.w*0.1+u*b.w*1.2,y=top+(bot-top)*(0.12+0.76*hh(i*5)),r=b.h*0.07*(0.8+0.4*hh(i*9)),tilt=0.35+0.6*Math.abs(Math.sin(st.t*0.5+i));
+    c.save();c.translate(x,y);c.rotate(Math.sin(st.t*0.3+i)*0.6);c.scale(1,tilt);c.globalAlpha=0.9;c.drawImage(spr,-r,-r,r*2,r*2);c.restore()}
+  // the big cell, opened to show hemoglobin
+  const X=b.x+b.w*0.6,Y=cy,R=b.h*0.22;c.save();c.translate(X,Y);c.scale(1,0.92);const g=c.createRadialGradient(0,0,R*0.2,0,0,R);g.addColorStop(0,'rgba(150,15,30,0.95)');g.addColorStop(0.6,'rgba(225,40,55,0.97)');g.addColorStop(0.9,'rgba(255,90,100,1)');g.addColorStop(1,'rgba(255,120,120,0)');
+  c.fillStyle=g;c.beginPath();c.arc(0,0,R,0,TAU);c.fill();c.globalCompositeOperation='lighter';
+  for(let i=0;i<60;i++){const an=i*2.39996+st.t*0.1,rr=R*0.8*Math.sqrt((i+0.5)/60),px=Math.cos(an)*rr,py=Math.sin(an)*rr,o=0.5+0.5*Math.sin(st.t*1.1*TAU+i);
+    for(let q=0;q<4;q++)softDot(c,px+Math.cos(q*1.57+i)*R*0.025,py+Math.sin(q*1.57+i)*R*0.025,R*0.03,'rgba(255,'+(120+80*o|0)+',120,0.35)')}c.restore();c.globalCompositeOperation='source-over'}
+function lvMuscle(c,b){const n=7,fh=b.h*0.09,x0=b.x+b.w*0.18,x1=b.x+b.w*0.98,con=0.5+0.5*Math.sin(st.t*TAU*0.5),sp=b.h*0.045*(1-0.14*con);
+  for(let i=0;i<n;i++){const y=b.y+b.h*0.18+i*fh*1.15+Math.sin(i*1.7)*fh*0.1,g=c.createLinearGradient(0,y-fh/2,0,y+fh/2);g.addColorStop(0,'rgb(90,20,25)');g.addColorStop(0.35,'rgb(205,70,70)');g.addColorStop(0.65,'rgb(170,45,50)');g.addColorStop(1,'rgb(60,12,18)');
+    c.fillStyle=g;c.beginPath();c.roundRect(x0,y-fh/2,x1-x0,fh,fh/2);c.fill();c.save();c.beginPath();c.roundRect(x0,y-fh/2,x1-x0,fh,fh/2);c.clip();
+    c.fillStyle='rgba(30,5,10,0.45)';const cx=(x0+x1)/2;for(let k=-40;k<=40;k++){const x=cx+k*sp;c.fillRect(x-sp*0.18,y-fh/2,sp*0.36,fh)}
+    c.fillStyle='rgba(255,200,190,0.18)';for(let k=-40;k<=40;k++){const x=cx+k*sp+sp*0.5;c.fillRect(x-sp*0.06,y-fh/2,sp*0.12,fh)}c.restore();
+    c.fillStyle='rgba(120,140,255,0.55)';for(let k=0;k<3;k++){c.beginPath();c.ellipse(x0+(x1-x0)*hh(i*4+k),y-fh*0.32,fh*0.18,fh*0.09,0,0,TAU);c.fill()}}
+  // the motor nerve, firing
+  const nx=b.x+b.w*0.12,fire=(st.t*20)%1<0.25;c.strokeStyle='rgba(200,180,255,0.8)';c.lineWidth=Math.max(2,b.h*0.008);c.beginPath();c.moveTo(nx-b.w*0.1,b.y+b.h*0.08);c.quadraticCurveTo(nx,b.y+b.h*0.3,nx+b.w*0.03,b.y+b.h*0.52);c.stroke();
+  for(let i=0;i<n;i++){const y=b.y+b.h*0.18+i*fh*1.15;c.beginPath();c.moveTo(nx+b.w*0.03,b.y+b.h*0.52);c.lineTo(x0+fh*0.3,y);c.stroke();if(fire){c.globalCompositeOperation='lighter';softDot(c,x0+fh*0.3,y,fh*0.5,'rgba(220,200,255,0.6)');c.globalCompositeOperation='source-over'}}}
+function lvNeuron(c,b){const y=b.y+b.h*0.5,sx=b.x+b.w*0.16,ex=b.x+b.w*0.97,R=b.h*0.09,per=1.4,ph=(st.t%per)/per,nodes=7,segW=(ex-sx-R*1.5)/nodes;
+  c.strokeStyle='rgba(200,180,255,0.55)';c.lineWidth=Math.max(1.5,R*0.08);for(let i=0;i<9;i++){const an=Math.PI*0.55+i*0.11*TAU*0.9;c.beginPath();c.moveTo(sx,y);let px=sx,py=y;for(let k=1;k<=3;k++){px+=Math.cos(an+Math.sin(i*k)*0.4)*R*0.8;py+=Math.sin(an+Math.sin(i*k)*0.4)*R*0.8;c.lineTo(px,py)}c.stroke()}
+  const g=c.createRadialGradient(sx-R*0.3,y-R*0.3,R*0.1,sx,y,R);g.addColorStop(0,'rgb(210,190,255)');g.addColorStop(1,'rgb(90,60,170)');c.fillStyle=g;c.beginPath();c.arc(sx,y,R,0,TAU);c.fill();
+  c.fillStyle='rgba(60,30,120,0.9)';c.beginPath();c.arc(sx,y,R*0.38,0,TAU);c.fill();
+  c.strokeStyle='rgba(180,160,255,0.8)';c.lineWidth=R*0.12;c.beginPath();c.moveTo(sx+R,y);c.lineTo(ex,y);c.stroke();
+  for(let i=0;i<nodes;i++){const x=sx+R*1.5+i*segW,mg=c.createLinearGradient(0,y-R*0.4,0,y+R*0.4);mg.addColorStop(0,'rgb(250,245,235)');mg.addColorStop(0.5,'rgb(215,205,190)');mg.addColorStop(1,'rgb(140,130,120)');c.fillStyle=mg;c.beginPath();c.roundRect(x+segW*0.06,y-R*0.4,segW*0.88,R*0.8,R*0.4);c.fill()}
+  c.globalCompositeOperation='lighter';const at=Math.floor(ph*(nodes+1));for(let i=0;i<=nodes;i++){const x=sx+R*1.5+i*segW,k=i===at?1:i===at-1?0.4:0;if(k)softDot(c,x,y,R*1.6*k,'rgba(255,240,140,'+(0.8*k).toFixed(3)+')')}
+  c.globalCompositeOperation='source-over';
+  // the voltage trace
+  const gx=b.x+b.w*0.62,gy=b.y+b.h*0.8,gw=b.w*0.3,gh=b.h*0.13;c.strokeStyle='rgba(255,255,255,0.18)';c.lineWidth=1;c.strokeRect(gx,gy-gh,gw,gh*1.3);c.strokeStyle='rgba(255,240,140,0.9)';c.lineWidth=Math.max(1.5,DPR*1.5);c.beginPath();
+  for(let i=0;i<=80;i++){const u=i/80,tt=((u-ph+1)%1)*per,v=tt<0.05?-70+110*Math.sin(tt/0.05*Math.PI/2):tt<0.12?40-125*(tt-0.05)/0.07:tt<0.35?-85+15*(tt-0.12)/0.23:-70,yy=gy-gh*0.15-(v+90)/140*gh;i?c.lineTo(gx+u*gw,yy):c.moveTo(gx+u*gw,yy)}c.stroke()}
+function lvSynapse(c,b){const cx=b.x+b.w*0.58,ty=b.y+b.h*0.42,R=b.h*0.25,per=2,ph=(st.t%per)/per;
+  const g=c.createRadialGradient(cx,ty-R*0.3,R*0.2,cx,ty-R*0.2,R*1.1);g.addColorStop(0,'rgba(170,140,255,0.5)');g.addColorStop(1,'rgba(80,50,170,0.35)');c.fillStyle=g;c.fillRect(cx-R*0.28,b.y,R*0.56,ty-b.y);c.beginPath();c.ellipse(cx,ty+R*0.1,R*1.1,R*0.95,0,0,TAU);c.fill();c.strokeStyle='rgba(200,180,255,0.6)';c.lineWidth=Math.max(1.5,R*0.02);c.stroke();
+  const my=ty+R*1.15;c.fillStyle='rgba(200,70,80,0.55)';c.beginPath();c.moveTo(b.x,my);for(let x=0;x<=b.w;x+=b.w/24){c.lineTo(b.x+x,my+Math.sin(x/b.w*24*Math.PI)*R*0.08+R*0.04)}c.lineTo(b.x+b.w,b.y+b.h);c.lineTo(b.x,b.y+b.h);c.closePath();c.fill();
+  for(let i=0;i<16;i++){const x=cx-R*1.3+i*R*2.6/15,on=ph>0.35&&ph<0.7;c.strokeStyle=on?'rgba(255,240,140,0.95)':'rgba(255,190,190,0.6)';c.lineWidth=Math.max(1.5,R*0.03);c.beginPath();c.moveTo(x,my+R*0.06);c.lineTo(x,my-R*0.02);c.moveTo(x-R*0.03,my-R*0.06);c.lineTo(x,my-R*0.02);c.lineTo(x+R*0.03,my-R*0.06);c.stroke()}
+  for(let i=0;i<14;i++){const an=i*2.39996,rr=R*0.75*Math.sqrt((i+0.5)/14),vx=cx+Math.cos(an)*rr,vy=ty-R*0.1+Math.sin(an)*rr*0.7,fuse=i<5&&ph>0.2&&ph<0.4;
+    c.strokeStyle='rgba(230,220,255,0.8)';c.lineWidth=Math.max(1,R*0.015);c.beginPath();c.arc(vx,fuse?vy+(ph-0.2)*R*2.5:vy,R*0.1,0,TAU);c.stroke();c.fillStyle='rgba(255,240,140,0.7)';for(let d=0;d<5;d++){c.beginPath();c.arc(vx+Math.cos(d*1.3)*R*0.05,(fuse?vy+(ph-0.2)*R*2.5:vy)+Math.sin(d*1.3)*R*0.05,R*0.012,0,TAU);c.fill()}}
+  c.globalCompositeOperation='lighter';if(ph>0.3&&ph<0.85){const u=(ph-0.3)/0.55;for(let i=0;i<70;i++){const x=cx+(hh(i)-0.5)*R*2.4*(0.3+u),y=ty+R*0.95+u*R*0.2*hh(i*3);softDot(c,x,y,R*0.03,'rgba(255,240,140,'+(0.9*(1-u)).toFixed(3)+')')}}
+  if(ph<0.25){for(let i=0;i<12;i++){const x=cx+(hh(i*7)-0.5)*R*1.8,y=ty-R*0.9+ph*4*R*0.6*hh(i);softDot(c,x,y,R*0.03,'rgba(120,255,180,0.8)')}}c.globalCompositeOperation='source-over'}
+function lvLiver(c,b){const cx=b.x+b.w*0.58,cy=b.y+b.h*0.52,R=Math.min(b.w,b.h)*0.4;
+  const hex=i=>[cx+Math.cos(i*Math.PI/3+Math.PI/6)*R,cy+Math.sin(i*Math.PI/3+Math.PI/6)*R];
+  c.fillStyle='rgba(120,55,50,0.55)';c.beginPath();for(let i=0;i<6;i++){const p=hex(i);i?c.lineTo(...p):c.moveTo(...p)}c.closePath();c.fill();
+  for(let i=0;i<24;i++){const an=i/24*TAU;for(let k=1;k<7;k++){const r=R*(0.12+k*0.12),x=cx+Math.cos(an)*r,y=cy+Math.sin(an)*r;c.fillStyle='rgba('+(170+20*hh(i*k))+',85,70,0.85)';c.beginPath();c.arc(x,y,R*0.045,0,TAU);c.fill();c.fillStyle='rgba(90,40,90,0.7)';c.beginPath();c.arc(x,y,R*0.014,0,TAU);c.fill()}}
+  c.globalCompositeOperation='lighter';
+  for(let i=0;i<24;i++){const an=(i+0.5)/24*TAU;for(let j=0;j<2;j++){const u=1-((st.t*0.12+j*0.5+hh(i))%1),r=R*(0.1+0.85*u);softDot(c,cx+Math.cos(an)*r,cy+Math.sin(an)*r,R*0.03,'rgba(255,80,90,0.75)')}
+    const u2=((st.t*0.07+hh(i*3))%1),r2=R*(0.15+0.8*u2),an2=an+TAU/48;softDot(c,cx+Math.cos(an2)*r2,cy+Math.sin(an2)*r2,R*0.022,'rgba(120,255,140,0.7)')}
+  softDot(c,cx,cy,R*0.16,'rgba(110,140,255,0.6)');
+  for(let i=0;i<6;i++){const [x,y]=hex(i);softDot(c,x,y,R*0.07,'rgba(255,70,80,0.7)');softDot(c,x+R*0.06,y,R*0.06,'rgba(110,130,255,0.6)');softDot(c,x-R*0.05,y+R*0.05,R*0.04,'rgba(120,255,140,0.6)')}c.globalCompositeOperation='source-over'}
+function lvGlom(c,b){const cx=b.x+b.w*0.55,cy=b.y+b.h*0.48,R=Math.min(b.w,b.h)*0.3,p=Math.pow(0.5+0.5*Math.sin(st.t*1.1*TAU),2);
+  c.strokeStyle='rgba(90,220,200,0.55)';c.lineWidth=R*0.08;c.beginPath();c.arc(cx,cy,R*1.25,Math.PI*1.35,Math.PI*1.05+TAU,false);c.stroke();
+  c.strokeStyle='rgba(90,220,200,0.35)';c.lineWidth=R*0.32;c.beginPath();c.moveTo(cx+R*1.1,cy+R*0.6);c.quadraticCurveTo(cx+R*1.8,cy+R*1.4,b.x+b.w*0.98,cy+R*1.1);c.stroke();
+  c.lineCap='round';for(const [w,col] of [[R*0.075,'rgba(150,20,35,0.9)'],[R*0.05,'rgba(230,60,70,0.95)'],[R*0.015,'rgba(255,170,170,0.7)']]){c.strokeStyle=col;c.lineWidth=w;c.beginPath();for(let i=0;i<=260;i++){const u=i/260,an=u*TAU*5.2,rr=R*(0.25+0.6*Math.abs(Math.sin(u*TAU*3.3+1))),x=cx+Math.cos(an)*rr*0.95,y=cy+Math.sin(an*1.13)*rr*0.85;i?c.lineTo(x,y):c.moveTo(x,y)}c.stroke()}
+  c.strokeStyle='rgba(220,50,60,0.75)';c.lineWidth=R*0.13;c.beginPath();c.moveTo(b.x+b.w*0.05,cy-R*0.9);c.quadraticCurveTo(cx-R*1.3,cy-R*1.1,cx-R*0.6,cy-R*0.5);c.stroke();c.beginPath();c.moveTo(cx-R*0.4,cy-R*0.7);c.quadraticCurveTo(cx-R*0.9,cy-R*1.8,b.x+b.w*0.12,b.y+b.h*0.05);c.stroke();
+  c.globalCompositeOperation='lighter';
+  for(let i=0;i<40;i++){const u=((st.t*(0.12+0.25*p)+hh(i))%1),an=hh(i*5)*TAU,small=i%4!==0;let x,y;
+    if(small){if(u<0.5){const r=R*0.6*(u/0.5);x=cx+Math.cos(an)*r;y=cy+Math.sin(an)*r}else{const v=(u-0.5)/0.5;x=cx+R*1.15+v*(b.x+b.w*0.98-cx-R*1.15);y=cy+R*0.6+Math.sin(v*Math.PI)*R*0.55+(hh(i)-0.5)*R*0.2}
+      softDot(c,x,y,R*0.04,i%3?'rgba(120,230,255,0.85)':'rgba(255,240,120,0.85)')}
+    else{const r=R*0.55*(0.5+0.5*Math.sin(st.t+i));x=cx+Math.cos(an+st.t*0.3)*r;y=cy+Math.sin(an+st.t*0.3)*r;softDot(c,x,y,R*0.09,'rgba(255,90,100,0.6)')}}c.globalCompositeOperation='source-over'}
+function lvMito(c,b){const cx=b.x+b.w*0.58,cy=b.y+b.h*0.52,L=b.w*0.36,Hh=b.h*0.26;
+  const g=c.createLinearGradient(0,cy-Hh,0,cy+Hh);g.addColorStop(0,'rgba(255,190,110,0.55)');g.addColorStop(1,'rgba(170,90,40,0.55)');c.fillStyle=g;c.beginPath();c.roundRect(cx-L,cy-Hh,L*2,Hh*2,Hh);c.fill();
+  c.strokeStyle='rgba(255,220,160,0.8)';c.lineWidth=Math.max(2,Hh*0.04);c.stroke();
+  c.fillStyle='rgba(90,40,20,0.65)';c.beginPath();c.roundRect(cx-L*0.93,cy-Hh*0.82,L*1.86,Hh*1.64,Hh*0.8);c.fill();
+  c.strokeStyle='rgba(255,200,130,0.9)';c.lineWidth=Math.max(2,Hh*0.05);const k=9,syn=[];for(let i=0;i<k;i++){const x=cx-L*0.8+i*L*1.6/(k-1),up=i%2===0,y0=up?cy-Hh*0.82:cy+Hh*0.82,y1=up?cy+Hh*0.35:cy-Hh*0.35;
+    c.beginPath();c.moveTo(x-Hh*0.07,y0);c.lineTo(x-Hh*0.07,y1);c.arc(x,y1,Hh*0.07,Math.PI,0,!up);c.lineTo(x+Hh*0.07,y0);c.stroke();for(let j=1;j<4;j++)syn.push([x+Hh*0.07*(j%2?1:-1),y0+(y1-y0)*j/4,j%2?1:-1])}
+  const rot=st.t*2.5*TAU;c.globalCompositeOperation='lighter';
+  syn.forEach(([x,y,s],i)=>{const r=Hh*0.06,xx=x+s*r*1.3;c.strokeStyle='rgba(255,240,180,0.9)';c.lineWidth=Math.max(1,r*0.25);c.beginPath();c.arc(xx,y,r,0,TAU);c.stroke();
+    for(let q=0;q<3;q++){const an=rot+q*TAU/3+i;c.beginPath();c.moveTo(xx,y);c.lineTo(xx+Math.cos(an)*r,y+Math.sin(an)*r);c.stroke()}
+    const u=((st.t*0.6+hh(i))%1);softDot(c,xx+s*r*(2.5-u*2),y,r*0.45,'rgba(140,220,255,'+(0.9*(1-u)).toFixed(3)+')');
+    const v=((st.t*0.35+hh(i*3))%1);softDot(c,xx+s*r*(1+v*4),y+(hh(i)-0.5)*r*3*v,r*0.6,'rgba(255,214,90,'+(0.9*(1-v)).toFixed(3)+')')});
+  c.globalCompositeOperation='source-over'}
+const BODY_LV={alveoli:lvAlveoli,rbc:lvRBC,muscle:lvMuscle,neuron:lvNeuron,synapse:lvSynapse,liver:lvLiver,glom:lvGlom,mito:lvMito};
+// ---------- the HUD: breadcrumb, title card, Activate line, rhythms, healthy ranges, scale ladder, breath pacer ----------
+function bodyHUD(c,box,sys,L,li,age,isAll){const M=Math.min(W,H),k=age<1.2?sstep(age/1.2):1,col=sys?sys.col:[242,184,75],x=box.x+box.w*0.045;c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1;c.shadowColor='rgba(0,0,0,0.85)';c.shadowBlur=M*0.015;c.textBaseline='alphabetic';
+  const font=(px,w)=>(w||'')+' '+(px|0)+'px "Chakra Petch",system-ui,sans-serif';
+  c.globalAlpha=k;c.fillStyle='rgba('+col.join(',')+',0.95)';c.font=font(M*0.016,'600');try{c.letterSpacing=(M*0.005|0)+'px'}catch(_){}
+  c.fillText((isAll?'ALL SYSTEMS':sys.name.toUpperCase()+'  ·  '+L.lv.toUpperCase()+'  ·  '+(li+1)+' / '+sys.levels.length+'  ·  ≈ '+L.scale),x,box.y+M*0.05);
+  if(BODY.titles){const ty=box.y+box.h*0.66,fs=M*0.048;c.fillStyle='rgba(250,246,236,1)';c.font=(fs|0)+'px Syncopate,"Arial Black",sans-serif';try{c.letterSpacing=(fs*0.07|0)+'px'}catch(_){}
+    const title=isAll?'YOUR BODY, WORKING AS ONE':L.title.toUpperCase();c.fillText(title,x,ty);const lw=Math.min(box.w*0.5,c.measureText(title).width)*sstep(Math.min(1,age/1.6));c.fillStyle='rgba('+col.join(',')+',0.9)';c.fillRect(x,ty+fs*0.32,lw,Math.max(1,M*0.002));
+    try{c.letterSpacing='0px'}catch(_){}c.font=font(M*0.019);c.fillStyle='rgba(236,230,214,0.9)';let yy=ty+fs*0.32+M*0.045;
+    const wrap=(txt,maxW,lh)=>{let ln='';for(const w of txt.split(' ')){const t2=ln?ln+' '+w:w;if(c.measureText(t2).width>maxW){c.fillText(ln,x,yy);ln=w;yy+=lh}else ln=t2}if(ln){c.fillText(ln,x,yy);yy+=lh}};
+    wrap(isAll?'Five systems, one body. Breathe, move, signal, clean and fuel: each one needs the others.':L.text,box.w*0.5,M*0.029);
+    if(BODY.act&&!isAll){yy+=M*0.008;c.font=font(M*0.021,'italic');c.fillStyle='rgba('+col.map(v=>Math.min(255,v+60)).join(',')+','+(0.75+0.25*Math.sin(st.t*0.25*TAU)).toFixed(3)+')';wrap('✦ '+L.act,box.w*0.5,M*0.031)}}
+  // right column: rhythms and healthy ranges
+  const rx=box.x+box.w*0.955;c.textAlign='right';let ry=box.y+M*0.05;
+  if(BODY.hz&&L.hz)for(const [nm,hz,note] of L.hz){const ph=bodyPhase(hz),pr=M*0.016,pl=0.5+0.5*Math.sin(ph);
+    c.globalCompositeOperation='lighter';softDot(c,rx-pr,ry+pr*0.2,pr*(1.2+pl),'rgba('+col.join(',')+','+(0.25+0.45*pl).toFixed(3)+')');c.globalCompositeOperation='source-over';
+    c.fillStyle='rgba(250,246,236,0.95)';c.font=font(M*0.02,'600');c.fillText(fmtHz(hz),rx-pr*3.2,ry+pr*0.6);c.fillStyle='rgba(236,230,214,0.75)';c.font=font(M*0.015);
+    c.fillText(nm+(note?' · '+note:'')+(showHz(hz)!==hz?' · shown slower':''),rx-pr*3.2,ry+pr*0.6+M*0.024);ry+=M*0.07}
+  if(BODY.ok){const list=isAll?BODY_OPT:L.ok;c.fillStyle='rgba('+col.join(',')+',0.95)';c.font=font(M*0.014,'600');try{c.letterSpacing=(M*0.004|0)+'px'}catch(_){}c.fillText('OPTIMAL',rx,ry+M*0.01);try{c.letterSpacing='0px'}catch(_){}
+    c.fillStyle='rgba(236,230,214,0.85)';c.font=font(M*0.016);list.forEach((t2,i)=>c.fillText(t2,rx,ry+M*0.04+i*M*0.026));ry+=M*0.05+list.length*M*0.026}
+  // scale ladder
+  if(sys&&!isAll){const lx=rx,ly0=box.y+box.h*0.6;c.font=font(M*0.014);sys.levels.forEach((l2,i)=>{const yy=ly0+i*M*0.03,cur=i===li;c.fillStyle=cur?'rgba('+col.join(',')+',1)':'rgba(236,230,214,0.45)';c.fillText((cur?'▸ ':'')+l2.lv+'  ·  '+l2.scale,lx,yy)})}
+  c.restore();
+  // breath pacer: 6 breaths a minute (0.1 Hz), in for 5 s and out for 5 s
+  if(BODY.breath){const ph=(st.t%10)/10,inh=ph<0.5,u=inh?sstep(ph/0.5):1-sstep((ph-0.5)/0.5),R=M*(0.03+0.05*u),px=box.x+box.w*0.5,py=box.y+box.h*0.13;
+    c.save();c.globalCompositeOperation='lighter';softDot(c,px,py,R*1.8,'rgba('+col.join(',')+',0.25)');c.globalCompositeOperation='source-over';c.strokeStyle='rgba(250,246,236,0.8)';c.lineWidth=Math.max(1.5,M*0.002);c.beginPath();c.arc(px,py,R,0,TAU);c.stroke();
+    c.fillStyle='rgba(250,246,236,0.9)';c.textAlign='center';c.font=(M*0.016|0)+'px "Chakra Petch",system-ui,sans-serif';c.fillText(inh?'BREATHE IN':'BREATHE OUT',px,py+R+M*0.03);c.restore()}}
+// ---------- the scene: chooses the shot, runs the zoom transitions, draws the level and the HUD ----------
+function bodyPick(){const B=BODY,sysList=B.sys==='all'?BSYS.map((_,i)=>i):[BSYS.findIndex(s=>s.k===B.sys)];
+  const prevS=B.s,prevL=B.l,wasAll=B.allView;
+  if(B.view==='overview'){B.allView=B.sys==='all';B.s=B.sys==='all'?(B.s+1)%BSYS.length:sysList[0];B.l=0;B.hold=B.sys==='all'?14:24}
+  else if(B.view==='zoom'){const s=BSYS[B.s];if(B.sys!=='all'&&B.s!==sysList[0]){B.s=sysList[0];B.l=0}else if(B.l<s.levels.length-1&&!B.allView)B.l++;else{B.s=B.sys==='all'?(B.s+1)%BSYS.length:sysList[0];B.l=0}B.allView=false;B.hold=13}
+  else{const r=Math.random();if(r<0.2){B.allView=true;B.l=0;B.hold=14}else{B.allView=false;if(r<0.55||B.sys!=='all'){const s=BSYS[B.s];B.l=Math.min(s.levels.length-1,B.l+1+(Math.random()<0.25?1:0));if(B.l===prevL&&!wasAll)B.l=0}else{B.s=sysList[Math.floor(Math.random()*sysList.length)];B.l=Math.floor(Math.random()*BSYS[B.s].levels.length)}B.hold=14+Math.random()*16}if(B.sys!=='all')B.s=sysList[0]}
+  B.dir=(B.allView&&!wasAll)||(B.s!==prevS)||B.l<prevL?-1:1;B.t0=st.t;B.capT=st.t;B.capR=BODY.rt}
+function bodyLabScene(c,a){BODY.rt=(BODY.rt||0)+Math.min(0.1,st.dtReal||0.016);
+  if(BODY.view==='lab'){LAB.ext=null;labScene(c,a);return}
+  const B=BODY;if(!B.t0){B.t0=st.t;B.capT=st.t;B.s=B.sys==='all'?0:Math.max(0,BSYS.findIndex(s=>s.k===B.sys));B.l=0;B.allView=B.view!=='zoom'&&B.sys==='all'}
+  const holdK=1/Math.max(0.2,LAB.speed||1);if(st.t-B.t0>B.hold*holdK&&(!live||A.beats%4===0||st.t-B.t0>B.hold*holdK+2.5)){
+    try{if(!B.snap||B.snap.width!==W||B.snap.height!==H){B.snap=document.createElement('canvas');B.snap.width=W;B.snap.height=H}B.snap.getContext('2d').drawImage(c.canvas,0,0)}catch(_){}
+    bodyPick();B.tr=st.t}
+  const sys=BSYS[B.s],L=B.allView?sys.levels[0]:sys.levels[B.l],env=LAB_ENV[sys.env]||LAB_ENV.Filters;
+  LAB.bars=LAB.dof=LAB.env=!!B.cine;
+  const M=Math.min(W,H),bh=B.cine?Math.max(0,(H-W/2.39)/2):0,box={x:0,y:bh,w:W,h:H-bh*2};
+  if(L.kind==='mol'||L.kind==='quantum'){
+    const idx=LAB_LIST.findIndex(x=>x.k===L.mol);if(idx>=0&&LAB.mol!==idx){LAB.mol=idx;LAB.guests=[];LAB.titleKey=L.mol}
+    LAB.ext={view:L.kind==='quantum'?5:7,focus:L.focus,env:sys.env};LAB.contract=!!L.contract;LAB.titleKey=L.mol;
+    if(L.bind&&(!LAB.guests.length)&&st.t-B.t0>2.5&&st.t-(LAB.bindT||-99)>16)labBind();
+    labScene(c,a);c.globalCompositeOperation='source-over'}
+  else{LAB.ext=null;c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1;
+    const bg=c.createRadialGradient(W*0.62,H*0.45,0,W*0.55,H*0.5,Math.hypot(W,H)*0.65);bg.addColorStop(0,'rgb('+env.bg[0].join(',')+')');bg.addColorStop(1,'rgb('+env.bg[1].join(',')+')');c.fillStyle=B.cine?bg:'rgb(3,4,10)';c.fillRect(0,0,W,H);
+    if(B.cine){c.globalCompositeOperation='lighter';for(let i=0;i<4;i++){const an=0.6+i*0.12+Math.sin(st.t*0.05+i)*0.05,len=Math.hypot(W,H),w=0.03,ox=-W*0.05+i*W*0.07,oy=-H*0.1,g=c.createLinearGradient(ox,oy,ox+Math.cos(an)*len,oy+Math.sin(an)*len);
+      g.addColorStop(0,'rgba('+env.shaft.join(',')+',0.05)');g.addColorStop(1,'rgba('+env.shaft.join(',')+',0)');c.fillStyle=g;c.beginPath();c.moveTo(ox,oy);c.lineTo(ox+Math.cos(an-w)*len,oy+Math.sin(an-w)*len);c.lineTo(ox+Math.cos(an+w)*len,oy+Math.sin(an+w)*len);c.closePath();c.fill()}c.globalCompositeOperation='source-over'}
+    if(L.kind==='body'){if(B.allView){const order=['breathe','move','signal','clean','fuel'];B.hl=order[Math.floor(st.t/4)%5]}bodyDraw(c,box,B.allView?'all':sys.k,a)}
+    else (BODY_LV[L.kind]||lvAlveoli)(c,box,a);
+    const vg=c.createRadialGradient(W/2,H/2,M*0.35,W/2,H/2,Math.hypot(W,H)*0.6);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.6)');c.fillStyle=vg;c.fillRect(0,0,W,H);
+    if(bh>0.5){c.fillStyle='#000';c.fillRect(0,0,W,bh);c.fillRect(0,H-bh,W,bh)}c.restore()}
+  // zoom transition: the last shot grows (zoom in) or shrinks (zoom out) and fades away
+  const tt=(st.t-B.tr)/1.6;if(B.snap&&tt>=0&&tt<1){const e=sstep(tt),s2=B.dir>0?1+e*3:1-e*0.6;c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1-e;c.translate(W*0.58,H*0.5);c.scale(s2,s2);c.translate(-W*0.58,-H*0.5);c.drawImage(B.snap,0,0);c.restore();
+    c.save();c.globalCompositeOperation='lighter';c.fillStyle='rgba('+sys.col.join(',')+','+(0.12*Math.sin(tt*Math.PI)).toFixed(3)+')';c.fillRect(0,0,W,H);c.restore()}
+  bodyHUD(c,box,sys,L,B.l,BODY.rt-(B.capR||0),!!B.allView&&B.sys==='all');
 }
 
 /* ---------- Flock: birds that move as one (a murmuration), and geometric energy pulses launched by the beat ---------- */
@@ -6527,6 +6773,13 @@ function labOpen(){const i=SCENES.findIndex(s=>s.lab);if(i<0)return;LAB.panel=tr
   g('labReset').onclick=()=>{FLY.yaw=FLY.pitch=0;FLY.speed=1;LAB.cam.t=0};
   g('labClose').onclick=()=>{LAB.panel=false;g('labPanel').hidden=true};
   g('bLab').onclick=()=>{if(SCENES[S.scene].lab&&!g('labPanel').hidden){g('labPanel').hidden=true;LAB.panel=false}else labOpen()};
+  const bs=()=>{g('bodySys').value=BODY.sys;g('bodyView').value=BODY.view;g('bodyHz').checked=BODY.hz;g('bodyOk').checked=BODY.ok;g('bodyAct').checked=BODY.act;g('bodyBreath').checked=BODY.breath;g('bodyTitles').checked=BODY.titles;g('bodyCine').checked=BODY.cine;g('labAdv').open=BODY.view==='lab'};
+  const bo=(id,ev,f)=>g(id).addEventListener(ev,e=>{f(e.target);bodySave();bs()});
+  const restart=()=>{BODY.t0=0;BODY.snap=null};
+  bo('bodySys','change',t=>{BODY.sys=t.value;restart()});bo('bodyView','change',t=>{BODY.view=t.value;restart()});
+  bo('bodyHz','change',t=>BODY.hz=t.checked);bo('bodyOk','change',t=>BODY.ok=t.checked);bo('bodyAct','change',t=>BODY.act=t.checked);bo('bodyBreath','change',t=>BODY.breath=t.checked);bo('bodyTitles','change',t=>BODY.titles=t.checked);bo('bodyCine','change',t=>BODY.cine=t.checked);
+  g('labMol').addEventListener('change',()=>{BODY.view='lab';bodySave();bs()});g('labView').addEventListener('change',()=>{BODY.view='lab';bodySave();bs()});
+  bs();
   labUiSync()})();
 
 document.getElementById('lightsOn').onchange=e=>{lightsOn(e.target.checked);toast(LT.on?'Lights follow Fibwave.':'Lights back to their own settings.')};
