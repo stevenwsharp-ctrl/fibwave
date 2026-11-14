@@ -26,19 +26,26 @@
 
 Click **Health Lab** in the controls (or choose the scene **Health Laboratory**). A panel opens on the right.
 
-**Five body systems**, each from the whole body down to the atom:
+**Six body systems**, each from the whole body down to the molecule or atom:
 
 | System | Levels |
 |---|---|
+| Muscles | Muscle map (front and back, 39 named muscles, activation for walking, squat, push-up, pull, curl and plank) → muscle fibers → actin and myosin |
 | Breathe | Lungs, heart and blood → alveoli → red blood cell → heme and oxygen → electron clouds |
-| Move | Muscles and bones → muscle fibers → actin and myosin → ATP → electron clouds |
+| Move | Skeleton and muscles → muscle fibers → actin and myosin → ATP → electron clouds |
 | Signal | Brain and nerves → neuron → nerve meets muscle → acetylcholine → electron clouds |
 | Clean | Liver, kidneys and lymph → liver lobule → kidney filter → albumin → urea |
 | Fuel | Food to energy → mitochondrion → glucose → ATP → electron clouds |
 
-**Views:** **Overview** (the whole body, with the systems working together), **Zoom in** (from the body down through each level, with how that part works) and **Journey** (a random mix of the two). **Molecule lab** gives the free molecule explorer below.
+**Atlas style:** anatomical body (skeleton, organs, vessels, nerves, muscles with fiber direction), textbook labels with leader lines on every level, a lub-dub heartbeat, breathing with the diaphragm, and correct sarcomere banding (A band constant, I band and H zone shorten).
 
-**On the screen:** the real rhythm of each level in hertz (breathing, heartbeat, nerve firing, bond vibrations, the light heme absorbs), optimal ranges, a scale ladder, and an **Activate** line that guides your attention to that part of your body. The **Breath pacer** guides slow breathing at 6 breaths a minute (0.1 Hz).
+**Lecture layout:** an information panel on the left (title, simple text, medical text, Activate line, rhythms in Hz, optimal ranges, activation list and scale ladder), the picture on the right.
+
+**Detail:** *Simple*, *Medical* or *Simple + medical* (for a mixed audience).
+
+**Presenter controls:** Back, Pause and Next in the panel, or Page Up / Page Down (a presentation clicker), `,` / `.` and Enter.
+
+**Views:** **Overview**, **Zoom in** and **Journey** (random). **Molecule lab** gives the free molecule explorer below.
 
 ### Molecule lab
 

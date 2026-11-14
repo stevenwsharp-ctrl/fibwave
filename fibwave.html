@@ -268,8 +268,11 @@ body:not(.locked) #showUi{display:none}
 </div>
 <div id="labPanel" hidden>
   <div class="lr"><b class="lt">Health Laboratory</b><button class="btn" id="labClose">Close</button></div>
-  <label class="lr">System <select id="bodySys"><option value="all">All systems</option><option value="breathe">Breathe</option><option value="move">Move</option><option value="signal">Signal</option><option value="clean">Clean</option><option value="fuel">Fuel</option></select></label>
+  <label class="lr">System <select id="bodySys"><option value="all">All systems</option><option value="muscles">Muscles</option><option value="breathe">Breathe</option><option value="move">Move</option><option value="signal">Signal</option><option value="clean">Clean</option><option value="fuel">Fuel</option></select></label>
   <label class="lr">View <select id="bodyView"><option value="overview">Overview</option><option value="zoom">Zoom in</option><option value="journey">🎲 Journey (random)</option><option value="lab">Molecule lab</option></select></label>
+  <label class="lr">Detail <select id="bodyDetail"><option value="both">Simple + medical</option><option value="simple">Simple</option><option value="medical">Medical</option></select></label>
+  <div class="lb"><button class="btn" id="bodyBack" title="Back (Page Up or ,)">◀ Back</button><button class="btn" id="bodyPause" title="Pause or play (Enter)">Pause</button><button class="btn" id="bodyNext" title="Next (Page Down or .)">Next ▶</button></div>
+  <label class="lr">Muscle pattern <select id="bodyPat"><option value="auto">Change every 16 s</option><option value="walk">Walking</option><option value="squat">Squat</option><option value="push">Push-up</option><option value="pull">Pull (row / pull-up)</option><option value="curl">Biceps curl</option><option value="plank">Plank</option></select></label>
   <label class="lr">Music link <input type="range" id="labMusic" min="0" max="2" step="0.05" value="1"></label>
   <label class="lr">Speed <input type="range" id="labSpeed" min="0.1" max="3" step="0.05" value="1"></label>
   <div class="lb"><label class="chk"><input type="checkbox" id="bodyHz"> Rhythms (Hz)</label><label class="chk"><input type="checkbox" id="bodyOk"> Optimal ranges</label><label class="chk"><input type="checkbox" id="bodyAct"> Activate</label><label class="chk" title="Slow breathing: 6 breaths a minute"><input type="checkbox" id="bodyBreath"> Breath pacer</label><label class="chk"><input type="checkbox" id="bodyTitles"> Titles</label><label class="chk"><input type="checkbox" id="bodyCine"> Cinematic</label></div>
@@ -284,7 +287,7 @@ body:not(.locked) #showUi{display:none}
   <div class="lb"><button class="btn" id="labBind" title="Molecules fly in and bind: adsorption on carbon, docking in albumin, oxygen on iron, water on polar atoms">Bind</button><button class="btn" id="labExplode">Explode</button><button class="btn" id="labContract">Contract</button><button class="btn" id="labNext">Next</button><button class="btn" id="labReset">Reset look</button></div>
   </div></details>
   <p id="labInfo" class="hint"></p>
-  <p class="hint">Drag the screen to look round. Scroll to change the flight speed.</p>
+  <p class="hint">Teaching: Page Down or . = next, Page Up or , = back, Enter = pause. A presentation clicker works too. Drag the screen to look round.</p>
 </div>
 <div class="panel" id="lights" hidden>
   <div class="card">
@@ -5734,7 +5737,7 @@ function labScene(c,a){
   else camA=labCamFor(v,S,t);
   // a slight hand-held float, like a real camera on a slider
   const hf=S.R*0.012;camA[0]=v3.add(camA[0],[Math.sin(st.t*0.71)*hf,Math.sin(st.t*0.53+1)*hf,Math.sin(st.t*0.37+2)*hf]);
-  const lens=v===2||v===3||v===4?0.6:0.95;LAB.lens=(LAB.lens||lens)+(lens-(LAB.lens||lens))*Math.min(1,dt*2);const C=camLook(camA[0],camA[1],camA[2],M*LAB.lens);
+  const lens=v===2||v===3||v===4?0.6:0.95;LAB.lens=(LAB.lens||lens)+(lens-(LAB.lens||lens))*Math.min(1,dt*2);const C=camLook(camA[0],camA[1],camA[2],M*LAB.lens);if(LAB.ext)C.cx=W*0.665;
   // ---- environment: deep background, light shafts and drifting particles with parallax ----
   const bg=c.createRadialGradient(W*0.38,H*0.32,0,W*0.5,H*0.5,Math.hypot(W,H)*0.62),ex0=1+0.25*LAB.pulse*mus;
   bg.addColorStop(0,'rgb('+(env.bg[0][0]*ex0|0)+','+(env.bg[0][1]*ex0|0)+','+(env.bg[0][2]*ex0|0)+')');bg.addColorStop(1,'rgb('+env.bg[1].join(',')+')');
@@ -5852,77 +5855,158 @@ const BODY_PATH={
   liver:'M -36 188 Q -28 180 4 184 Q 22 186 20 196 Q 10 210 -28 208 Q -38 200 -36 188 Z'};
 const BP2={};function bp(k){return BP2[k]||(BP2[k]=new Path2D(BODY_PATH[k]))}
 const BSYS=[
+{k:'muscles',name:'Muscles',col:[255,140,90],env:'Movement',levels:[
+  {lv:'Muscle map',scale:'1.7 m',kind:'musclemap',title:'Muscle map',adv:'Skeletal muscle is about 30–40% of body mass. Agonists produce the movement, antagonists control it, and synergists and stabilizers (core, scapular muscles) hold the joints. Colours show estimated relative activation (surface EMG patterns), not exact values.',text:'More than 600 muscles move the body. Watch which ones work in each movement, and how they take turns.',act:'Feel each working muscle light up, strong and smooth.',hz:[],ok:[]},
+  {lv:'Tissue',scale:'0.1 mm',kind:'muscle',title:'Muscle fibers',adv:'Each fiber is a multinucleated cell (10–100 µm wide) filled with myofibrils. In contraction the A band (myosin length, about 1.6 µm) stays constant; the I band and H zone shorten (sliding filament theory). Motor units are recruited small to large (Henneman size principle).',text:'Each fiber is one long cell with many nuclei. When the nerve fires, the dark A bands stay the same length and the light I bands get shorter.',act:'Feel the fibers shorten together, smooth and powerful.',hz:[['Motor nerve firing',20,'about 8–50 Hz']],ok:['Natural tremor: 8–12 Hz']},
+  {lv:'Molecule',scale:'10 nm',kind:'mol',mol:'actin',focus:'head',contract:1,title:'Actin and myosin',adv:'Cross-bridge cycle: ATP binding releases the myosin head; hydrolysis cocks it; Pi release drives the power stroke (about 5–10 nm). Ca²⁺ binds troponin C, tropomyosin moves, and the myosin-binding sites on actin open. Rigor occurs without ATP.',text:'Myosin heads grab the actin filament and pull it about 5–10 nm. Each pull uses one ATP. Muscles only pull.',act:'Millions of tiny heads pull in rhythm. This is your power.',hz:[['Power strokes',5,'many each second']],ok:['Sarcomere length: about 2–2.5 µm']}]},
  {k:'breathe',name:'Breathe',col:[255,96,96],env:'Blood',levels:[
-  {lv:'Body',scale:'1.7 m',kind:'body',title:'Lungs, heart and blood',text:'Each breath fills the lungs. The heart sends the oxygen-rich blood to every one of your cells.',act:'Breathe in slowly. Feel the lungs open, and the heart send the new oxygen everywhere.',hz:[['Breathing',0.25,'12–20 breaths a minute'],['Heartbeat',1.1,'60–100 beats a minute']],ok:['Breathing at rest: 12–20 a minute','Heart at rest: 60–100 beats a minute','Oxygen saturation: 95–100%']},
-  {lv:'Tissue',scale:'0.2 mm',kind:'alveoli',title:'Alveoli',text:'About 480 million air sacs. Oxygen moves through a wall about 1 µm thin into the blood. Carbon dioxide moves out.',act:'Feel 480 million air sacs open together with this breath.',hz:[['Breathing',0.25,'one breath about every 4 s']],ok:['Gas-exchange area: about 50–75 m²','Blood passes each sac in about 0.75 s']},
-  {lv:'Cell',scale:'7.5 µm',kind:'rbc',title:'Red blood cell',text:'A flexible disc with no nucleus. It holds about 270 million hemoglobin molecules, and each one carries 4 oxygen molecules.',act:'Feel your blood bright and full, flowing easily through every vessel.',hz:[['Heartbeat',1.1,'each beat pushes the cells forward']],ok:['Red cells live about 120 days','Hemoglobin: about 12–17 g/dL']},
-  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'hemeo2',focus:'Fe',bind:1,title:'Heme and oxygen',text:'Oxygen binds to the iron at the centre of heme. At a working muscle, the oxygen comes off again.',act:'Each iron atom takes oxygen in, and gives it to the cells that need it.',hz:[['Fe–O₂ bond vibration',1.7e13,'']],ok:['Oxygen saturation: 95–100%']},
-  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'hemeo2',focus:'Fe',title:'The colour of life',text:'Heme absorbs violet-blue light (414 nm) and green-yellow light (541 and 577 nm). The light it leaves is red: this is why oxygen-rich blood is bright red.',act:'Light, electrons and oxygen, working together at the smallest scale.',hz:[['Light absorbed by heme',7.2e14,'414 nm']],ok:['Electron clouds: each dot is a place an electron can be']}]},
+  {lv:'Body',scale:'1.7 m',kind:'body',title:'Lungs, heart and blood',adv:'Tidal volume about 500 mL; minute ventilation about 6 L/min. Cardiac output about 5 L/min (heart rate × stroke volume, about 70 mL). The pulmonary circulation is low pressure (mean about 15 mmHg) compared with systemic (mean about 93 mmHg).',text:'Each breath fills the lungs. The heart sends the oxygen-rich blood to every one of your cells.',act:'Breathe in slowly. Feel the lungs open, and the heart send the new oxygen everywhere.',hz:[['Breathing',0.25,'12–20 breaths a minute'],['Heartbeat',1.1,'60–100 beats a minute']],ok:['Breathing at rest: 12–20 a minute','Heart at rest: 60–100 beats a minute','Oxygen saturation: 95–100%']},
+  {lv:'Tissue',scale:'0.2 mm',kind:'alveoli',title:'Alveoli',adv:'About 480 million alveoli. Type I pneumocytes form the thin barrier (blood–air barrier about 0.5–1 µm); type II make surfactant, which lowers surface tension. Diffusion follows Fick\'s law. PAO₂ about 100 mmHg, mixed venous PO₂ about 40 mmHg.',text:'About 480 million air sacs. Oxygen moves through a wall about 1 µm thin into the blood. Carbon dioxide moves out.',act:'Feel 480 million air sacs open together with this breath.',hz:[['Breathing',0.25,'one breath about every 4 s']],ok:['Gas-exchange area: about 50–75 m²','Blood passes each sac in about 0.75 s']},
+  {lv:'Cell',scale:'7.5 µm',kind:'rbc',title:'Red blood cell',adv:'Biconcave disc, 7–8 µm, no nucleus or mitochondria (energy from glycolysis). About 270 million hemoglobin molecules, each α₂β₂ with 4 heme groups. 2,3-BPG lowers O₂ affinity. Normal hematocrit about 40–50% (men) and 36–44% (women).',text:'A flexible disc with no nucleus. It holds about 270 million hemoglobin molecules, and each one carries 4 oxygen molecules.',act:'Feel your blood bright and full, flowing easily through every vessel.',hz:[['Heartbeat',1.1,'each beat pushes the cells forward']],ok:['Red cells live about 120 days','Hemoglobin: about 12–17 g/dL']},
+  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'hemeo2',focus:'Fe',bind:1,title:'Heme and oxygen',adv:'Fe²⁺ in protoporphyrin IX, bound to the proximal histidine. Cooperative O₂ binding gives a sigmoid dissociation curve, P50 about 26.8 mmHg. The Bohr effect: lower pH, higher CO₂ or temperature releases O₂ to working tissue. CO binds about 200–250 times more strongly than O₂.',text:'Oxygen binds to the iron at the centre of heme. At a working muscle, the oxygen comes off again.',act:'Each iron atom takes oxygen in, and gives it to the cells that need it.',hz:[['Fe–O₂ bond vibration',1.7e13,'']],ok:['Oxygen saturation: 95–100%']},
+  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'hemeo2',focus:'Fe',title:'The colour of life',adv:'Oxyhemoglobin absorbs strongly at the Soret band (about 414 nm) and at the Q bands (541 and 577 nm). Pulse oximetry compares red (660 nm) and infrared (940 nm) absorption to estimate SpO₂.',text:'Heme absorbs violet-blue light (414 nm) and green-yellow light (541 and 577 nm). The light it leaves is red: this is why oxygen-rich blood is bright red.',act:'Light, electrons and oxygen, working together at the smallest scale.',hz:[['Light absorbed by heme',7.2e14,'414 nm']],ok:['Electron clouds: each dot is a place an electron can be']}]},
  {k:'move',name:'Move',col:[255,176,80],env:'Movement',levels:[
-  {lv:'Body',scale:'1.7 m',kind:'body',title:'Muscles and bones',text:'Muscles pull on bones across the joints. They work in pairs: one pulls, the other relaxes.',act:'Feel your strength: every muscle ready, every joint free and easy.',hz:[['Walking steps',1.8,'100–120 steps a minute']],ok:['Activity: at least 150 minutes a week','Muscle: about 30–40% of body mass']},
-  {lv:'Tissue',scale:'0.1 mm',kind:'muscle',title:'Muscle fibers',text:'A nerve fires and thousands of fibers contract together. The stripes are millions of tiny motors in rows.',act:'Feel the fibers shorten together, smooth and powerful.',hz:[['Motor nerve firing',20,'about 8–50 Hz']],ok:['Natural tremor: 8–12 Hz']},
-  {lv:'Molecule',scale:'10 nm',kind:'mol',mol:'actin',focus:'head',contract:1,title:'Actin and myosin',text:'Myosin heads grab the actin filament and pull it about 5–10 nm. Each pull uses one ATP. Muscles only pull.',act:'Millions of tiny heads pull in rhythm. This is your power.',hz:[['Power strokes',5,'many each second']],ok:['Sarcomere length: about 2–2.5 µm']},
-  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'atp',focus:'P',title:'ATP: the energy molecule',text:'Breaking the last phosphate bond releases the energy for each pull. Your body recycles about its own weight in ATP every day.',act:'Feel energy ready in every cell.',hz:[['P–O bond vibration',3.5e13,'']],ok:['About your body weight of ATP is made each day']},
-  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'atp',focus:'P',title:'Inside the phosphate',text:'The nucleus is about 100,000 times smaller than the electron cloud round it. Atoms are almost all space and energy.',act:'Solid strength, made of energy and space.',hz:[['P–O bond vibration',3.5e13,'']],ok:['Each dot is a place an electron can be']}]},
+  {lv:'Body',scale:'1.7 m',kind:'body',title:'Muscles and bones',adv:'Muscles produce force only by shortening (pulling). Joints act as levers (most limbs are third-class levers: speed over force). 206 bones; bone remodels all the time (osteoblasts build, osteoclasts resorb).',text:'Muscles pull on bones across the joints. They work in pairs: one pulls, the other relaxes.',act:'Feel your strength: every muscle ready, every joint free and easy.',hz:[['Walking steps',1.8,'100–120 steps a minute']],ok:['Activity: at least 150 minutes a week','Muscle: about 30–40% of body mass']},
+  {lv:'Tissue',scale:'0.1 mm',kind:'muscle',title:'Muscle fibers',adv:'Each fiber is a multinucleated cell (10–100 µm wide) filled with myofibrils. In contraction the A band (myosin length, about 1.6 µm) stays constant; the I band and H zone shorten (sliding filament theory). Motor units are recruited small to large (Henneman size principle).',text:'A nerve fires and thousands of fibers contract together. The stripes are millions of tiny motors in rows.',act:'Feel the fibers shorten together, smooth and powerful.',hz:[['Motor nerve firing',20,'about 8–50 Hz']],ok:['Natural tremor: 8–12 Hz']},
+  {lv:'Molecule',scale:'10 nm',kind:'mol',mol:'actin',focus:'head',contract:1,title:'Actin and myosin',adv:'Cross-bridge cycle: ATP binding releases the myosin head; hydrolysis cocks it; Pi release drives the power stroke (about 5–10 nm). Ca²⁺ binds troponin C, tropomyosin moves, and the myosin-binding sites on actin open. Rigor occurs without ATP.',text:'Myosin heads grab the actin filament and pull it about 5–10 nm. Each pull uses one ATP. Muscles only pull.',act:'Millions of tiny heads pull in rhythm. This is your power.',hz:[['Power strokes',5,'many each second']],ok:['Sarcomere length: about 2–2.5 µm']},
+  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'atp',focus:'P',title:'ATP: the energy molecule',adv:'ATP hydrolysis: ΔG°′ about −30.5 kJ/mol (about −50 kJ/mol in cells). Muscle stores ATP for only seconds; phosphocreatine, glycolysis and oxidative phosphorylation refill it. Body ATP turnover is about body weight per day.',text:'Breaking the last phosphate bond releases the energy for each pull. Your body recycles about its own weight in ATP every day.',act:'Feel energy ready in every cell.',hz:[['P–O bond vibration',3.5e13,'']],ok:['About your body weight of ATP is made each day']},
+  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'atp',focus:'P',title:'Inside the phosphate',adv:'Phosphorus (Z = 15) is tetrahedral in phosphate. Electron density is drawn as probability (|ψ|²): the s orbital is round, the 3 p orbitals are dumbbells along x, y and z.',text:'The nucleus is about 100,000 times smaller than the electron cloud round it. Atoms are almost all space and energy.',act:'Solid strength, made of energy and space.',hz:[['P–O bond vibration',3.5e13,'']],ok:['Each dot is a place an electron can be']}]},
  {k:'signal',name:'Signal',col:[170,140,255],env:'Filters',levels:[
-  {lv:'Body',scale:'1.7 m',kind:'body',title:'Brain and nerves',text:'The brain sends signals down the spinal cord and out through the nerves to every muscle and organ.',act:'Feel the signals clear and fast, from the brain to every part of you.',hz:[['Alpha brain waves',10,'8–12 Hz, relaxed and alert']],ok:['Fast nerves: up to about 120 m/s','The brain uses about 20% of your energy']},
-  {lv:'Cell',scale:'20 µm',kind:'neuron',title:'Neuron',text:'The signal (action potential) jumps from gap to gap along the myelin. The voltage goes from −70 mV to about +30 mV in 1 ms.',act:'Each signal jumps, quick and clean.',hz:[['Nerve firing',8,'up to several hundred a second']],ok:['Resting voltage: about −70 mV']},
-  {lv:'Synapse',scale:'1 µm',kind:'synapse',title:'Nerve meets muscle',text:'Calcium comes in. Vesicles release acetylcholine, about 10,000 molecules each. It binds to the muscle and the fiber fires. An enzyme clears it in about 1 ms.',act:'The message arrives, and the muscle answers at once.',hz:[['Signals',2,'shown slower']],ok:['Clearing time: about 1 ms']},
-  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'ach',focus:'N',title:'Acetylcholine',text:'The messenger between nerve and muscle. Its positive nitrogen fits the receptor like a key.',act:'One small molecule, one clear message.',hz:[['C=O bond vibration',5.2e13,'']],ok:['Made from choline (eggs, fish, beans)']},
-  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'ach',focus:'N',title:'Charge and electrons',text:'The signal is moving charge. Electrons and ions move, and the message travels.',act:'Feel the spark of the signal.',hz:[['C=O bond vibration',5.2e13,'']],ok:['Each dot is a place an electron can be']}]},
+  {lv:'Body',scale:'1.7 m',kind:'body',title:'Brain and nerves',adv:'About 86 billion neurons. The brain is about 2% of body weight but uses about 20% of resting O₂. Alpha rhythm (8–12 Hz) is strongest over the occipital cortex with the eyes closed. Myelinated Aα fibers conduct at about 70–120 m/s.',text:'The brain sends signals down the spinal cord and out through the nerves to every muscle and organ.',act:'Feel the signals clear and fast, from the brain to every part of you.',hz:[['Alpha brain waves',10,'8–12 Hz, relaxed and alert']],ok:['Fast nerves: up to about 120 m/s','The brain uses about 20% of your energy']},
+  {lv:'Cell',scale:'20 µm',kind:'neuron',title:'Neuron',adv:'Resting potential about −70 mV (K⁺ leak, Na⁺/K⁺-ATPase). Threshold about −55 mV opens voltage-gated Na⁺ channels; peak about +30 mV; K⁺ channels repolarize. Myelin raises speed by saltatory conduction between nodes of Ranvier.',text:'The signal (action potential) jumps from gap to gap along the myelin. The voltage goes from −70 mV to about +30 mV in 1 ms.',act:'Each signal jumps, quick and clean.',hz:[['Nerve firing',8,'up to several hundred a second']],ok:['Resting voltage: about −70 mV']},
+  {lv:'Synapse',scale:'1 µm',kind:'synapse',title:'Nerve meets muscle',adv:'Neuromuscular junction: Ca²⁺ enters by voltage-gated channels, vesicles fuse (SNARE proteins), acetylcholine binds nicotinic receptors and makes the end-plate potential. Acetylcholinesterase in the cleft ends the signal. Junctional folds raise the receptor area.',text:'Calcium comes in. Vesicles release acetylcholine, about 10,000 molecules each. It binds to the muscle and the fiber fires. An enzyme clears it in about 1 ms.',act:'The message arrives, and the muscle answers at once.',hz:[['Signals',2,'shown slower']],ok:['Clearing time: about 1 ms']},
+  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'ach',focus:'N',title:'Acetylcholine',adv:'Made from choline and acetyl-CoA by choline acetyltransferase. The quaternary ammonium (N⁺) binds the receptor by cation–π interactions with aromatic residues. Nicotinic receptors are ligand-gated ion channels; muscarinic receptors are G-protein coupled.',text:'The messenger between nerve and muscle. Its positive nitrogen fits the receptor like a key.',act:'One small molecule, one clear message.',hz:[['C=O bond vibration',5.2e13,'']],ok:['Made from choline (eggs, fish, beans)']},
+  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'ach',focus:'N',title:'Charge and electrons',adv:'Nerve signals are ionic currents (Na⁺ in, K⁺ out), not electrons in a wire. Electron clouds decide the shape and charge of each molecule, and so how it binds its receptor.',text:'The signal is moving charge. Electrons and ions move, and the message travels.',act:'Feel the spark of the signal.',hz:[['C=O bond vibration',5.2e13,'']],ok:['Each dot is a place an electron can be']}]},
  {k:'clean',name:'Clean',col:[90,220,200],env:'Filters',levels:[
-  {lv:'Body',scale:'1.7 m',kind:'body',title:'Liver, kidneys and lymph',text:'The liver changes toxins. The kidneys filter the blood. Lymph nodes and the spleen catch microbes.',act:'Feel the body clear and clean, every filter working with ease.',hz:[['Heartbeat',1.1,'each beat pushes blood through the filters']],ok:['Kidneys filter about 180 L a day','Kidney filtering (GFR): 90 mL/min or more']},
-  {lv:'Tissue',scale:'1 mm',kind:'liver',title:'Liver lobule',text:'Blood flows past rows of liver cells to the central vein. The cells take out toxins and change them. Bile flows the other way.',act:'Fresh blood flows in, clean blood flows out.',hz:[['Liver blood flow',1.1,'about 1.5 L a minute']],ok:['Albumin (made by the liver): 3.5–5.0 g/dL']},
-  {lv:'Tissue',scale:'0.2 mm',kind:'glom',title:'Kidney filter',text:'Pressure pushes water and small molecules through the filter. Cells and big proteins stay in the blood. Each kidney has about 1 million filters.',act:'One million filters in each kidney, clearing the blood.',hz:[['Heartbeat',1.1,'drives the filtering']],ok:['Urine: about 1–2 L a day','Creatinine: about 0.6–1.2 mg/dL']},
-  {lv:'Molecule',scale:'8 nm',kind:'mol',mol:'albumin',focus:'site',bind:1,title:'Albumin, the carrier',text:'The most common protein in blood. It holds drugs, fatty acids and bilirubin in pockets and carries them to the liver and kidneys.',act:'Each carrier picks up what the body does not need.',hz:[['Heartbeat',1.1,'carries it round the body']],ok:['Albumin: 3.5–5.0 g/dL']},
-  {lv:'Molecule',scale:'0.5 nm',kind:'mol',mol:'urea',focus:'C',title:'Urea',text:'Waste nitrogen leaves the body as urea, through the kidneys.',act:'Waste goes out easily.',hz:[['C=O bond vibration',5.0e13,'']],ok:['Blood urea nitrogen: about 7–20 mg/dL']}]},
+  {lv:'Body',scale:'1.7 m',kind:'body',title:'Liver, kidneys and lymph',adv:'Liver blood flow about 1.5 L/min (about 75% portal vein, 25% hepatic artery). Kidneys get about 20–25% of cardiac output. GFR about 125 mL/min (about 180 L/day); about 99% is reabsorbed.',text:'The liver changes toxins. The kidneys filter the blood. Lymph nodes and the spleen catch microbes.',act:'Feel the body clear and clean, every filter working with ease.',hz:[['Heartbeat',1.1,'each beat pushes blood through the filters']],ok:['Kidneys filter about 180 L a day','Kidney filtering (GFR): 90 mL/min or more']},
+  {lv:'Tissue',scale:'1 mm',kind:'liver',title:'Liver lobule',adv:'Hexagonal lobule with portal triads (portal vein, hepatic artery, bile duct) at the corners and a central vein in the middle. Zone 1 (periportal) has the most O₂; zone 3 (centrilobular) has the most CYP450 activity and is the most sensitive to hypoxia and some toxins. Kupffer cells line the sinusoids.',text:'Blood flows past rows of liver cells to the central vein. The cells take out toxins and change them. Bile flows the other way.',act:'Fresh blood flows in, clean blood flows out.',hz:[['Liver blood flow',1.1,'about 1.5 L a minute']],ok:['Albumin (made by the liver): 3.5–5.0 g/dL']},
+  {lv:'Tissue',scale:'0.2 mm',kind:'glom',title:'Kidney filter',adv:'Filtration barrier: fenestrated endothelium, glomerular basement membrane and podocyte slit diaphragms. Filtration depends on Starling forces (glomerular capillary pressure about 55 mmHg against capsule pressure and oncotic pressure). Molecules above about 70 kDa and negative charge (albumin, 66.5 kDa) are mostly kept in the blood.',text:'Pressure pushes water and small molecules through the filter. Cells and big proteins stay in the blood. Each kidney has about 1 million filters.',act:'One million filters in each kidney, clearing the blood.',hz:[['Heartbeat',1.1,'drives the filtering']],ok:['Urine: about 1–2 L a day','Creatinine: about 0.6–1.2 mg/dL']},
+  {lv:'Molecule',scale:'8 nm',kind:'mol',mol:'albumin',focus:'site',bind:1,title:'Albumin, the carrier',adv:'585 amino acids, 66.5 kDa, three helical domains (I–III), each with subdomains A and B. Main drug sites: Sudlow I (IIA, e.g. warfarin) and Sudlow II (IIIA, e.g. ibuprofen). Gives about 75–80% of plasma oncotic pressure. Half-life about 19–21 days.',text:'The most common protein in blood. It holds drugs, fatty acids and bilirubin in pockets and carries them to the liver and kidneys.',act:'Each carrier picks up what the body does not need.',hz:[['Heartbeat',1.1,'carries it round the body']],ok:['Albumin: 3.5–5.0 g/dL']},
+  {lv:'Molecule',scale:'0.5 nm',kind:'mol',mol:'urea',focus:'C',title:'Urea',adv:'Made in the liver by the urea cycle (ornithine cycle) from ammonia. Filtered freely; about 40–50% is reabsorbed and helps build the medullary concentration gradient. BUN rises with low kidney filtering, dehydration or high protein breakdown.',text:'Waste nitrogen leaves the body as urea, through the kidneys.',act:'Waste goes out easily.',hz:[['C=O bond vibration',5.0e13,'']],ok:['Blood urea nitrogen: about 7–20 mg/dL']}]},
  {k:'fuel',name:'Fuel',col:[255,214,90],env:'Blood',levels:[
-  {lv:'Body',scale:'1.7 m',kind:'body',title:'Food to energy',text:'The gut takes in glucose. The blood carries it to the muscles and the brain, where it becomes energy.',act:'Feel steady energy flowing to every muscle and to the brain.',hz:[['Stomach waves',0.05,'about 3 a minute']],ok:['Fasting glucose: 70–99 mg/dL','The brain uses about 120 g of glucose a day']},
-  {lv:'Organelle',scale:'1 µm',kind:'mito',title:'Mitochondrion',text:'Food energy pumps protons across the inner membrane. They flow back through ATP synthase and turn it like a water wheel. Each turn makes 3 ATP.',act:'Thousands of power plants in each cell, turning with ease.',hz:[['ATP synthase turns',100,'up to about 100 a second']],ok:['Hundreds to thousands per cell']},
-  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'glucose',focus:'O',title:'Glucose',text:'A ring of 6 carbon atoms. Its bonds hold the energy from food.',act:'Clean fuel, ready to burn.',hz:[['O–H bond vibration',1.0e14,'']],ok:['Fasting glucose: 70–99 mg/dL']},
-  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'atp',focus:'P',title:'ATP',text:'The energy from glucose is stored in ATP. Every cell uses it.',act:'Energy in every cell.',hz:[['P–O bond vibration',3.5e13,'']],ok:['About your body weight of ATP is made each day']},
-  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'glucose',focus:'C',title:'Carbon, the frame of life',text:'Carbon makes 4 bonds, so it builds the rings and chains of every living molecule.',act:'You are built from light-weight atoms in perfect order.',hz:[['O–H bond vibration',1.0e14,'']],ok:['Each dot is a place an electron can be']}]}];
+  {lv:'Body',scale:'1.7 m',kind:'body',title:'Food to energy',adv:'Insulin (from pancreatic β cells) moves glucose into muscle and fat by GLUT4; glucagon raises blood glucose. The brain uses mostly glucose (about 120 g/day) and ketones in fasting. Normal fasting glucose 70–99 mg/dL (3.9–5.5 mmol/L).',text:'The gut takes in glucose. The blood carries it to the muscles and the brain, where it becomes energy.',act:'Feel steady energy flowing to every muscle and to the brain.',hz:[['Stomach waves',0.05,'about 3 a minute']],ok:['Fasting glucose: 70–99 mg/dL','The brain uses about 120 g of glucose a day']},
+  {lv:'Organelle',scale:'1 µm',kind:'mito',title:'Mitochondrion',adv:'Electron transport chain (complexes I–IV) pumps protons into the intermembrane space; the proton-motive force is about 150–200 mV. ATP synthase (Complex V): the human c-ring has 8 subunits, so about 2.7 H⁺ per ATP. Mitochondria have their own circular DNA (16.6 kb), inherited from the mother.',text:'Food energy pumps protons across the inner membrane. They flow back through ATP synthase and turn it like a water wheel. Each turn makes 3 ATP.',act:'Thousands of power plants in each cell, turning with ease.',hz:[['ATP synthase turns',100,'up to about 100 a second']],ok:['Hundreds to thousands per cell']},
+  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'glucose',focus:'O',title:'Glucose',adv:'β-D-glucopyranose in the chair form. Glycolysis gives 2 ATP (net) and 2 pyruvate; full aerobic oxidation gives about 30–32 ATP per glucose.',text:'A ring of 6 carbon atoms. Its bonds hold the energy from food.',act:'Clean fuel, ready to burn.',hz:[['O–H bond vibration',1.0e14,'']],ok:['Fasting glucose: 70–99 mg/dL']},
+  {lv:'Molecule',scale:'1 nm',kind:'mol',mol:'atp',focus:'P',title:'ATP',adv:'Adenine + ribose + 3 phosphates (α, β, γ). The terminal (γ) phosphate is transferred in kinase reactions and hydrolysed by ATPases such as myosin and the Na⁺/K⁺ pump.',text:'The energy from glucose is stored in ATP. Every cell uses it.',act:'Energy in every cell.',hz:[['P–O bond vibration',3.5e13,'']],ok:['About your body weight of ATP is made each day']},
+  {lv:'Atom',scale:'0.1 nm',kind:'quantum',mol:'glucose',focus:'C',title:'Carbon, the frame of life',adv:'Carbon is tetravalent (sp³, sp² or sp hybrids), so it makes stable chains, rings and double bonds. Each dot is one sample of the electron probability density.',text:'Carbon makes 4 bonds, so it builds the rings and chains of every living molecule.',act:'You are built from light-weight atoms in perfect order.',hz:[['O–H bond vibration',1.0e14,'']],ok:['Each dot is a place an electron can be']}]}];
 const BODY_OPT=['Body temperature: 36.5–37.5 °C','Blood pH: 7.35–7.45','Heart at rest: 60–100 a minute','Breathing at rest: 12–20 a minute','Oxygen saturation: 95–100%','Fasting glucose: 70–99 mg/dL','Blood pressure: below 120/80 mmHg'];
 const BODY={sys:'all',view:'journey',hz:true,ok:true,act:true,breath:false,titles:true,cine:true,s:0,l:0,t0:0,hold:16,trans:null,tr:0,snap:null,lastS:-1};
 try{Object.assign(BODY,JSON.parse(localStorage.getItem('fibwave.body')||'{}'),{trans:null,snap:null})}catch(_){}
-function bodySave(){try{const o={};['sys','view','hz','ok','act','breath','titles','cine'].forEach(k=>o[k]=BODY[k]);localStorage.setItem('fibwave.body',JSON.stringify(o))}catch(_){}}
+function bodySave(){try{const o={};['sys','view','hz','ok','act','breath','titles','cine','pat','detail'].forEach(k=>o[k]=BODY[k]);localStorage.setItem('fibwave.body',JSON.stringify(o))}catch(_){}}
 const fmtHz=hz=>{if(hz>=1e6){const e=Math.floor(Math.log10(hz)),m=hz/Math.pow(10,e);return m.toFixed(1)+'×10'+String(e).replace(/\d/g,d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d])+' Hz'}return (hz<1?hz.toFixed(2):hz<10?hz.toFixed(1):Math.round(hz))+' Hz'};
 // the shown rhythm: real if it can be seen (0.03–12 Hz), otherwise a slowed copy
 const showHz=hz=>hz>=0.03&&hz<=12?hz:hz>12&&hz<1000?2.5:0.7;
 function bodyPhase(hz){return st.t*showHz(hz)*TAU}
-// ---------- the body level ----------
+/* ---------- atlas style: textures, textbook labels, anatomical body ---------- */
+const ATL={};
+function atlNoise(){if(ATL.noise)return ATL.noise;const cv=labCan(256),g=cv.getContext('2d'),im=g.createImageData(256,256);
+  for(let i=0;i<256*256;i++){const x=i%256,y=(i/256)|0,v=128+60*(Math.sin(x*0.21+Math.sin(y*0.13)*2)*0.5+Math.sin(y*0.27+Math.sin(x*0.09)*3)*0.5)*0.5+40*(Math.random()-0.5);im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=v;im.data[i*4+3]=255}
+  g.putImageData(im,0,0);return ATL.noise=cv}
+// a soft organic texture over the last shape (call inside a clip)
+function atlTex(c,x,y,w,h,al){const p=c.createPattern(atlNoise(),'repeat');c.save();c.globalAlpha=al;c.globalCompositeOperation='overlay';c.fillStyle=p;c.fillRect(x,y,w,h);c.restore()}
+// a shaded organ: base fill, a light from the upper left, darker edge, texture
+function atlFill(c,path,rgb,al,bx){const [x,y,w,h]=bx;const g=c.createRadialGradient(x+w*0.35,y+h*0.3,Math.min(w,h)*0.05,x+w*0.5,y+h*0.5,Math.max(w,h)*0.75);
+  g.addColorStop(0,'rgba('+rgb.map(v=>Math.min(255,v+70)|0).join(',')+','+al+')');g.addColorStop(0.55,'rgba('+rgb.join(',')+','+al+')');g.addColorStop(1,'rgba('+rgb.map(v=>v*0.35|0).join(',')+','+al+')');
+  c.fillStyle=g;c.fill(path);c.save();c.clip(path);atlTex(c,x,y,w,h,0.35*al);c.restore();c.strokeStyle='rgba('+rgb.map(v=>v*0.4|0).join(',')+','+(al*0.9)+')';c.stroke(path)}
+// textbook labels: a dot, a thin leader line and the name, collected and drawn last
+const ATL_L=[];function atlLabel(ax,ay,lx,ly,text){ATL_L.push([ax,ay,lx,ly,text])}
+function atlDrawLabels(c,col){if(!ATL_L.length)return;const M=Math.min(W,H);c.save();c.globalCompositeOperation='source-over';c.font=(M*0.0165|0)+'px "Chakra Petch",system-ui,sans-serif';c.textBaseline='middle';
+  for(let [ax,ay,lx,ly,t] of ATL_L){const right=lx>=ax,tw=c.measureText(t).width+M*0.03;if(right&&lx+tw>W*0.985)lx=W*0.985-tw;if(!right&&lx-tw<W*0.36)lx=W*0.36+tw;c.strokeStyle='rgba(240,236,224,0.6)';c.lineWidth=Math.max(1,M*0.0012);c.beginPath();c.moveTo(ax,ay);c.lineTo(lx,ly);c.lineTo(lx+(right?M*0.02:-M*0.02),ly);c.stroke();
+    c.fillStyle='rgba(255,255,255,0.95)';c.beginPath();c.arc(ax,ay,Math.max(1.5,M*0.0028),0,TAU);c.fill();
+    c.shadowColor='rgba(0,0,0,0.9)';c.shadowBlur=M*0.008;c.fillStyle='rgba(250,246,236,0.95)';c.textAlign=right?'left':'right';c.fillText(t,lx+(right?M*0.026:-M*0.026),ly);c.shadowBlur=0}
+  ATL_L.length=0;c.restore()}
+const AP={
+  rLung:'M -6 118 C -16 112 -30 116 -36 132 C -42 150 -42 175 -38 192 C -30 197 -14 195 -6 187 C -8 160 -8 136 -6 118 Z',
+  lLung:'M 6 118 C 16 112 30 116 36 132 C 42 150 42 175 38 192 C 30 197 18 197 12 191 C 18 181 20 169 14 161 C 8 151 8 136 6 118 Z',
+  heart:'M -7 152 C -9 141 1 138 7 144 C 13 137 26 141 24 154 C 24 166 15 178 12 186 C 4 178 -7 168 -7 152 Z',
+  liver:'M -39 196 C -41 214 -31 223 -14 221 C 2 219 17 209 27 201 C 31 197 27 192 18 194 C 4 197 -20 190 -39 196 Z',
+  stomach:'M 13 197 C 26 191 35 200 33 214 C 31 227 20 233 9 229 C 4 226 7 219 13 219 C 21 217 23 210 17 204 Z',
+  kidneyR:'M -18 222 C -26 222 -27 234 -25 242 C -23 248 -14 248 -12 242 C -14 238 -15 232 -12 228 C -12 224 -14 222 -18 222 Z',
+  kidneyL:'M 18 220 C 26 220 27 232 25 240 C 23 246 14 246 12 240 C 14 236 15 230 12 226 C 12 222 14 220 18 220 Z',
+  colon:'M -22 292 L -25 254 Q -25 245 -17 245 L 17 245 Q 25 245 25 253 L 25 282 Q 25 292 13 296 L 3 302',
+  brain:'M -17 54 C -18 40 -8 34 0 35 C 8 34 18 40 17 54 C 17 62 10 66 0 66 C -10 66 -17 62 -17 54 Z',
+  pec:'M 2 118 C 14 115 34 118 46 126 C 41 140 30 151 14 151 C 6 149 2 138 2 118 Z',
+  delt:'M 40 113 C 52 115 57 126 56 140 C 53 150 49 155 46 157 C 44 141 42 126 40 113 Z',
+  obl:'M 14 152 C 30 161 36 200 34 230 C 31 260 24 280 15 286 C 14 240 14 200 14 152 Z',
+  quad:'M 8 318 C 24 300 40 301 42 320 C 40 360 34 390 30 408 C 22 410 14 404 12 390 C 8 360 6 340 8 318 Z',
+  calf:'M 16 420 C 26 418 32 430 31 450 C 30 468 26 478 22 480 C 18 470 16 446 16 420 Z',
+  bicep:'M 51 136 C 60 140 64 160 62 188 C 61 200 58 208 56 212 C 52 196 50 170 51 136 Z',
+  fore:'M 55 218 C 63 222 66 240 64 266 C 63 280 61 288 60 292 C 56 270 54 240 55 218 Z'};
+const AP2={};function ap(k){return AP2[k]||(AP2[k]=new Path2D(AP[k]))}
+const atlBeat=t=>{const p=(t*1.1)%1;return Math.exp(-Math.pow((p-0.08)/0.05,2))+0.6*Math.exp(-Math.pow((p-0.3)/0.05,2))};   // lub-dub
 function bodyDraw(c,box,sysK,a){
-  const sc=box.h*0.9/470,ox=box.x+box.w*0.6,oy=box.y+box.h*0.5-272*sc;c.save();c.translate(ox,oy);c.scale(sc,sc);const lw=1/sc;
-  const hb=0.5+0.5*Math.sin(st.t*1.1*TAU),br=0.5+0.5*Math.sin(st.t*0.25*TAU-1.5);
-  // glass body
-  const g=c.createLinearGradient(-60,40,60,500);g.addColorStop(0,'rgba(120,160,200,0.16)');g.addColorStop(1,'rgba(60,80,120,0.08)');
-  c.fillStyle=g;c.strokeStyle='rgba(170,210,255,0.45)';c.lineWidth=1.2*lw;
-  for(const k of ['armL','armR','trunk']){c.fill(bp(k));c.stroke(bp(k))}
-  c.beginPath();c.ellipse(0,62,20,25,0,0,TAU);c.fill();c.stroke();
-  const on=k=>sysK==='all'||sysK===k,dim=k=>sysK==='all'?(BODY.hl===k?1:0.45):1;
-  const glow=(x,y,r,rgb,al)=>{softDot(c,x,y,r,'rgba('+rgb.join(',')+','+al.toFixed(3)+')')};
-  const flow=(pts,rgb,speed,n,size,al)=>{let L=0;const seg=[];for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(d);L+=d}
-    c.strokeStyle='rgba('+rgb.join(',')+','+(al*0.35).toFixed(3)+')';c.lineWidth=1.4*lw;c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.stroke();
-    c.fillStyle='rgba('+rgb.join(',')+','+al.toFixed(3)+')';for(let j=0;j<n;j++){let d=((st.t*speed+j*L/n)%L+L)%L,i=0;while(i<seg.length-1&&d>seg[i]){d-=seg[i];i++}const f=d/(seg[i]||1),x=pts[i][0]+(pts[i+1][0]-pts[i][0])*f,y=pts[i][1]+(pts[i+1][1]-pts[i][1])*f;c.beginPath();c.arc(x,y,size,0,TAU);c.fill()}};
-  c.globalCompositeOperation='lighter';
-  if(on('move')){const k=dim('move');c.strokeStyle='rgba(235,225,200,'+(0.55*k).toFixed(3)+')';c.lineWidth=3;c.lineCap='round';
-    for(const s of [-1,1]){[[s*50,124,s*58,212],[s*58,216,s*60,292],[s*20,306,s*20,402],[s*19,414,s*20,492],[s*6,114,s*44,116]].forEach(l=>{c.beginPath();c.moveTo(l[0],l[1]);c.lineTo(l[2],l[3]);c.stroke()})}
-    c.beginPath();c.moveTo(0,84);c.lineTo(0,292);c.stroke();
-    const st2=0.5+0.5*Math.sin(st.t*1.8*TAU/2);for(const s of [-1,1]){glow(s*57,172,22,[255,110,80],(0.25+0.3*st2)*k);glow(s*24,352,34,[255,110,80],(0.2+0.3*(s>0?st2:1-st2))*k);glow(s*20,134,24,[255,110,80],0.18*k);glow(s*21,448,22,[255,110,80],(0.15+0.25*(s>0?1-st2:st2))*k)}}
-  if(on('breathe')){const k=dim('breathe'),sL=1+0.08*br;
-    for(const [x,y,rx,ry] of [[-18,152,16,32],[19,154,14,30]]){c.fillStyle='rgba(255,140,150,'+(0.22*k).toFixed(3)+')';c.beginPath();c.ellipse(x,y,rx*sL,ry*sL,0,0,TAU);c.fill();glow(x,y,ry*1.2*sL,[255,120,130],0.12*k)}
-    glow(6,150,10+8*hb,[255,60,70],(0.4+0.4*hb)*k);
-    flow([[6,150],[2,110],[0,80],[0,60]],[255,70,70],40,3,1.6,0.8*k);flow([[6,150],[2,200],[2,290],[18,330],[20,420],[20,490]],[255,70,70],70,7,1.6,0.8*k);flow([[6,150],[-40,130],[-56,210],[-60,300]],[255,70,70],60,5,1.6,0.8*k);flow([[-20,490],[-20,400],[-16,320],[-2,290],[-2,170],[4,152]],[90,110,255],60,7,1.6,0.7*k)}
-  if(on('signal')){const k=dim('signal');glow(0,56,26,[170,140,255],0.35*k);c.fillStyle='rgba(190,170,255,'+(0.3*k).toFixed(3)+')';c.beginPath();c.ellipse(0,54,15,13,0,0,TAU);c.fill();
-    const ab=0.5+0.5*Math.sin(st.t*TAU*1.2);glow(0,54,18,[220,200,255],0.25*ab*k);
-    flow([[0,66],[0,292]],[200,180,255],120,4,1.6,0.9*k);for(const s of [-1,1]){flow([[0,118],[s*48,128],[s*56,210],[s*60,300]],[200,180,255],110,3,1.4,0.9*k);flow([[0,290],[s*16,312],[s*22,405],[s*22,492]],[200,180,255],110,3,1.4,0.9*k)}}
-  if(on('clean')){const k=dim('clean'),p=0.5+0.5*Math.sin(st.t*1.1*TAU);c.fillStyle='rgba(120,60,50,'+(0.7*k).toFixed(3)+')';c.fill(bp('liver'));glow(-12,196,30,[90,220,200],(0.18+0.1*p)*k);
-    for(const s of [-1,1]){c.fillStyle='rgba(160,82,45,'+(0.7*k).toFixed(3)+')';c.beginPath();c.ellipse(s*16,232,7,12,0,0,TAU);c.fill();glow(s*16,232,16,[90,220,200],(0.2+0.15*p)*k)}
-    glow(34,194,10,[150,90,140],0.4*k);for(const [x,y] of [[-9,98],[9,98],[-42,134],[42,134],[-18,300],[18,300]])glow(x,y,6+2*p,[90,230,140],0.7*k);
-    flow([[2,200],[-12,196],[-16,232],[-16,262]],[90,220,200],30,4,1.4,0.8*k);flow([[2,210],[16,232],[16,262]],[90,220,200],30,3,1.4,0.8*k)}
-  if(on('fuel')){const k=dim('fuel'),w=0.5+0.5*Math.sin(st.t*0.05*TAU*6);c.fillStyle='rgba(217,160,102,'+(0.35*k).toFixed(3)+')';c.beginPath();c.roundRect(-27,216,54,52,16);c.fill();glow(22,200,14,[255,214,90],(0.2+0.2*w)*k);
-    flow([[0,240],[2,180],[0,100],[0,60]],[255,214,90],50,4,1.7,0.9*k);for(const s of [-1,1]){flow([[0,240],[s*18,320],[s*24,360],[s*22,440]],[255,214,90],50,4,1.7,0.9*k);flow([[0,200],[s*46,128],[s*57,172]],[255,214,90],40,3,1.7,0.9*k)}}
-  c.restore();c.globalCompositeOperation='source-over'}
+  const sc=box.h*0.9/470,ox=box.x+box.w*0.5,oy=box.y+box.h*0.5-272*sc;const T=(x,y)=>[ox+x*sc,oy+y*sc];
+  c.save();c.translate(ox,oy);c.scale(sc,sc);const lw=1/sc;c.lineJoin='round';c.lineCap='round';
+  const beat=atlBeat(st.t),br=0.5+0.5*Math.sin(st.t*0.25*TAU-1.5),on=k=>sysK==='all'||sysK===k,al=k=>sysK==='all'?(BODY.hl===k?1:0.55):1;
+  const lab=(k,ax,ay,lx,ly,t)=>{if(sysK===k||(sysK==='all'&&BODY.hl===k)){const A1=T(ax,ay),B1=T(lx,ly);atlLabel(A1[0],A1[1],B1[0],B1[1],t)}};
+  // skin
+  const sk=c.createLinearGradient(-60,0,60,0);sk.addColorStop(0,'rgba(120,150,190,0.10)');sk.addColorStop(0.5,'rgba(160,190,225,0.16)');sk.addColorStop(1,'rgba(120,150,190,0.10)');
+  c.fillStyle=sk;c.strokeStyle='rgba(180,215,255,0.5)';c.lineWidth=1.1*lw;for(const k of ['armL','armR','trunk']){c.fill(bp(k));c.stroke(bp(k))}c.beginPath();c.ellipse(0,62,20,25,0,0,TAU);c.fill();c.stroke();
+  // ---- skeleton ----
+  {const k=on('move')?al('move'):0.22,bone='rgba(236,226,200,'+(0.85*k).toFixed(3)+')',edge='rgba(150,135,105,'+(0.9*k).toFixed(3)+')';c.fillStyle=bone;c.strokeStyle=edge;c.lineWidth=0.6*lw;
+    c.beginPath();c.ellipse(0,55,15,18,0,0,TAU);c.fill();c.stroke();c.beginPath();c.moveTo(-10,66);c.quadraticCurveTo(0,82,10,66);c.lineTo(8,70);c.quadraticCurveTo(0,80,-8,70);c.closePath();c.fill();c.stroke();
+    c.fillStyle='rgba(30,25,20,'+(0.6*k)+')';c.beginPath();c.ellipse(-6,56,4,3.5,0,0,TAU);c.ellipse(6,56,4,3.5,0,0,TAU);c.fill();c.fillStyle=bone;
+    for(let i=0;i<28;i++){const y=84+i*7.5,w=i<7?3:i<19?3.6:4.6;c.beginPath();c.roundRect(-w,y,w*2,5.6,1.5);c.fill();c.stroke()}
+    c.beginPath();c.moveTo(-6,294);c.lineTo(6,294);c.lineTo(0,312);c.closePath();c.fill();c.stroke();
+    c.beginPath();c.roundRect(-3,118,6,46,2);c.fill();c.stroke();
+    c.lineWidth=2.2;c.strokeStyle=bone;for(let i=0;i<10;i++){const y=114+i*8.4,wd=24+Math.sin(i/9*Math.PI)*14;for(const s of [-1,1]){c.beginPath();c.moveTo(s*3,y);c.bezierCurveTo(s*wd*0.8,y-4,s*wd,y+6,s*wd*0.95,y+12);c.bezierCurveTo(s*wd*0.8,y+18,s*8,y+16,s*3,y+(i<7?14:20));c.stroke()}}
+    c.lineWidth=0.6*lw;c.strokeStyle=edge;
+    for(const s of [-1,1]){c.save();c.scale(s,1);c.fillStyle=bone;
+      c.beginPath();c.moveTo(4,110);c.quadraticCurveTo(24,104,44,114);c.lineTo(44,117);c.quadraticCurveTo(24,108,4,113);c.closePath();c.fill();c.stroke();
+      c.beginPath();c.moveTo(4,282);c.bezierCurveTo(16,262,40,262,42,284);c.bezierCurveTo(40,300,26,300,18,304);c.lineTo(6,312);c.lineTo(4,296);c.closePath();c.fill();c.stroke();
+      const lim=[[50,122,57,212,3.4],[56,216,57,292,2],[60,216,61,292,2],[20,302,21,404,4.4],[18,414,19,492,3.4],[23,416,24,490,1.6]];
+      for(const [x0,y0,x1,y1,w] of lim){c.lineWidth=w*2;c.strokeStyle=bone;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();c.lineWidth=0.5*lw;c.strokeStyle=edge;c.stroke()}
+      c.beginPath();c.arc(21,409,4.5,0,TAU);c.fill();c.stroke();c.beginPath();c.arc(50,121,5,0,TAU);c.fill();c.stroke();c.beginPath();c.arc(20,302,5,0,TAU);c.fill();c.stroke();c.restore()}
+    lab('move',0,50,-58,40,'Skull');lab('move',-24,113,-78,100,'Clavicle');lab('move',30,150,80,138,'Ribs');lab('move',0,250,-70,250,'Spine (vertebrae)');lab('move',-30,284,-78,290,'Pelvis');lab('move',-20,350,-70,360,'Femur');lab('move',53,170,86,190,'Humerus')}
+  // ---- muscles ----
+  if(on('move')){const k=al('move'),con=0.5+0.5*Math.sin(st.t*0.9*TAU/2);
+    for(const s of [-1,1]){c.save();c.scale(s,1);
+      for(const [m,ang,amp] of [['pec',0.3,0],['delt',1.4,0],['obl',1.2,0],['quad',1.5,s>0?con:1-con],['calf',1.6,s>0?1-con:con],['bicep',1.5,con],['fore',1.5,0]]){const P=ap(m);
+        const g=c.createLinearGradient(-40,100,40,400);g.addColorStop(0,'rgba('+(190+40*amp|0)+',60,60,'+(0.55*k).toFixed(3)+')');g.addColorStop(1,'rgba(140,35,40,'+(0.55*k).toFixed(3)+')');c.fillStyle=g;c.fill(P);
+        c.save();c.clip(P);c.strokeStyle='rgba(255,180,170,'+(0.25*k).toFixed(3)+')';c.lineWidth=0.35;const cs=Math.cos(ang),sn=Math.sin(ang);for(let i=-80;i<80;i+=2.2){c.beginPath();c.moveTo(-200*cs-i*sn+30,-200*sn+i*cs+250);c.lineTo(200*cs-i*sn+30,200*sn+i*cs+250);c.stroke()}c.restore();
+        c.strokeStyle='rgba(90,20,25,'+(0.7*k).toFixed(3)+')';c.lineWidth=0.5*lw;c.stroke(P)}
+      c.restore()}
+    c.fillStyle='rgba(185,60,60,'+(0.5*k).toFixed(3)+')';c.beginPath();c.roundRect(-12,152,24,134,6);c.fill();c.strokeStyle='rgba(240,220,200,'+(0.6*k).toFixed(3)+')';c.lineWidth=0.8;for(const y of [176,200,224]){c.beginPath();c.moveTo(-12,y);c.lineTo(12,y);c.stroke()}c.beginPath();c.moveTo(0,152);c.lineTo(0,286);c.stroke();
+    lab('move',20,134,74,124,'Pectoralis major');lab('move',-48,134,-82,150,'Deltoid');lab('move',-57,172,-84,198,'Biceps');lab('move',0,210,-60,214,'Rectus abdominis');lab('move',24,350,74,334,'Quadriceps');lab('move',-24,448,-66,446,'Calf (gastrocnemius)')}
+  // ---- breathing and blood ----
+  if(on('breathe')){const k=al('breathe'),sL=1+0.06*br,dia=br*6;
+    c.save();c.translate(0,118);c.scale(1,sL);c.translate(0,-118);for(const L of ['rLung','lLung'])atlFill(c,ap(L),[230,130,140],(0.8*k).toFixed(3),[-42,112,84,86]);
+    c.strokeStyle='rgba(120,40,50,'+(0.7*k)+')';c.lineWidth=0.6*lw;c.beginPath();c.moveTo(-37,156);c.lineTo(-8,152);c.moveTo(-10,130);c.lineTo(-38,182);c.moveTo(10,128);c.lineTo(38,178);c.stroke();c.restore();
+    c.strokeStyle='rgba(235,225,215,'+(0.9*k)+')';const tree=(x,y,an,len,d)=>{if(d>5)return;const x2=x+Math.sin(an)*len,y2=y+Math.cos(an)*len;c.lineWidth=Math.max(0.4,3-d*0.5);c.beginPath();c.moveTo(x,y);c.lineTo(x2,y2);c.stroke();tree(x2,y2,an-0.45,len*0.72,d+1);tree(x2,y2,an+0.4,len*0.72,d+1)};
+    c.lineWidth=3;c.beginPath();c.moveTo(0,92);c.lineTo(0,126);c.stroke();for(let i=0;i<8;i++){c.lineWidth=0.4;c.beginPath();c.moveTo(-2.5,94+i*4);c.lineTo(2.5,94+i*4);c.stroke()}tree(0,126,-0.7,10,1);tree(0,126,0.75,10,1);
+    c.save();c.translate(7,162);const hs=1+0.06*beat;c.scale(hs,hs);c.translate(-7,-162);atlFill(c,ap('heart'),[200,40,50],(0.95*k).toFixed(3),[-8,138,34,48]);c.restore();
+    c.lineWidth=4;c.strokeStyle='rgba(215,45,55,'+(0.9*k)+')';c.beginPath();c.moveTo(3,146);c.bezierCurveTo(0,130,5,122,11,125);c.bezierCurveTo(17,128,14,137,10,144);c.lineTo(6,200);c.lineTo(3,288);c.stroke();
+    c.lineWidth=2;for(const [x0,y0,x1,y1] of [[5,125,-6,102],[9,124,5,96],[13,126,30,112]]){c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke()}
+    c.beginPath();c.moveTo(3,288);c.lineTo(18,320);c.lineTo(20,410);c.moveTo(3,288);c.lineTo(-18,320);c.lineTo(-20,410);c.moveTo(-6,102);c.lineTo(-30,112);c.lineTo(-48,126);c.lineTo(-57,210);c.moveTo(30,112);c.lineTo(48,126);c.lineTo(57,210);c.moveTo(5,96);c.lineTo(4,70);c.moveTo(-6,102);c.lineTo(-5,70);c.stroke();
+    c.lineWidth=3.6;c.strokeStyle='rgba(70,90,200,'+(0.85*k)+')';c.beginPath();c.moveTo(-6,104);c.lineTo(-6,148);c.moveTo(-4,170);c.lineTo(-3,288);c.lineTo(-16,320);c.lineTo(-18,410);c.moveTo(-3,288);c.lineTo(16,320);c.lineTo(18,410);c.stroke();
+    c.fillStyle='rgba(255,90,90,'+(0.9*k)+')';for(let j=0;j<20;j++){const u=(st.t*0.12*(1+beat*0.4)+j/20)%1;const y=130+u*160;c.beginPath();c.arc(6-u*3,y,1.1,0,TAU);c.fill()}
+    c.strokeStyle='rgba(230,170,160,'+(0.8*k)+')';c.lineWidth=1.5;c.beginPath();c.moveTo(-38,194+dia);c.quadraticCurveTo(-20,180+dia,0,188+dia);c.quadraticCurveTo(20,180+dia,38,194+dia);c.stroke();
+    lab('breathe',0,104,-62,92,'Trachea');lab('breathe',-28,150,-78,150,'Right lung (3 lobes)');lab('breathe',30,150,80,140,'Left lung (2 lobes)');lab('breathe',10,165,74,176,'Heart');lab('breathe',10,126,62,112,'Aorta');lab('breathe',-6,130,-66,122,'Vena cava');lab('breathe',-24,190+dia,-74,200,'Diaphragm')}
+  // ---- nerves ----
+  if(on('signal')){const k=al('signal');atlFill(c,ap('brain'),[225,175,185],(0.9*k).toFixed(3),[-18,34,36,33]);
+    c.save();c.clip(ap('brain'));c.strokeStyle='rgba(150,80,100,'+(0.7*k)+')';c.lineWidth=0.5;for(let i=0;i<34;i++){c.beginPath();let x=-18+hh(i)*36,y=34+hh(i*3)*32;c.moveTo(x,y);for(let j=0;j<6;j++){x+=(hh(i*7+j)-0.5)*9;y+=(hh(i*5+j)-0.5)*9;c.lineTo(x,y)}c.stroke()}c.restore();
+    c.strokeStyle='rgba(120,60,80,'+(0.8*k)+')';c.lineWidth=0.8;c.beginPath();c.moveTo(0,35);c.lineTo(0,66);c.stroke();
+    c.strokeStyle='rgba(250,230,140,'+(0.85*k)+')';c.lineWidth=2.2;c.beginPath();c.moveTo(0,66);c.lineTo(0,290);c.stroke();c.lineWidth=1;
+    for(const s of [-1,1]){c.beginPath();c.moveTo(0,112);c.lineTo(s*40,122);c.lineTo(s*50,130);c.lineTo(s*56,212);c.lineTo(s*60,300);c.moveTo(0,288);c.lineTo(s*14,310);c.lineTo(s*20,405);c.lineTo(s*21,492);for(let i=0;i<9;i++){c.moveTo(0,124+i*8.4);c.lineTo(s*26,130+i*8.4)}c.stroke()}
+    c.fillStyle='rgba(255,250,200,'+(0.95*k)+')';for(let j=0;j<10;j++){const u=(st.t*0.5+j/10)%1;c.beginPath();c.arc(0,66+u*224,1.4,0,TAU);c.fill();for(const s of [-1,1]){const v=(st.t*0.5+j/10+0.3)%1;c.beginPath();c.arc(s*(14+v*6),310+v*95,1.2,0,TAU);c.fill()}}
+    lab('signal',-10,46,-62,40,'Brain (cerebrum)');lab('signal',0,180,-62,176,'Spinal cord');lab('signal',-48,128,-86,118,'Brachial plexus');lab('signal',20,370,66,372,'Sciatic nerve');lab('signal',-20,160,-74,150,'Intercostal nerves')}
+  // ---- the filters ----
+  if(on('clean')){const k=al('clean');atlFill(c,ap('liver'),[130,45,40],(0.95*k).toFixed(3),[-41,190,72,33]);c.fillStyle='rgba(70,140,60,'+(0.9*k)+')';c.beginPath();c.ellipse(-14,216,3.5,5.5,0.3,0,TAU);c.fill();
+    for(const K of ['kidneyR','kidneyL'])atlFill(c,ap(K),[150,70,50],(0.95*k).toFixed(3),[-27,220,54,30]);
+    c.strokeStyle='rgba(230,210,120,'+(0.8*k)+')';c.lineWidth=1.2;c.beginPath();c.moveTo(-13,242);c.quadraticCurveTo(-12,270,-5,294);c.moveTo(13,240);c.quadraticCurveTo(12,270,5,294);c.stroke();
+    c.fillStyle='rgba(230,200,110,'+(0.75*k)+')';c.beginPath();c.ellipse(0,298,9,7,0,0,TAU);c.fill();c.fillStyle='rgba(130,60,110,'+(0.9*k)+')';c.beginPath();c.ellipse(34,206,5,9,0.3,0,TAU);c.fill();
+    const p=atlBeat(st.t);for(const [x,y] of [[-9,98],[9,98],[-40,132],[40,132],[-16,300],[16,300],[-6,240],[6,236]]){c.fillStyle='rgba(110,230,140,'+((0.6+0.3*p)*k).toFixed(3)+')';c.beginPath();c.ellipse(x,y,2.4,1.7,0,0,TAU);c.fill()}
+    c.strokeStyle='rgba(110,230,140,'+(0.35*k)+')';c.lineWidth=0.6;c.beginPath();c.moveTo(-9,98);c.lineTo(-40,132);c.lineTo(-16,300);c.moveTo(9,98);c.lineTo(40,132);c.lineTo(16,300);c.stroke();
+    lab('clean',-24,204,-76,210,'Liver');lab('clean',-14,216,-70,228,'Gallbladder');lab('clean',-19,236,-72,246,'Right kidney');lab('clean',19,232,72,236,'Left kidney');lab('clean',34,206,74,200,'Spleen');lab('clean',0,298,-60,304,'Bladder');lab('clean',40,132,80,126,'Lymph nodes')}
+  // ---- digestion and fuel ----
+  if(on('fuel')){const k=al('fuel'),w=0.5+0.5*Math.sin(st.t*0.05*TAU*6);atlFill(c,ap('stomach'),[220,140,120],(0.9*k).toFixed(3),[6,190,30,44]);
+    c.strokeStyle='rgba(235,200,120,'+(0.85*k)+')';c.lineWidth=3;c.beginPath();c.moveTo(-6,224);c.bezierCurveTo(4,220,18,221,28,216);c.stroke();
+    c.lineWidth=6.5;c.strokeStyle='rgba(190,120,100,'+(0.85*k)+')';const col=new Path2D(AP.colon);c.stroke(col);c.lineWidth=0.6;c.setLineDash([1,3.5]);c.strokeStyle='rgba(90,40,30,'+(0.8*k)+')';c.lineDashOffset=-st.t*2;c.stroke(col);c.setLineDash([]);
+    c.lineWidth=3;c.strokeStyle='rgba(230,150,140,'+(0.85*k)+')';c.beginPath();let x=-14,y=252;c.moveTo(x,y);for(let i=0;i<40;i++){x=clamp(x+Math.sin(i*1.7)*9,-17,17);y=clamp(y+Math.cos(i*1.3)*7+0.8,251,291);c.lineTo(x,y)}c.stroke();
+    c.fillStyle='rgba(255,214,90,'+(0.95*k)+')';for(let j=0;j<16;j++){const u=(st.t*0.1+j/16)%1;c.beginPath();c.arc(Math.sin(u*20)*12,252+u*38,1.2,0,TAU);c.fill()}
+    lab('fuel',24,212,74,214,'Stomach');lab('fuel',10,222,70,230,'Pancreas');lab('fuel',0,270,-62,270,'Small intestine');lab('fuel',24,262,72,262,'Large intestine')}
+  c.restore();atlDrawLabels(c)}
+
 // ---------- tissue, cell and organelle levels (all drawn live, sizes from the box) ----------
 function lvAlveoli(c,b){const cx=b.x+b.w*0.58,cy=b.y+b.h*0.52,R=Math.min(b.w,b.h)*0.34,br=0.5+0.5*Math.sin(st.t*0.25*TAU-1.5),s=1+0.07*br;
   c.strokeStyle='rgba(255,190,200,0.35)';c.lineWidth=R*0.12;c.lineCap='round';c.beginPath();c.moveTo(b.x+b.w*0.05,b.y+b.h*0.1);c.quadraticCurveTo(cx-R*1.2,cy-R*1.2,cx-R*0.3,cy-R*0.2);c.stroke();
@@ -5946,11 +6030,13 @@ function lvRBC(c,b,a){const cy=b.y+b.h*0.55,top=cy-b.h*0.26,bot=cy+b.h*0.26,puls
   c.fillStyle=g;c.beginPath();c.arc(0,0,R,0,TAU);c.fill();c.globalCompositeOperation='lighter';
   for(let i=0;i<60;i++){const an=i*2.39996+st.t*0.1,rr=R*0.8*Math.sqrt((i+0.5)/60),px=Math.cos(an)*rr,py=Math.sin(an)*rr,o=0.5+0.5*Math.sin(st.t*1.1*TAU+i);
     for(let q=0;q<4;q++)softDot(c,px+Math.cos(q*1.57+i)*R*0.025,py+Math.sin(q*1.57+i)*R*0.025,R*0.03,'rgba(255,'+(120+80*o|0)+',120,0.35)')}c.restore();c.globalCompositeOperation='source-over'}
-function lvMuscle(c,b){const n=7,fh=b.h*0.09,x0=b.x+b.w*0.18,x1=b.x+b.w*0.98,con=0.5+0.5*Math.sin(st.t*TAU*0.5),sp=b.h*0.045*(1-0.14*con);
+function lvMuscle(c,b){const n=7,fh=b.h*0.09,x0=b.x+b.w*0.18,x1=b.x+b.w*0.98,con=0.5+0.5*Math.sin(st.t*TAU*0.5);
   for(let i=0;i<n;i++){const y=b.y+b.h*0.18+i*fh*1.15+Math.sin(i*1.7)*fh*0.1,g=c.createLinearGradient(0,y-fh/2,0,y+fh/2);g.addColorStop(0,'rgb(90,20,25)');g.addColorStop(0.35,'rgb(205,70,70)');g.addColorStop(0.65,'rgb(170,45,50)');g.addColorStop(1,'rgb(60,12,18)');
     c.fillStyle=g;c.beginPath();c.roundRect(x0,y-fh/2,x1-x0,fh,fh/2);c.fill();c.save();c.beginPath();c.roundRect(x0,y-fh/2,x1-x0,fh,fh/2);c.clip();
-    c.fillStyle='rgba(30,5,10,0.45)';const cx=(x0+x1)/2;for(let k=-40;k<=40;k++){const x=cx+k*sp;c.fillRect(x-sp*0.18,y-fh/2,sp*0.36,fh)}
-    c.fillStyle='rgba(255,200,190,0.18)';for(let k=-40;k<=40;k++){const x=cx+k*sp+sp*0.5;c.fillRect(x-sp*0.06,y-fh/2,sp*0.12,fh)}c.restore();
+    // sarcomeres: the A band (myosin) keeps its length; the I band and H zone shorten as the muscle contracts
+    const cx=(x0+x1)/2,L0=b.h*0.05,Ls=L0*(1-0.2*con),Ab=L0*0.64,Hz=Math.max(L0*0.03,L0*0.2-L0*0.17*con);
+    for(let k=-40;k<=40;k++){const xc=cx+k*Ls;if(xc<x0-Ls||xc>x1+Ls)continue;c.fillStyle='rgba(40,6,12,0.5)';c.fillRect(xc-Ab/2,y-fh/2,Ab,fh);c.fillStyle='rgba(255,190,180,0.16)';c.fillRect(xc-Hz/2,y-fh/2,Hz,fh);
+      c.fillStyle='rgba(30,4,8,0.7)';c.fillRect(xc-L0*0.012,y-fh/2,L0*0.024,fh);c.fillStyle='rgba(20,2,6,0.85)';c.fillRect(xc+Ls/2-L0*0.02,y-fh/2,L0*0.04,fh)}c.restore();
     c.fillStyle='rgba(120,140,255,0.55)';for(let k=0;k<3;k++){c.beginPath();c.ellipse(x0+(x1-x0)*hh(i*4+k),y-fh*0.32,fh*0.18,fh*0.09,0,0,TAU);c.fill()}}
   // the motor nerve, firing
   const nx=b.x+b.w*0.12,fire=(st.t*20)%1<0.25;c.strokeStyle='rgba(200,180,255,0.8)';c.lineWidth=Math.max(2,b.h*0.008);c.beginPath();c.moveTo(nx-b.w*0.1,b.y+b.h*0.08);c.quadraticCurveTo(nx,b.y+b.h*0.3,nx+b.w*0.03,b.y+b.h*0.52);c.stroke();
@@ -6005,33 +6091,127 @@ function lvMito(c,b){const cx=b.x+b.w*0.58,cy=b.y+b.h*0.52,L=b.w*0.36,Hh=b.h*0.2
     const u=((st.t*0.6+hh(i))%1);softDot(c,xx+s*r*(2.5-u*2),y,r*0.45,'rgba(140,220,255,'+(0.9*(1-u)).toFixed(3)+')');
     const v=((st.t*0.35+hh(i*3))%1);softDot(c,xx+s*r*(1+v*4),y+(hh(i)-0.5)*r*3*v,r*0.6,'rgba(255,214,90,'+(0.9*(1-v)).toFixed(3)+')')});
   c.globalCompositeOperation='source-over'}
-const BODY_LV={alveoli:lvAlveoli,rbc:lvRBC,muscle:lvMuscle,neuron:lvNeuron,synapse:lvSynapse,liver:lvLiver,glom:lvGlom,mito:lvMito};
+/* ---------- Muscle map: front and back, named muscles, activation patterns ---------- */
+// [name, x0,y0, x1,y1, width, group]  (body units, right side of the body; the left side is the mirror)
+const MUS_F=[['Sternocleidomastoid',5,72,13,112,3,'neck'],['Trapezius (upper)',9,90,36,112,4,'trapU'],['Deltoid (front)',42,114,54,150,7,'deltA'],
+ ['Pectoralis major (upper)',6,118,40,124,7,'pec'],['Pectoralis major (lower)',6,136,42,132,10,'pec'],['Serratus anterior',30,148,38,178,5,'serr'],
+ ['Rectus abdominis',6,152,6,284,9,'abs'],['External oblique',27,160,17,270,11,'obl'],['Biceps brachii',52,136,57,208,6,'bic'],['Brachialis',55,188,58,214,4,'brach'],
+ ['Brachioradialis',57,212,60,268,5,'brad'],['Forearm flexors',59,222,60,290,5,'flex'],['Tensor fasciae latae',38,288,36,330,5,'tfl'],['Sartorius',34,292,14,410,3,'sart'],
+ ['Rectus femoris',26,306,22,402,7,'quad'],['Vastus lateralis',37,320,31,402,7,'quad'],['Vastus medialis',13,356,18,404,7,'quad'],['Adductors',8,318,14,372,7,'add'],
+ ['Tibialis anterior',24,420,20,486,5,'tib'],['Gastrocnemius (inner)',14,426,16,470,4,'calf'],['Peroneus longus',27,424,25,480,3,'per']];
+const MUS_B=[['Trapezius (upper)',4,92,40,114,8,'trapU'],['Trapezius (middle)',2,130,36,122,11,'trapM'],['Trapezius (lower)',2,178,28,134,8,'trapM'],
+ ['Deltoid (back)',44,116,54,150,7,'deltP'],['Infraspinatus',16,136,38,140,8,'rot'],['Teres major',33,152,46,142,5,'lat'],['Latissimus dorsi',6,204,40,150,16,'lat'],
+ ['Erector spinae',6,168,6,286,5,'erec'],['Triceps brachii',52,130,57,208,7,'tri'],['Forearm extensors',59,216,61,290,5,'ext'],['Gluteus medius',30,282,36,300,9,'glut'],
+ ['Gluteus maximus',12,300,34,318,14,'glut'],['Biceps femoris',30,322,26,402,7,'ham'],['Semitendinosus',14,322,16,402,7,'ham'],['Gastrocnemius (outer)',28,420,26,470,6,'calf'],
+ ['Gastrocnemius (inner)',16,420,18,470,6,'calf'],['Soleus',22,452,22,484,6,'sol'],['Achilles tendon',21,484,21,500,1.5,'ach']];
+// activation of each group for each pattern: function of the phase (0-1) and the side (+1 right, -1 left)
+const MUS_PAT={
+ walk:{name:'Walking',hz:0.9,note:'about 1.8 steps a second',f:(g,ph,s)=>{const p=(ph+(s<0?0.5:0))%1,st2=p<0.6,early=p<0.2,push=p>0.4&&p<0.6,swing=p>=0.6,late=p>0.85;
+   return {quad:early?0.8:st2?0.3:0.1,glut:st2?0.6:0.1,ham:late||early?0.7:0.15,calf:push?0.95:0.1,sol:push?0.85:0.2,tib:swing||p<0.1?0.7:0.1,add:0.25,tfl:st2?0.4:0.1,erec:0.35,obl:0.3,abs:0.2,deltA:p>0.5?0.3:0.1,deltP:p<0.5?0.3:0.1,per:push?0.5:0.1,sart:swing?0.4:0.1}[g]||0.06}},
+ squat:{name:'Squat',hz:0.25,note:'one squat every 4 s',f:(g,ph)=>{const up=ph>0.5,depth=Math.sin(ph*Math.PI);return {quad:0.4+0.6*depth,glut:0.3+0.7*depth*(up?1:0.7),add:0.3+0.5*depth,ham:0.25+0.3*depth,erec:0.5+0.4*depth,abs:0.45,obl:0.45,calf:0.3,sol:0.35,tib:0.3,tfl:0.3}[g]||0.06}},
+ push:{name:'Push-up',hz:0.4,note:'one push-up every 2.5 s',f:(g,ph)=>{const e=Math.sin(ph*Math.PI);return {pec:0.4+0.6*e,deltA:0.35+0.6*e,tri:0.35+0.65*e,serr:0.3+0.5*e,abs:0.55,obl:0.5,quad:0.35,glut:0.3,erec:0.25,flex:0.3}[g]||0.06}},
+ pull:{name:'Pull (row / pull-up)',hz:0.35,note:'one pull every 3 s',f:(g,ph)=>{const e=Math.sin(ph*Math.PI);return {lat:0.4+0.6*e,bic:0.35+0.6*e,brach:0.35+0.55*e,brad:0.3+0.5*e,trapM:0.3+0.6*e,deltP:0.3+0.6*e,rot:0.3+0.4*e,flex:0.6,erec:0.4,abs:0.3}[g]||0.06}},
+ curl:{name:'Biceps curl',hz:0.4,note:'one curl every 2.5 s',f:(g,ph)=>{const e=Math.sin(ph*Math.PI);return {bic:0.3+0.7*e,brach:0.3+0.65*e,brad:0.25+0.55*e,flex:0.5,deltA:0.15,tri:0.15,trapU:0.2}[g]||0.05}},
+ plank:{name:'Plank',hz:0.1,note:'held · slow breathing (0.1 Hz)',f:g=>({abs:0.85,obl:0.8,serr:0.6,erec:0.45,glut:0.5,quad:0.45,deltA:0.55,pec:0.35,tri:0.35,tib:0.3,add:0.3}[g]||0.06)}};
+const MUS_ORDER=['walk','squat','push','pull','curl','plank'];
+function musPat(){if(BODY.pat&&BODY.pat!=='auto')return BODY.pat;return MUS_ORDER[Math.floor((BODY.rt||0)/16)%MUS_ORDER.length]}
+// one muscle: a spindle from origin to insertion, white tendons at both ends, fibers along its length, colour from rest to full activation
+function musDraw(c,x0,y0,x1,y1,w,act,lw){const dx=x1-x0,dy=y1-y0,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,nx=-uy,ny=ux,N=18,pts=[];
+  for(let i=0;i<=N;i++){const t=i/N,hw=w*0.5*Math.pow(Math.sin(Math.PI*clamp((t-0.06)/0.88,0,1)),0.75)+0.35;pts.push([x0+dx*t,y0+dy*t,hw])}
+  const P=new Path2D();pts.forEach(([x,y,h],i)=>i?P.lineTo(x+nx*h,y+ny*h):P.moveTo(x+nx*h,y+ny*h));for(let i=N;i>=0;i--){const [x,y,h]=pts[i];P.lineTo(x-nx*h,y-ny*h)}P.closePath();
+  const r=120+135*act,g=30+120*act*act,b=35+20*act;const gr=c.createLinearGradient(x0+nx*w*0.6,y0+ny*w*0.6,x0-nx*w*0.6,y0-ny*w*0.6);
+  gr.addColorStop(0,'rgb('+(r*0.45|0)+','+(g*0.45|0)+','+(b*0.5|0)+')');gr.addColorStop(0.4,'rgb('+(r|0)+','+(g|0)+','+(b|0)+')');gr.addColorStop(0.6,'rgb('+Math.min(255,r+30|0)+','+Math.min(255,g+30|0)+','+(b+20|0)+')');gr.addColorStop(1,'rgb('+(r*0.4|0)+','+(g*0.4|0)+','+(b*0.45|0)+')');
+  c.fillStyle=gr;c.fill(P);c.save();c.clip(P);c.strokeStyle='rgba(255,210,190,'+(0.18+0.25*act).toFixed(3)+')';c.lineWidth=0.3;
+  for(let k=-4;k<=4;k++){const o=k/4*w*0.45;c.beginPath();c.moveTo(x0+nx*o,y0+ny*o);c.quadraticCurveTo((x0+x1)/2+nx*o*1.3,(y0+y1)/2+ny*o*1.3,x1+nx*o,y1+ny*o);c.stroke()}
+  c.fillStyle='rgba(240,232,215,0.9)';for(const t of [0,1]){const cx=t?x1:x0,cy=t?y1:y0;c.beginPath();c.ellipse(cx-ux*(t?L*0.04:-L*0.04),cy-uy*(t?L*0.04:-L*0.04),Math.max(0.6,w*0.18),L*0.06,Math.atan2(uy,ux)+Math.PI/2,0,TAU);c.fill()}c.restore();
+  c.strokeStyle='rgba(60,10,15,0.85)';c.lineWidth=0.45*lw;c.stroke(P);return P}
+function lvMuscleMap(c,b){const pat=MUS_PAT[musPat()],ph=(st.t*pat.hz)%1,M=Math.min(W,H),sc=b.h*0.88/470,figs=[[b.x+b.w*0.3,MUS_F,'Front'],[b.x+b.w*0.76,MUS_B,'Back']],acts={};
+  BODY.mpLabel=pat.name;const T=(ox,oy,x,y)=>[ox+x*sc,oy+y*sc];
+  for(const [cx,list,view] of figs){const oy=b.y+b.h*0.52-272*sc;c.save();c.translate(cx,oy);c.scale(sc,sc);const lw=1/sc;
+    c.fillStyle='rgba(150,175,210,0.12)';c.strokeStyle='rgba(180,215,255,0.4)';c.lineWidth=lw;for(const k of ['armL','armR','trunk']){c.fill(bp(k));c.stroke(bp(k))}c.beginPath();c.ellipse(0,62,20,25,0,0,TAU);c.fill();c.stroke();
+    for(const s of [1,-1]){c.save();c.scale(-s,1);   // s=+1 is the body's right side (on the viewer's left in the front view)
+      for(const m of list){const side=view==='Front'?s:-s,base=pat.f(m[6],ph,side),fl=base>0.5?0.06*Math.sin(st.t*TAU*12+m[1]):0,act=clamp(base+fl,0,1);
+        musDraw(c,m[1],m[2],m[3],m[4],m[5]*1.75,act,lw);const key=m[0];if(!acts[key]||acts[key].a<base)acts[key]={a:base,x:(m[1]+m[3])/2*(-s),y:(m[2]+m[4])/2,cx,oy,view}}
+      c.restore()}
+    c.restore();c.save();c.font=(M*0.016|0)+'px "Chakra Petch",system-ui,sans-serif';c.fillStyle='rgba(236,230,214,0.7)';c.textAlign='center';c.fillText(view.toUpperCase(),cx,b.y+b.h*0.98);c.restore()}
+  // glow on the strongest muscles, labels for the top ones, and the activation list
+  const top=Object.entries(acts).sort((p,q)=>q[1].a-p[1].a).slice(0,7);c.save();c.globalCompositeOperation='lighter';
+  for(const [,v] of top){if(v.a<0.5)continue;const [x,y]=T(v.cx,v.oy,v.x,v.y);softDot(c,x,y,M*0.03*v.a,'rgba(255,170,80,'+(0.35*v.a).toFixed(3)+')')}c.restore();
+  {const sides={Front:[],Back:[]};top.slice(0,6).forEach(e=>sides[e[1].view].push(e));
+    for(const vw of ['Front','Back']){let last=-1e9;sides[vw].map(([n,v])=>{const [x,y]=T(v.cx,v.oy,v.x,v.y);return {n,x,y}}).sort((p,q)=>p.y-q.y).forEach(o=>{const ly=Math.max(o.y,last+M*0.04);last=ly;atlLabel(o.x,o.y,vw==='Back'?b.x+b.w*0.6:b.x+b.w*0.13,ly,o.n)})}}
+  atlDrawLabels(c);
+  BODY.mpTop=top;BODY.mpHz=[pat.name+' rhythm',pat.hz,pat.note]}
+
+// ---------- textbook labels for the tissue, cell and organelle levels (same geometry as the drawings) ----------
+function lvLabels(kind,b){const L=(ax,ay,lx,ly,t)=>atlLabel(ax,ay,lx,ly,t),med=BODY.detail!=='simple',m=Math.min(b.w,b.h);
+  if(kind==='alveoli'){const cx=b.x+b.w*0.58,cy=b.y+b.h*0.52,R=m*0.34;L(cx-R*1.05,cy-R*0.95,cx-R*1.7,cy-R*1.05,'Bronchiole');L(cx+R*0.2,cy-R*0.5,cx+R*1.45,cy-R*0.9,med?'Alveolus (type I pneumocytes)':'Air sac (alveolus)');
+    L(cx+R*0.72,cy+R*0.25,cx+R*1.45,cy+R*0.1,'Capillary with red blood cells');L(cx-R*0.3,cy+R*0.15,cx-R*1.7,cy+R*0.35,'O₂ moves into the blood');if(med)L(cx+R*0.1,cy+R*0.7,cx+R*1.45,cy+R*0.85,'Blood–air barrier: 0.5–1 µm')}
+  if(kind==='rbc'){const X=b.x+b.w*0.6,Y=b.y+b.h*0.55,R=b.h*0.22;L(X,Y-R*0.9,X+R*1.6,Y-R*1.1,'Red blood cell (7.5 µm)');L(X+R*0.3,Y+R*0.1,X+R*1.6,Y+R*0.4,med?'Hemoglobin (α₂β₂, 4 heme)':'Hemoglobin');
+    L(b.x+b.w*0.3,Y-b.h*0.26,b.x+b.w*0.24,Y-b.h*0.33,'Capillary wall');L(b.x+b.w*0.36,Y+b.h*0.05,b.x+b.w*0.3,Y+b.h*0.18,'Plasma')}
+  if(kind==='muscle'){const fh=b.h*0.09,y=b.y+b.h*0.18,cx=(b.x+b.w*0.18+b.x+b.w*0.98)/2,sp=b.h*0.045*(1-0.2*(0.5+0.5*Math.sin(st.t*TAU*0.5)));
+    L(cx,y-fh*0.5,cx-b.w*0.12,b.y+b.h*0.02,'Z line');L(cx+sp*0.5,y,cx+b.w*0.06,b.y+b.h*0.02,med?'A band (myosin, constant length)':'Dark band (myosin)');L(cx+sp*0.07,y+fh*1.15,cx+b.w*0.2,b.y+b.h*0.085,med?'I band (actin, shortens)':'Light band (actin)');
+    L(b.x+b.w*0.12+b.w*0.03,b.y+b.h*0.52,b.x+b.w*0.06,b.y+b.h*0.6,'Motor nerve');L(b.x+b.w*0.18+fh*0.3,y,b.x+b.w*0.06,b.y+b.h*0.12,'Neuromuscular junction');if(med)L(cx+sp,y+fh*1.15*6,cx+b.w*0.12,b.y+b.h*1.0,'Sarcomere = Z line to Z line (about 2.2 µm)')}
+  if(kind==='neuron'){const y=b.y+b.h*0.5,sx=b.x+b.w*0.16,ex=b.x+b.w*0.97,R=b.h*0.09,segW=(ex-sx-R*1.5)/7;L(sx-R*1.5,y-R*1.4,sx-R*1.8,y-R*3,'Dendrites');L(sx,y+R*0.7,sx-R*0.6,y+R*3,'Cell body (soma)');L(sx,y,sx+R*0.4,y-R*3.4,'Nucleus');
+    L(sx+R*1.5+segW*1.5,y-R*0.4,sx+R*1.5+segW*1.5,y-R*3,med?'Myelin (Schwann cell)':'Myelin sheath');L(sx+R*1.5+segW*3,y,sx+R*1.5+segW*3,y+R*3,'Node of Ranvier');L(ex-R,y,ex-R,y-R*3,'Axon')}
+  if(kind==='synapse'){const cx=b.x+b.w*0.58,ty=b.y+b.h*0.42,R=b.h*0.25,my=ty+R*1.15;L(cx-R*0.9,ty-R*0.2,cx-R*2.2,ty-R*0.6,'Axon terminal');L(cx,ty-R*0.1,cx+R*2,ty-R*0.6,med?'Synaptic vesicles (ACh)':'Vesicles with acetylcholine');
+    L(cx+R*1.2,ty+R*1.08,cx+R*2,ty+R*0.6,med?'Synaptic cleft (about 50 nm)':'Gap (synaptic cleft)');L(cx-R*0.7,my-R*0.02,cx-R*2.2,my+R*0.4,med?'Nicotinic ACh receptors':'Receptors');L(cx+R*1.6,my+R*0.4,cx+R*2,my+R*0.9,med?'Muscle end plate (junctional folds)':'Muscle fiber')}
+  if(kind==='liver'){const cx=b.x+b.w*0.58,cy=b.y+b.h*0.52,R=m*0.4,hx=i=>[cx+Math.cos(i*Math.PI/3+Math.PI/6)*R,cy+Math.sin(i*Math.PI/3+Math.PI/6)*R];L(cx,cy,cx-R*1.6,cy-R*0.2,'Central vein');const [x0,y0]=hx(0);
+    L(x0,y0,x0+R*0.5,y0+R*0.3,med?'Portal triad: artery, portal vein, bile duct':'Portal triad');L(cx+R*0.5,cy-R*0.1,cx+R*1.3,cy-R*1.05,med?'Hepatocyte plates (zone 1 → 3)':'Liver cells');L(cx-R*0.35,cy+R*0.35,cx-R*1.6,cy+R*0.6,med?'Sinusoid (Kupffer cells)':'Blood channel (sinusoid)')}
+  if(kind==='glom'){const cx=b.x+b.w*0.55,cy=b.y+b.h*0.48,R=m*0.3;L(cx-R*1.3,cy-R*1.0,cx-R*2.4,cy-R*0.7,'Afferent arteriole (in)');L(cx-R*0.9,cy-R*1.6,cx-R*2.4,cy-R*1.5,'Efferent arteriole (out)');L(cx+R*0.2,cy,cx+R*1.8,cy-R*0.8,med?'Glomerulus (capillary tuft)':'Filter (glomerulus)');
+    L(cx-R*0.9,cy+R*0.9,cx-R*2.4,cy+R*0.9,med?'Bowman\'s capsule':'Capsule');L(cx+R*2.2,cy+R*1.2,cx+R*2.3,cy+R*1.8,med?'Proximal tubule (filtrate)':'Filtered fluid')}
+  if(kind==='mito'){const cx=b.x+b.w*0.58,cy=b.y+b.h*0.52,Lx=b.w*0.36,Hh=b.h*0.26;L(cx-Lx*0.5,cy-Hh,cx-Lx*0.7,cy-Hh*1.6,'Outer membrane');L(cx-Lx*0.8+Lx*1.6/8*2,cy,cx-Lx*0.4,cy+Hh*1.6,med?'Inner membrane (cristae, ETC)':'Inner membrane (folds)');
+    L(cx+Lx*0.1,cy+Hh*0.6,cx+Lx*0.5,cy+Hh*1.6,'Matrix');L(cx-Lx*0.8+Hh*0.07+Hh*0.08,cy-Hh*0.82+(Hh*1.17)/4,cx-Lx*1.15,cy-Hh*0.4,med?'ATP synthase (Complex V)':'ATP synthase')}}
+// ---------- presenter: back, pause, next ----------
+function bodyStep(d,c0){const B=BODY;try{const cv=work;if(!B.snap||B.snap.width!==W||B.snap.height!==H){B.snap=document.createElement('canvas');B.snap.width=W;B.snap.height=H}B.snap.getContext('2d').drawImage(cv,0,0)}catch(_){}
+  const sysList=B.sys==='all'?BSYS.map((_,i)=>i):[BSYS.findIndex(s=>s.k===B.sys)];if(B.allView){B.allView=false;B.l=d>0?0:BSYS[B.s].levels.length-1}
+  else{B.l+=d;if(B.l>=BSYS[B.s].levels.length||B.l<0){let k=sysList.indexOf(B.s);k=(k+d+sysList.length)%sysList.length;B.s=sysList[k];B.l=d>0?0:BSYS[B.s].levels.length-1}}
+  B.dir=d>0?1:-1;B.t0=st.t;B.capT=st.t;B.capR=B.rt;B.tr=st.t;labUiSyncBody&&labUiSyncBody()}
+let labUiSyncBody=null;
+addEventListener('keydown',e=>{if(!SCENES[S.scene]||!SCENES[S.scene].lab||BODY.view==='lab')return;if(e.target&&(e.target.tagName==='INPUT'&&e.target.type==='text'||e.target.tagName==='SELECT'))return;
+  const k=e.key;if(k==='PageDown'||k==='.'){bodyStep(1)}else if(k==='PageUp'||k===','){bodyStep(-1)}else if(k==='Enter'){BODY.paused=!BODY.paused;toast(BODY.paused?'Paused: use Next and Back to move':'Playing')}else return;e.preventDefault();e.stopImmediatePropagation()},true);
+
+const BODY_LV={musclemap:lvMuscleMap,alveoli:lvAlveoli,rbc:lvRBC,muscle:lvMuscle,neuron:lvNeuron,synapse:lvSynapse,liver:lvLiver,glom:lvGlom,mito:lvMito};
 // ---------- the HUD: breadcrumb, title card, Activate line, rhythms, healthy ranges, scale ladder, breath pacer ----------
-function bodyHUD(c,box,sys,L,li,age,isAll){const M=Math.min(W,H),k=age<1.2?sstep(age/1.2):1,col=sys?sys.col:[242,184,75],x=box.x+box.w*0.045;c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1;c.shadowColor='rgba(0,0,0,0.85)';c.shadowBlur=M*0.015;c.textBaseline='alphabetic';
-  const font=(px,w)=>(w||'')+' '+(px|0)+'px "Chakra Petch",system-ui,sans-serif';
-  c.globalAlpha=k;c.fillStyle='rgba('+col.join(',')+',0.95)';c.font=font(M*0.016,'600');try{c.letterSpacing=(M*0.005|0)+'px'}catch(_){}
-  c.fillText((isAll?'ALL SYSTEMS':sys.name.toUpperCase()+'  ·  '+L.lv.toUpperCase()+'  ·  '+(li+1)+' / '+sys.levels.length+'  ·  ≈ '+L.scale),x,box.y+M*0.05);
-  if(BODY.titles){const ty=box.y+box.h*0.66,fs=M*0.048;c.fillStyle='rgba(250,246,236,1)';c.font=(fs|0)+'px Syncopate,"Arial Black",sans-serif';try{c.letterSpacing=(fs*0.07|0)+'px'}catch(_){}
-    const title=isAll?'YOUR BODY, WORKING AS ONE':L.title.toUpperCase();c.fillText(title,x,ty);const lw=Math.min(box.w*0.5,c.measureText(title).width)*sstep(Math.min(1,age/1.6));c.fillStyle='rgba('+col.join(',')+',0.9)';c.fillRect(x,ty+fs*0.32,lw,Math.max(1,M*0.002));
-    try{c.letterSpacing='0px'}catch(_){}c.font=font(M*0.019);c.fillStyle='rgba(236,230,214,0.9)';let yy=ty+fs*0.32+M*0.045;
-    const wrap=(txt,maxW,lh)=>{let ln='';for(const w of txt.split(' ')){const t2=ln?ln+' '+w:w;if(c.measureText(t2).width>maxW){c.fillText(ln,x,yy);ln=w;yy+=lh}else ln=t2}if(ln){c.fillText(ln,x,yy);yy+=lh}};
-    wrap(isAll?'Five systems, one body. Breathe, move, signal, clean and fuel: each one needs the others.':L.text,box.w*0.5,M*0.029);
-    if(BODY.act&&!isAll){yy+=M*0.008;c.font=font(M*0.021,'italic');c.fillStyle='rgba('+col.map(v=>Math.min(255,v+60)).join(',')+','+(0.75+0.25*Math.sin(st.t*0.25*TAU)).toFixed(3)+')';wrap('✦ '+L.act,box.w*0.5,M*0.031)}}
-  // right column: rhythms and healthy ranges
-  const rx=box.x+box.w*0.955;c.textAlign='right';let ry=box.y+M*0.05;
-  if(BODY.hz&&L.hz)for(const [nm,hz,note] of L.hz){const ph=bodyPhase(hz),pr=M*0.016,pl=0.5+0.5*Math.sin(ph);
-    c.globalCompositeOperation='lighter';softDot(c,rx-pr,ry+pr*0.2,pr*(1.2+pl),'rgba('+col.join(',')+','+(0.25+0.45*pl).toFixed(3)+')');c.globalCompositeOperation='source-over';
-    c.fillStyle='rgba(250,246,236,0.95)';c.font=font(M*0.02,'600');c.fillText(fmtHz(hz),rx-pr*3.2,ry+pr*0.6);c.fillStyle='rgba(236,230,214,0.75)';c.font=font(M*0.015);
-    c.fillText(nm+(note?' · '+note:'')+(showHz(hz)!==hz?' · shown slower':''),rx-pr*3.2,ry+pr*0.6+M*0.024);ry+=M*0.07}
-  if(BODY.ok){const list=isAll?BODY_OPT:L.ok;c.fillStyle='rgba('+col.join(',')+',0.95)';c.font=font(M*0.014,'600');try{c.letterSpacing=(M*0.004|0)+'px'}catch(_){}c.fillText('OPTIMAL',rx,ry+M*0.01);try{c.letterSpacing='0px'}catch(_){}
-    c.fillStyle='rgba(236,230,214,0.85)';c.font=font(M*0.016);list.forEach((t2,i)=>c.fillText(t2,rx,ry+M*0.04+i*M*0.026));ry+=M*0.05+list.length*M*0.026}
-  // scale ladder
-  if(sys&&!isAll){const lx=rx,ly0=box.y+box.h*0.6;c.font=font(M*0.014);sys.levels.forEach((l2,i)=>{const yy=ly0+i*M*0.03,cur=i===li;c.fillStyle=cur?'rgba('+col.join(',')+',1)':'rgba(236,230,214,0.45)';c.fillText((cur?'▸ ':'')+l2.lv+'  ·  '+l2.scale,lx,yy)})}
-  c.restore();
-  // breath pacer: 6 breaths a minute (0.1 Hz), in for 5 s and out for 5 s
-  if(BODY.breath){const ph=(st.t%10)/10,inh=ph<0.5,u=inh?sstep(ph/0.5):1-sstep((ph-0.5)/0.5),R=M*(0.03+0.05*u),px=box.x+box.w*0.5,py=box.y+box.h*0.13;
-    c.save();c.globalCompositeOperation='lighter';softDot(c,px,py,R*1.8,'rgba('+col.join(',')+',0.25)');c.globalCompositeOperation='source-over';c.strokeStyle='rgba(250,246,236,0.8)';c.lineWidth=Math.max(1.5,M*0.002);c.beginPath();c.arc(px,py,R,0,TAU);c.stroke();
-    c.fillStyle='rgba(250,246,236,0.9)';c.textAlign='center';c.font=(M*0.016|0)+'px "Chakra Petch",system-ui,sans-serif';c.fillText(inh?'BREATHE IN':'BREATHE OUT',px,py+R+M*0.03);c.restore()}}
+function bodyHUD(c,box,sys,L,li,age,isAll){const M=Math.min(W,H),k=age<1.2?sstep(age/1.2):1,col=sys?sys.col:[242,184,75];
+  c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1;c.textBaseline='alphabetic';c.textAlign='left';
+  const px=box.x+box.w*0.022,pw=box.w*0.325,py=box.y+M*0.03,ph=box.h-M*0.06,x=px+M*0.028,maxW=pw-M*0.056,bottom=py+ph-M*0.02;
+  const pg=c.createLinearGradient(px,0,px+pw,0);pg.addColorStop(0,'rgba(4,6,12,0.78)');pg.addColorStop(1,'rgba(4,6,12,0.55)');c.fillStyle=pg;c.beginPath();c.roundRect(px,py,pw,ph,M*0.012);c.fill();
+  c.strokeStyle='rgba('+col.join(',')+',0.28)';c.lineWidth=Math.max(1,M*0.0012);c.stroke();c.save();c.beginPath();c.roundRect(px,py,pw,ph,M*0.012);c.clip();c.globalAlpha=k;
+  const font=(px2,w)=>(w||'')+' '+(px2|0)+'px "Chakra Petch",system-ui,sans-serif';let y=py+M*0.045;
+  const ls=v=>{try{c.letterSpacing=v}catch(_){}};
+  const wrap=(txt,size,lh,style,fill)=>{c.font=font(size,style);c.fillStyle=fill;let ln='';for(const w of txt.split(' ')){const t2=ln?ln+' '+w:w;if(c.measureText(t2).width>maxW){if(y<bottom)c.fillText(ln,x,y);ln=w;y+=lh}else ln=t2}if(ln){if(y<bottom)c.fillText(ln,x,y);y+=lh}};
+  // where we are
+  c.fillStyle='rgba('+col.join(',')+',0.95)';c.font=font(M*0.0145,'600');ls((M*0.004|0)+'px');
+  c.fillText(isAll?'ALL SYSTEMS':(sys.name+'  ·  '+L.lv+'  ·  '+(li+1)+'/'+sys.levels.length+'  ·  ≈ '+L.scale).toUpperCase(),x,y);ls('0px');y+=M*0.05;
+  // title, sized to fit
+  if(BODY.titles){const title=(isAll?'Your body, working as one':(L.kind==='musclemap'?L.title+': '+(BODY.mpLabel||''):L.title)).toUpperCase();let fs=M*0.034;c.font=(fs|0)+'px Syncopate,"Arial Black",sans-serif';ls((fs*0.05|0)+'px');
+    while(c.measureText(title).width>maxW&&fs>M*0.018){fs*=0.92;c.font=(fs|0)+'px Syncopate,"Arial Black",sans-serif'}c.fillStyle='rgba(250,246,236,1)';c.fillText(title,x,y);ls('0px');
+    c.fillStyle='rgba('+col.join(',')+',0.9)';c.fillRect(x,y+fs*0.4,Math.min(maxW,c.measureText(title).width)*sstep(Math.min(1,age/1.6)),Math.max(1,M*0.002));y+=fs*0.4+M*0.04}
+  const det=BODY.detail||'both';
+  if(isAll||det!=='medical')wrap(isAll?'Six views of one body: muscles, breathing, movement, signals, cleaning and fuel. Each system needs the others.':L.text,M*0.0175,M*0.026,'','rgba(240,236,224,0.94)');
+  if(!isAll&&L.adv&&det!=='simple'){y+=M*0.008;c.fillStyle='rgba(150,200,240,0.95)';c.font=font(M*0.012,'600');ls((M*0.004|0)+'px');c.fillText('MEDICAL',x,y);ls('0px');y+=M*0.022;wrap(L.adv,M*0.0148,M*0.0215,'','rgba(205,222,240,0.92)')}
+  if(BODY.act&&!isAll){y+=M*0.01;wrap('✦ '+L.act,M*0.0165,M*0.025,'italic','rgba('+col.map(v=>Math.min(255,v+60)).join(',')+','+(0.78+0.22*Math.sin(st.t*0.25*TAU)).toFixed(3)+')')}
+  y+=M*0.012;c.fillStyle='rgba(255,255,255,0.12)';c.fillRect(x,y,maxW,1);y+=M*0.03;
+  // rhythms
+  const hzList=L.kind==='musclemap'&&!isAll?(BODY.mpHz?[BODY.mpHz]:[]):(isAll?[['Breathing',0.25,'12–20 a minute'],['Heartbeat',1.1,'60–100 a minute']]:L.hz||[]);
+  if(BODY.hz)for(const [nm,hz,note] of hzList){if(y>bottom)break;const ph2=bodyPhase(hz),pl=0.5+0.5*Math.sin(ph2),pr=M*0.009;c.globalCompositeOperation='lighter';softDot(c,x+pr,y-pr*0.6,pr*(1.3+pl),'rgba('+col.join(',')+','+(0.3+0.5*pl).toFixed(3)+')');c.globalCompositeOperation='source-over';
+    c.fillStyle='rgba(250,246,236,0.96)';c.font=font(M*0.018,'600');c.fillText(fmtHz(hz),x+pr*3.2,y);const w0=c.measureText(fmtHz(hz)).width;c.fillStyle='rgba(236,230,214,0.75)';c.font=font(M*0.0135);
+    c.fillText(nm+(note?' · '+note:'')+(showHz(hz)!==hz?' · shown slower':''),x+pr*3.2+w0+M*0.012,y);y+=M*0.034}
+  // activation (muscle map) or optimal ranges
+  if(L.kind==='musclemap'&&!isAll){c.fillStyle='rgba('+col.join(',')+',0.95)';c.font=font(M*0.012,'600');ls((M*0.004|0)+'px');c.fillText('ACTIVATION (estimated)',x,y);ls('0px');y+=M*0.026;
+    (BODY.mpTop||[]).slice(0,7).forEach(([n,v])=>{if(y>bottom-M*0.08)return;const bw=maxW*0.32;c.fillStyle='rgba(255,255,255,0.12)';c.fillRect(x+maxW-bw,y-M*0.008,bw,M*0.008);c.fillStyle='rgba(255,'+(150+80*v.a|0)+',80,0.95)';c.fillRect(x+maxW-bw,y-M*0.008,bw*v.a,M*0.008);
+      c.fillStyle='rgba(236,230,214,0.9)';c.font=font(M*0.0145);c.fillText(n+'  '+Math.round(v.a*100)+'%',x,y);y+=M*0.024})}
+  else if(BODY.ok){const list=isAll?BODY_OPT:L.ok;c.fillStyle='rgba('+col.join(',')+',0.95)';c.font=font(M*0.012,'600');ls((M*0.004|0)+'px');c.fillText('OPTIMAL',x,y);ls('0px');y+=M*0.026;
+    c.font=font(M*0.0145);c.fillStyle='rgba(236,230,214,0.88)';for(const t2 of list){if(y>bottom-M*0.08)break;c.fillText(t2,x,y);y+=M*0.023}}
+  // scale ladder along the bottom of the panel
+  if(sys&&!isAll){let lx=x;const ly=bottom;c.font=font(M*0.0125);sys.levels.forEach((l2,i)=>{const t2=l2.lv,cur=i===li,w2=c.measureText(t2).width;c.fillStyle=cur?'rgba('+col.join(',')+',1)':'rgba(236,230,214,0.4)';c.fillText(t2,lx,ly);if(cur)c.fillRect(lx,ly+M*0.006,w2,Math.max(1,M*0.0015));lx+=w2+M*0.012;if(i<sys.levels.length-1){c.fillStyle='rgba(236,230,214,0.3)';c.fillText('›',lx,ly);lx+=M*0.016}})}
+  if(BODY.paused){c.fillStyle='rgba(250,246,236,0.7)';c.font=font(M*0.012,'600');c.textAlign='right';c.fillText('❚❚ PAUSED',px+pw-M*0.02,py+M*0.045)}
+  c.restore();c.restore();
+  // breath pacer, top of the picture: 6 breaths a minute (0.1 Hz)
+  if(BODY.breath){const ph=(st.t%10)/10,inh=ph<0.5,u=inh?sstep(ph/0.5):1-sstep((ph-0.5)/0.5),R=M*(0.022+0.04*u),cx=box.x+box.w*0.67,cy=box.y+M*0.1;
+    c.save();c.globalCompositeOperation='lighter';softDot(c,cx,cy,R*1.8,'rgba('+col.join(',')+',0.22)');c.globalCompositeOperation='source-over';c.strokeStyle='rgba(250,246,236,0.8)';c.lineWidth=Math.max(1.5,M*0.002);c.beginPath();c.arc(cx,cy,R,0,TAU);c.stroke();
+    c.fillStyle='rgba(250,246,236,0.9)';c.textAlign='center';c.font=(M*0.014|0)+'px "Chakra Petch",system-ui,sans-serif';c.fillText(inh?'BREATHE IN':'BREATHE OUT',cx,cy+M*0.075);c.restore()}}
+
 // ---------- the scene: chooses the shot, runs the zoom transitions, draws the level and the HUD ----------
 function bodyPick(){const B=BODY,sysList=B.sys==='all'?BSYS.map((_,i)=>i):[BSYS.findIndex(s=>s.k===B.sys)];
   const prevS=B.s,prevL=B.l,wasAll=B.allView;
@@ -6042,10 +6222,10 @@ function bodyPick(){const B=BODY,sysList=B.sys==='all'?BSYS.map((_,i)=>i):[BSYS.
 function bodyLabScene(c,a){BODY.rt=(BODY.rt||0)+Math.min(0.1,st.dtReal||0.016);
   if(BODY.view==='lab'){LAB.ext=null;labScene(c,a);return}
   const B=BODY;if(!B.t0){B.t0=st.t;B.capT=st.t;B.s=B.sys==='all'?0:Math.max(0,BSYS.findIndex(s=>s.k===B.sys));B.l=0;B.allView=B.view!=='zoom'&&B.sys==='all'}
-  const holdK=1/Math.max(0.2,LAB.speed||1);if(st.t-B.t0>B.hold*holdK&&(!live||A.beats%4===0||st.t-B.t0>B.hold*holdK+2.5)){
+  const holdK=1/Math.max(0.2,LAB.speed||1);if(!B.paused&&st.t-B.t0>B.hold*holdK&&(!live||A.beats%4===0||st.t-B.t0>B.hold*holdK+2.5)){
     try{if(!B.snap||B.snap.width!==W||B.snap.height!==H){B.snap=document.createElement('canvas');B.snap.width=W;B.snap.height=H}B.snap.getContext('2d').drawImage(c.canvas,0,0)}catch(_){}
     bodyPick();B.tr=st.t}
-  const sys=BSYS[B.s],L=B.allView?sys.levels[0]:sys.levels[B.l],env=LAB_ENV[sys.env]||LAB_ENV.Filters;
+  const sys=BSYS[B.s],L=B.allView?BSYS.find(x=>x.k==='breathe').levels[0]:sys.levels[B.l],env=LAB_ENV[sys.env]||LAB_ENV.Filters;
   LAB.bars=LAB.dof=LAB.env=!!B.cine;
   const M=Math.min(W,H),bh=B.cine?Math.max(0,(H-W/2.39)/2):0,box={x:0,y:bh,w:W,h:H-bh*2};
   if(L.kind==='mol'||L.kind==='quantum'){
@@ -6057,8 +6237,9 @@ function bodyLabScene(c,a){BODY.rt=(BODY.rt||0)+Math.min(0.1,st.dtReal||0.016);
     const bg=c.createRadialGradient(W*0.62,H*0.45,0,W*0.55,H*0.5,Math.hypot(W,H)*0.65);bg.addColorStop(0,'rgb('+env.bg[0].join(',')+')');bg.addColorStop(1,'rgb('+env.bg[1].join(',')+')');c.fillStyle=B.cine?bg:'rgb(3,4,10)';c.fillRect(0,0,W,H);
     if(B.cine){c.globalCompositeOperation='lighter';for(let i=0;i<4;i++){const an=0.6+i*0.12+Math.sin(st.t*0.05+i)*0.05,len=Math.hypot(W,H),w=0.03,ox=-W*0.05+i*W*0.07,oy=-H*0.1,g=c.createLinearGradient(ox,oy,ox+Math.cos(an)*len,oy+Math.sin(an)*len);
       g.addColorStop(0,'rgba('+env.shaft.join(',')+',0.05)');g.addColorStop(1,'rgba('+env.shaft.join(',')+',0)');c.fillStyle=g;c.beginPath();c.moveTo(ox,oy);c.lineTo(ox+Math.cos(an-w)*len,oy+Math.sin(an-w)*len);c.lineTo(ox+Math.cos(an+w)*len,oy+Math.sin(an+w)*len);c.closePath();c.fill()}c.globalCompositeOperation='source-over'}
-    if(L.kind==='body'){if(B.allView){const order=['breathe','move','signal','clean','fuel'];B.hl=order[Math.floor(st.t/4)%5]}bodyDraw(c,box,B.allView?'all':sys.k,a)}
-    else (BODY_LV[L.kind]||lvAlveoli)(c,box,a);
+    const vb={x:box.x+box.w*0.35,y:box.y,w:box.w*0.63,h:box.h};
+    if(L.kind==='body'){if(B.allView){const order=['breathe','move','signal','clean','fuel'];B.hl=order[Math.floor(st.t/4)%5]}bodyDraw(c,vb,B.allView?'all':sys.k,a)}
+    else{const ib=L.kind==='musclemap'?vb:{x:vb.x+vb.w*0.06,y:vb.y+vb.h*0.08,w:vb.w*0.8,h:vb.h*0.84};(BODY_LV[L.kind]||lvAlveoli)(c,ib,a);if(L.kind!=='musclemap'){lvLabels(L.kind,ib);atlDrawLabels(c)}}
     const vg=c.createRadialGradient(W/2,H/2,M*0.35,W/2,H/2,Math.hypot(W,H)*0.6);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.6)');c.fillStyle=vg;c.fillRect(0,0,W,H);
     if(bh>0.5){c.fillStyle='#000';c.fillRect(0,0,W,bh);c.fillRect(0,H-bh,W,bh)}c.restore()}
   // zoom transition: the last shot grows (zoom in) or shrinks (zoom out) and fades away
@@ -6773,11 +6954,11 @@ function labOpen(){const i=SCENES.findIndex(s=>s.lab);if(i<0)return;LAB.panel=tr
   g('labReset').onclick=()=>{FLY.yaw=FLY.pitch=0;FLY.speed=1;LAB.cam.t=0};
   g('labClose').onclick=()=>{LAB.panel=false;g('labPanel').hidden=true};
   g('bLab').onclick=()=>{if(SCENES[S.scene].lab&&!g('labPanel').hidden){g('labPanel').hidden=true;LAB.panel=false}else labOpen()};
-  const bs=()=>{g('bodySys').value=BODY.sys;g('bodyView').value=BODY.view;g('bodyHz').checked=BODY.hz;g('bodyOk').checked=BODY.ok;g('bodyAct').checked=BODY.act;g('bodyBreath').checked=BODY.breath;g('bodyTitles').checked=BODY.titles;g('bodyCine').checked=BODY.cine;g('labAdv').open=BODY.view==='lab'};
+  const bs=()=>{g('bodySys').value=BODY.sys;g('bodyDetail').value=BODY.detail||'both';g('bodyPause').textContent=BODY.paused?'Play':'Pause';g('bodyPat').value=BODY.pat||'auto';g('bodyView').value=BODY.view;g('bodyHz').checked=BODY.hz;g('bodyOk').checked=BODY.ok;g('bodyAct').checked=BODY.act;g('bodyBreath').checked=BODY.breath;g('bodyTitles').checked=BODY.titles;g('bodyCine').checked=BODY.cine;g('labAdv').open=BODY.view==='lab'};
   const bo=(id,ev,f)=>g(id).addEventListener(ev,e=>{f(e.target);bodySave();bs()});
   const restart=()=>{BODY.t0=0;BODY.snap=null};
   bo('bodySys','change',t=>{BODY.sys=t.value;restart()});bo('bodyView','change',t=>{BODY.view=t.value;restart()});
-  bo('bodyHz','change',t=>BODY.hz=t.checked);bo('bodyOk','change',t=>BODY.ok=t.checked);bo('bodyAct','change',t=>BODY.act=t.checked);bo('bodyBreath','change',t=>BODY.breath=t.checked);bo('bodyTitles','change',t=>BODY.titles=t.checked);bo('bodyCine','change',t=>BODY.cine=t.checked);
+  bo('bodyHz','change',t=>BODY.hz=t.checked);bo('bodyDetail','change',t=>BODY.detail=t.value);g('bodyBack').onclick=()=>bodyStep(-1);g('bodyNext').onclick=()=>bodyStep(1);g('bodyPause').onclick=()=>{BODY.paused=!BODY.paused;bs()};labUiSyncBody=bs;bo('bodyPat','change',t=>BODY.pat=t.value);bo('bodyOk','change',t=>BODY.ok=t.checked);bo('bodyAct','change',t=>BODY.act=t.checked);bo('bodyBreath','change',t=>BODY.breath=t.checked);bo('bodyTitles','change',t=>BODY.titles=t.checked);bo('bodyCine','change',t=>BODY.cine=t.checked);
   g('labMol').addEventListener('change',()=>{BODY.view='lab';bodySave();bs()});g('labView').addEventListener('change',()=>{BODY.view='lab';bodySave();bs()});
   bs();
   labUiSync()})();
