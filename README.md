@@ -40,6 +40,8 @@ Albumin, collagen, actin and myosin are coarse-grained (one bead for each amino 
 
 **Cinematic look:** every atom is lit like a film shot (a key light, a coloured rim light, a sharp highlight and soft shadow where atoms crowd together). Near and far things go out of focus (depth of field). Each body system has its own world: clear fluid with floating particles for the filters, warm muscle fibers for movement, and drifting red blood cells for blood. Light shafts, a vignette, wide-screen cinema bars and a title card for each molecule finish the picture. You can turn each part off in the panel.
 
+**Random journey** (the default for *Next molecule*): every 18 to 45 seconds, on a downbeat, the lab changes the shot. Sometimes the same molecule gets a new view or style, sometimes another molecule comes. It visits all 18 molecules before one repeats, and it uses Bind, Explode and Contract by itself.
+
 **Things to play with:**
 - **Bind**: molecules fly in and stick. Chloroform adsorbs on carbon, drugs and bilirubin dock in albumin, oxygen binds to the iron of heme, water bonds to oxygen and nitrogen atoms.
 - **Explode**: the atoms move apart and come back together.
