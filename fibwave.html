@@ -26,7 +26,7 @@
 #plPanel{position:fixed;top:12px;left:max(12px,env(safe-area-inset-left));width:min(360px,92vw);max-height:calc(100% - 210px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;z-index:5;font-size:13px;display:flex;flex-direction:column;gap:8px;transition:opacity .5s}
 #plPanel .lr{display:flex;justify-content:space-between;align-items:center;gap:8px}#plPanel .lt{font-family:var(--display);font-size:13px;letter-spacing:.06em;color:var(--gold)}
 #plPanel .lb{display:flex;flex-wrap:wrap;gap:6px}#plPanel .hint{margin:0;color:var(--dim)}#plPanel .now{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#plPanel input[type=range]{flex:1}#plPanel .btn.on{border-color:var(--gold);color:var(--gold)}
+#plPanel input[type=range]{flex:1}#plPanel .tr .btn{min-width:38px;font-size:15px}#plPanel select{background:#0d0f15;border:1px solid var(--line);border-radius:6px;padding:3px 5px}#plPanel .btn.on{border-color:var(--gold);color:var(--gold)}
 #plList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;max-height:38vh;overflow:auto}
 #plList li{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;border:1px solid transparent}#plList li:hover{background:rgba(255,255,255,.05)}
 #plList li.cur{background:rgba(242,184,75,.12);color:var(--gold)}#plList li.over{border-color:var(--gold)}#plList li.drag{opacity:.4}
@@ -281,10 +281,12 @@ body:not(.locked) #showUi{display:none}
   <div class="lr"><b class="lt">Playlist</b><span id="plCount" class="hint"></span><button class="btn" id="plClose">Close</button></div>
   <div class="now" id="plNow"></div>
   <div class="lr"><input type="range" id="plSeek" min="0" max="0" step="0.1" value="0" aria-label="Position in the track"><span id="plTime" class="hint">0:00 / 0:00</span></div>
-  <div class="lb"><button class="btn" id="plPrev" title="Previous track (or the start of this track)" aria-label="Previous">⏮</button><button class="btn" id="plPlay" aria-label="Play or pause">▶</button><button class="btn" id="plNext" title="Next track" aria-label="Next">⏭</button><button class="btn" id="plRepeat" title="Repeat off, repeat all, repeat one">🔁 Repeat: all</button><button class="btn" id="plShuffle" title="Shuffle">🔀 Shuffle</button></div>
+  <div class="lb tr"><button class="btn" id="plPrev" title="Previous track (or the start of this track)" aria-label="Previous">⏮</button><button class="btn" id="plRew" title="Rewind 10 s (hold to rewind fast)" aria-label="Rewind">⏪</button><button class="btn" id="plPlay" title="Play or pause" aria-label="Play or pause">▶</button><button class="btn" id="plStop" title="Stop: go back to the start" aria-label="Stop">■</button><button class="btn" id="plFwd" title="Forward 10 s (hold to go fast)" aria-label="Fast forward">⏩</button><button class="btn" id="plNext" title="Next track" aria-label="Next">⏭</button></div>
+  <div class="lr"><label class="lr" title="Slow motion or faster playback">Speed <select id="plRate"><option value="0.25">0.25× (slow motion)</option><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1× (normal)</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label><label class="chk" title="Keep the same pitch when the speed changes (off: slower = lower, like a tape)"><input type="checkbox" id="plPitch" checked> Keep pitch</label></div>
+  <div class="lb"><button class="btn" id="plRepeat" title="Repeat off, repeat all, repeat one">🔁 Repeat: all</button><button class="btn" id="plShuffle" title="Shuffle">🔀 Shuffle</button></div>
   <ol id="plList"></ol>
   <div class="lb"><button class="btn" id="plAdd">+ Add files</button><button class="btn" id="plClear">Clear</button><input type="file" id="plAddIn" accept="audio/*" multiple hidden></div>
-  <p class="hint">Drag tracks to change the order. Drop audio files here, or on the visuals, to add them.</p>
+  <p class="hint">⏪ ⏩: click = 10 s, hold = fast. Drag tracks to change the order. Drop audio files here, or on the visuals, to add them.</p>
 </div>
 <div id="labPanel" hidden>
   <div class="lr"><b class="lt">Health Laboratory</b><button class="btn" id="labClose">Close</button></div>
@@ -600,9 +602,9 @@ async function refreshInputs(){
 micSel.onchange=()=>{try{localStorage.setItem('fibwave.mic',micSel.value)}catch(e){}useMic()};
 if(navigator.mediaDevices){refreshInputs();try{navigator.mediaDevices.addEventListener('devicechange',refreshInputs)}catch(e){}}
 /* ---------- playlist: many files, repeat off / all / one, shuffle, add, remove, reorder ---------- */
-const PL={repeat:'all',shuffle:false,played:[],durs:new WeakMap()};
-try{const o=JSON.parse(localStorage.getItem('fibwave.playlist')||'{}');if(o.repeat)PL.repeat=o.repeat;PL.shuffle=!!o.shuffle}catch(_){}
-function plSave(){try{localStorage.setItem('fibwave.playlist',JSON.stringify({repeat:PL.repeat,shuffle:PL.shuffle}))}catch(_){}}
+const PL={repeat:'all',shuffle:false,rate:1,pitch:true,played:[],durs:new WeakMap()};
+try{const o=JSON.parse(localStorage.getItem('fibwave.playlist')||'{}');if(o.repeat)PL.repeat=o.repeat;PL.shuffle=!!o.shuffle;if(o.rate)PL.rate=o.rate;if(o.pitch===false)PL.pitch=false}catch(_){}
+function plSave(){try{localStorage.setItem('fibwave.playlist',JSON.stringify({repeat:PL.repeat,shuffle:PL.shuffle,rate:PL.rate,pitch:PL.pitch}))}catch(_){}}
 const isAudio=f=>f&&(f.type.startsWith('audio')||/\.(mp3|wav|flac|m4a|aac|ogg|opus|aiff?)$/i.test(f.name));
 function useFiles(files){
   files=[...(files||[])].filter(isAudio);if(!files.length)return;
@@ -618,7 +620,7 @@ function playTrack(){
   mediaEl=new Audio(URL.createObjectURL(f));
   srcNode=actx.createMediaElementSource(mediaEl);
   srcNode.connect(analyser);srcNode.connect(actx.destination);
-  mediaEl.loop=PL.repeat==='one';
+  mediaEl.loop=PL.repeat==='one';plApplyRate();
   mediaEl.addEventListener('ended',plEnded);
   mediaEl.addEventListener('loadedmetadata',()=>{PL.durs.set(f,mediaEl.duration);plRender()});
   mediaEl.play().catch(()=>toast('The file could not play.'));
@@ -630,7 +632,10 @@ function plNextIndex(dir){const n=playlist.length;if(!n)return -1;
   const k=track+dir;if(k>=n)return PL.repeat==='off'?-1:0;if(k<0)return n-1;return k}
 function plEnded(){if(PL.repeat==='one'){mediaEl.currentTime=0;mediaEl.play();return}const k=plNextIndex(1);if(k<0){live=false;toast('End of the playlist');plRender();return}track=k;playTrack()}
 function plGo(dir){if(!playlist.length)return;if(dir<0&&mediaEl&&mediaEl.currentTime>3){mediaEl.currentTime=0;return}const k=plNextIndex(dir);track=k<0?0:k;ensureCtx();playTrack()}
-function plToggle(){if(!mediaEl){if(playlist.length){ensureCtx();playTrack()}return}if(mediaEl.paused){ensureCtx();mediaEl.play();live=true}else{mediaEl.pause()}plRender()}
+function plApplyRate(){if(!mediaEl)return;try{mediaEl.preservesPitch=mediaEl.mozPreservesPitch=mediaEl.webkitPreservesPitch=PL.pitch}catch(_){}mediaEl.playbackRate=PL.rate}
+function plSeekBy(sec){if(!mediaEl)return;const d=mediaEl.duration||0;mediaEl.currentTime=clamp((mediaEl.currentTime||0)+sec,0,Math.max(0,d-0.05));plTick()}
+function plStop(){if(!mediaEl)return;mediaEl.pause();mediaEl.currentTime=0;live=false;plRender();plTick();toast('Stopped')}
+function plToggle(){if(!mediaEl){if(playlist.length){ensureCtx();playTrack()}return}if(mediaEl.paused){ensureCtx();mediaEl.play();live=true}else{mediaEl.pause();live=false}plRender()}
 function plCycleRepeat(){PL.repeat={off:'all',all:'one',one:'off'}[PL.repeat];if(mediaEl)mediaEl.loop=PL.repeat==='one';plSave();plRender();toast({off:'Repeat off',all:'Repeat all',one:'Repeat one'}[PL.repeat])}
 const fmtT=s=>!isFinite(s)?'--:--':Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
 function plOpen(show){const p=document.getElementById('plPanel');if(!p)return;p.hidden=show===undefined?!p.hidden:!show;document.getElementById('bPlaylist').hidden=!playlist.length;plRender()}
@@ -655,7 +660,15 @@ function plTick(){const g=id=>document.getElementById(id),p=g('plPanel');if(!p||
 setInterval(plTick,250);
 (function plInit(){const g=id=>document.getElementById(id);if(!g('plPanel'))return;
   g('bPlaylist').onclick=()=>plOpen();g('plClose').onclick=()=>plOpen(false);g('plPrev').onclick=()=>plGo(-1);g('plNext').onclick=()=>plGo(1);g('plPlay').onclick=plToggle;
-  g('plRepeat').onclick=plCycleRepeat;g('plShuffle').onclick=()=>{PL.shuffle=!PL.shuffle;PL.played=[track];plSave();plRender();toast(PL.shuffle?'Shuffle on':'Shuffle off')};
+  g('plRepeat').onclick=plCycleRepeat;g('plStop').onclick=plStop;
+  // rewind and fast forward: click = 10 s; hold = keep moving fast
+  for(const [id,dir] of [['plRew',-1],['plFwd',1]]){const b=g(id);let hold=null,moved=false;
+    b.onpointerdown=e=>{moved=false;clearInterval(hold);hold=setInterval(()=>{moved=true;plSeekBy(dir*2)},120)};
+    const end=()=>{clearInterval(hold);hold=null};b.onpointerup=()=>{end();if(!moved)plSeekBy(dir*10)};b.onpointerleave=end;b.onpointercancel=end;
+    b.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();plSeekBy(dir*10)}}}
+  g('plRate').value=String(PL.rate);g('plPitch').checked=PL.pitch;
+  g('plRate').onchange=()=>{PL.rate=+g('plRate').value;plApplyRate();plSave();toast('Speed '+PL.rate+'×'+(PL.rate<1?' (slow motion)':''))};
+  g('plPitch').onchange=()=>{PL.pitch=g('plPitch').checked;plApplyRate();plSave()};g('plShuffle').onclick=()=>{PL.shuffle=!PL.shuffle;PL.played=[track];plSave();plRender();toast(PL.shuffle?'Shuffle on':'Shuffle off')};
   const add=g('plAddIn');g('plAdd').onclick=()=>add.click();add.onchange=()=>{addFiles(add.files);add.value=''};
   g('plClear').onclick=()=>{stopSource();playlist=[];track=0;plOpen(false);toast('Playlist cleared')};
   const s=g('plSeek');s.oninput=()=>{PL.seeking=true};s.onchange=()=>{if(mediaEl)mediaEl.currentTime=+s.value;PL.seeking=false};
