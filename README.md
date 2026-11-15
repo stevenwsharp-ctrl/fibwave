@@ -22,6 +22,18 @@
 
 ---
 
+## Playlist
+
+When you play audio files, a **Playlist** panel opens (the **Playlist** button in the controls opens and closes it).
+
+- Choose many files at once, use **+ Add files**, or drop audio files on the panel or on the visuals to add them.
+- **⏮ / ▶ / ⏭**, a position bar and the time.
+- **Repeat**: off (stop after the last track), all (start the list again) or one (repeat this track). Your choice is saved.
+- **Shuffle**: every track plays once before one repeats.
+- Click a track to play it, drag tracks to change the order, and × removes a track. **N** goes to the next track.
+
+---
+
 ## Health Laboratory
 
 Click **Health Lab** in the controls (or choose the scene **Health Laboratory**). A panel opens on the right.
