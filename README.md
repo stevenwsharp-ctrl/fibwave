@@ -22,6 +22,18 @@
 
 ---
 
+## Guitar coach
+
+Click **Guitar** in the controls (or press **X**). The coach from Fibwave Guitar opens over the visuals.
+
+- **Modes:** Jam & scales, Chords, Riffs, Strumming, Fretboard notes, Ear training, Key & theory, Tuner and **Pentatonic** (Shift+1 … Shift+9; **M** = next mode).
+- **Pentatonic:** the 5 standard boxes (two notes on each string) of the song's key: minor, major or minor blues (♭5). Layouts: *One box*, *All 5 boxes* (each box has its colour) and *Connect the boxes* (outlines and the slides between them). For each box: the roots, the chord tones to aim for now, the usual bends, the blues note, a double stop, the slide to the next box, ▶ Hear the box and a new lick in the box. Your type, box and layout are saved for each song.
+- **Layouts:** Large, Side, Small (**V** changes it), ✕ hides the coach.
+- **Move and resize:** drag the title bar to move the coach or the Guitar riffs box, and drag the bottom-right corner to resize it. Each layout remembers its place. Double-click the title bar to reset it.
+- **Guitar scenes:** Neon Fretboard, Six Strings, Chord Wheel and Soundhole Rosette.
+
+---
+
 ## Playlist
 
 When you play audio files, a **Playlist** panel opens (the **Playlist** button in the controls opens and closes it).
