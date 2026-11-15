@@ -30,7 +30,7 @@ Click **Health Lab** in the controls (or choose the scene **Health Laboratory**)
 
 | System | Levels |
 |---|---|
-| Muscles | Muscle map (front and back, 39 named muscles, activation for walking, squat, push-up, pull, curl and plank) → muscle fibers → actin and myosin |
+| Muscles | 3D muscle map (a GPU-rendered figure seen from the front and back, turning slowly; drag to rotate; 28 muscle groups, activation for walking, squat, push-up, pull, curl and plank) → muscle fibers → actin and myosin |
 | Breathe | Lungs, heart and blood → alveoli → red blood cell → heme and oxygen → electron clouds |
 | Move | Skeleton and muscles → muscle fibers → actin and myosin → ATP → electron clouds |
 | Signal | Brain and nerves → neuron → nerve meets muscle → acetylcholine → electron clouds |
@@ -38,6 +38,8 @@ Click **Health Lab** in the controls (or choose the scene **Health Laboratory**)
 | Fuel | Food to energy → mitochondrion → glucose → ATP → electron clouds |
 
 **Atlas style:** anatomical body (skeleton, organs, vessels, nerves, muscles with fiber direction), textbook labels with leader lines on every level, a lub-dub heartbeat, breathing with the diaphragm, and correct sarcomere banding (A band constant, I band and H zone shorten).
+
+**Look:** a deep navy backdrop with soft drifting glows, a fading grid, a holographic platform, a slow light scan, cool key and rim lighting with filmic tone mapping, and a glass information panel.
 
 **Lecture layout:** an information panel on the left (title, simple text, medical text, Activate line, rhythms in Hz, optimal ranges, activation list and scale ladder), the picture on the right.
 

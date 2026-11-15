@@ -5658,9 +5658,9 @@ function labBind(){LAB.bindT=st.t;LAB.guests=[];const S=labLoad(),it=LAB_LIST[LA
    a living environment for each body system (fluid, fibers or blood cells) with parallax bokeh,
    light shafts, title cards, cinema bars and a vignette */
 const LAB_ENV={
-  Filters:{bg:[[6,34,44],[1,6,12]],fog:[60,170,175],rim:[150,240,255],part:[150,230,220],kind:'debris',shaft:[120,220,230]},
-  Movement:{bg:[[52,14,14],[8,2,4]],fog:[210,90,60],rim:[255,190,140],part:[255,160,120],kind:'fibers',shaft:[255,190,140]},
-  Blood:{bg:[[60,4,12],[10,0,3]],fog:[220,50,60],rim:[255,160,160],part:[200,30,45],kind:'cells',shaft:[255,140,130]}};
+  Filters:{bg:[[10,34,58],[1,3,8]],fog:[60,170,200],rim:[150,235,255],part:[150,225,240],kind:'debris',shaft:[140,215,255]},
+  Movement:{bg:[[26,22,50],[2,2,8]],fog:[150,110,220],rim:[150,220,255],part:[255,150,120],kind:'fibers',shaft:[170,200,255]},
+  Blood:{bg:[[34,12,40],[2,1,7]],fog:[200,60,120],rim:[170,220,255],part:[190,30,50],kind:'cells',shaft:[190,200,255]}};
 const LABSPR={};
 function labCan(n){const cv=document.createElement('canvas');cv.width=cv.height=n;return cv}
 const LAB_HAS_FILTER=(()=>{try{const g=labCan(2).getContext('2d');g.filter='blur(2px)';return g.filter==='blur(2px)'}catch(_){return false}})();
@@ -6170,13 +6170,135 @@ let labUiSyncBody=null;
 addEventListener('keydown',e=>{if(!SCENES[S.scene]||!SCENES[S.scene].lab||BODY.view==='lab')return;if(e.target&&(e.target.tagName==='INPUT'&&e.target.type==='text'||e.target.tagName==='SELECT'))return;
   const k=e.key;if(k==='PageDown'||k==='.'){bodyStep(1)}else if(k==='PageUp'||k===','){bodyStep(-1)}else if(k==='Enter'){BODY.paused=!BODY.paused;toast(BODY.paused?'Paused: use Next and Back to move':'Playing')}else return;e.preventDefault();e.stopImmediatePropagation()},true);
 
-const BODY_LV={musclemap:lvMuscleMap,alveoli:lvAlveoli,rbc:lvRBC,muscle:lvMuscle,neuron:lvNeuron,synapse:lvSynapse,liver:lvLiver,glom:lvGlom,mito:lvMito};
+/* ---------- 3D écorché: a GPU-rendered muscle figure (signed-distance shapes, raymarched) ---------- */
+// each muscle: [name, group, a(x,y,z), b(x,y,z), belly radius, end radius] (right side; the left side is the mirror)
+const M3=[
+ ['Trapezius','trapM',[0.12,2.98,-0.2],[0.92,2.6,-0.12],0.2,0.06,[0,0.5,-1],0.45],['Trapezius (lower)','trapM',[0.04,1.8,-0.46],[0.62,2.48,-0.34],0.17,0.05,[0,0,-1],0.45],
+ ['Deltoid','delt',[0.98,2.66,0.0],[1.12,1.92,0.02],0.29,0.06,[1,0.2,0],0.8],['Pectoralis major','pec',[0.1,2.18,0.47],[0.92,2.42,0.2],0.3,0.07,[0,0,1],0.42],
+ ['Biceps brachii','bic',[1.02,2.12,0.2],[1.13,1.36,0.16],0.16,0.05,[0,0,1],1.0],['Triceps brachii','tri',[1.0,2.28,-0.19],[1.12,1.42,-0.2],0.19,0.06,[0,0,1],1.0],
+ ['Forearm flexors','flex',[1.14,1.24,0.12],[1.25,0.28,0.13],0.15,0.05,[0,0,1],1.0],['Forearm extensors','ext',[1.21,1.3,-0.06],[1.29,0.34,-0.02],0.14,0.05,[0,0,1],1.0],
+ ['Rectus abdominis','abs',[0.16,1.78,0.46],[0.13,0.0,0.43],0.16,0.12,[0,0,1],0.5],['External oblique','obl',[0.52,1.72,0.27],[0.42,0.25,0.3],0.25,0.12,[0.6,0,1],0.45],
+ ['Serratus anterior','serr',[0.68,2.02,0.22],[0.62,1.45,0.26],0.13,0.06,[1,0,0.6],0.55],['Latissimus dorsi','lat',[0.24,0.95,-0.42],[0.88,2.18,-0.2],0.3,0.07,[0.4,0,-1],0.4],
+ ['Erector spinae','erec',[0.14,2.45,-0.44],[0.15,0.05,-0.45],0.13,0.1,[0,0,-1],0.8],['Gluteus maximus','glut',[0.32,0.18,-0.46],[0.6,-0.6,-0.36],0.38,0.12,[0,0,-1],0.7],
+ ['Gluteus medius','glut',[0.55,0.38,-0.2],[0.65,-0.08,-0.14],0.24,0.08,[1,0,-0.3],0.6],['Rectus femoris','quad',[0.43,-0.32,0.27],[0.48,-1.98,0.3],0.23,0.07,[0,0,1],1.0],
+ ['Vastus lateralis','quad',[0.64,-0.5,0.05],[0.55,-2.02,0.12],0.25,0.07,[0,0,1],1.0],['Vastus medialis','quad',[0.28,-1.25,0.16],[0.4,-2.02,0.22],0.19,0.08,[0,0,1],1.0],
+ ['Adductors','add',[0.12,-0.36,0.0],[0.36,-1.42,0.05],0.24,0.06,[0,0,1],1.0],['Hamstrings','ham',[0.44,-0.48,-0.3],[0.5,-2.02,-0.22],0.26,0.06,[0,0,1],1.0],
+ ['Gastrocnemius','calf',[0.5,-2.38,-0.22],[0.5,-3.36,-0.24],0.24,0.06,[0,0,1],1.0],['Soleus','sol',[0.5,-2.95,-0.12],[0.5,-3.78,-0.17],0.18,0.06,[0,0,1],1.0],
+ ['Tibialis anterior','tib',[0.6,-2.36,0.16],[0.5,-3.82,0.16],0.11,0.04,[0,0,1],1.0],['Sartorius','sart',[0.62,0.0,0.3],[0.3,-2.2,0.1],0.07,0.04,[0,0,1],1.0],
+ ['Tensor fasciae latae','tfl',[0.72,0.05,0.12],[0.68,-0.75,0.06],0.12,0.04,[1,0,0.3],0.7],['Sternocleidomastoid','neck',[0.24,3.18,0.02],[0.08,2.62,0.27],0.075,0.04,[0,0,1],1.0],
+ ['Infraspinatus','rot',[0.42,2.24,-0.4],[0.86,2.18,-0.24],0.17,0.06,[0,0,-1],0.5],['Peroneus longus','per',[0.66,-2.4,0.0],[0.58,-3.8,-0.04],0.09,0.04,[0,0,1],1.0]];
+const M3N=M3.length;
+const M3_FS=`#version 300 es
+precision highp float;
+uniform vec2 uRes;uniform float uYaw,uPitch,uT,uSplit;uniform float uAR[${M3N}];uniform float uAL[${M3N}];uniform vec3 uRim;
+out vec4 o;
+const int N=${M3N};
+const vec3 MA[N]=vec3[](${M3.map(m=>'vec3('+m[2].join(',')+')').join(',')});
+const vec3 MB[N]=vec3[](${M3.map(m=>'vec3('+m[3].join(',')+')').join(',')});
+const vec2 MR[N]=vec2[](${M3.map(m=>'vec2('+m[4]+','+m[5]+')').join(',')});
+const vec4 MD[N]=vec4[](${M3.map(m=>{const d=m[6],l=Math.hypot(...d);return 'vec4('+(d[0]/l).toFixed(3)+','+(d[1]/l).toFixed(3)+','+(d[2]/l).toFixed(3)+','+m[7]+')'}).join(',')});
+float smin(float a,float b,float k){float h=clamp(0.5+0.5*(b-a)/k,0.,1.);return mix(b,a,h)-k*h*(1.-h);}
+// a muscle: a spindle from a to b, full belly in the middle, thin tendon at the ends
+float mus(vec3 p,int i,out float h){vec3 a=MA[i],b=MB[i],ba=b-a,pa=p-a;h=clamp(dot(pa,ba)/dot(ba,ba),0.,1.);float r=MR[i].y+(MR[i].x-MR[i].y)*pow(sin(3.14159*h),0.7);vec3 d=pa-ba*h,nn=MD[i].xyz;nn=normalize(nn-ba*dot(nn,ba)/dot(ba,ba));float dn=dot(d,nn),fl=MD[i].w;return (length(d-nn*dn+nn*dn/fl)-r)*fl;}
+float cap(vec3 p,vec3 a,vec3 b,float r){vec3 ba=b-a,pa=p-a;float h=clamp(dot(pa,ba)/dot(ba,ba),0.,1.);return length(pa-ba*h)-r;}
+float ell(vec3 p,vec3 c,vec3 r){vec3 q=(p-c)/r;return (length(q)-1.)*min(r.x,min(r.y,r.z));}
+// the deep layer under the muscles (it shows as dark grooves) and the head, hands and feet
+float core(vec3 q){float d=ell(q,vec3(0,1.4,0.0),vec3(0.7,1.32,0.44));d=min(d,ell(q,vec3(0.,-0.12,-0.05),vec3(0.62,0.5,0.42)));d=min(d,ell(q,vec3(0.75,2.45,-0.02),vec3(0.35,0.22,0.3)));
+  d=min(d,cap(q,vec3(0.98,2.5,0),vec3(1.12,1.3,0),0.17));d=min(d,cap(q,vec3(1.12,1.3,0.02),vec3(1.26,0.25,0.05),0.12));
+  d=min(d,cap(q,vec3(0.45,-0.2,0),vec3(0.5,-2.2,0.06),0.27));d=min(d,cap(q,vec3(0.5,-2.2,0.06),vec3(0.5,-4.0,-0.05),0.15));return d;}
+float neutral(vec3 q){float d=smin(ell(q,vec3(0,3.68,-0.02),vec3(0.37,0.44,0.43)),ell(q,vec3(0,3.36,0.12),vec3(0.26,0.24,0.28)),0.12);d=min(d,cap(q,vec3(0,2.7,0),vec3(0,3.25,0.02),0.2));
+  d=min(d,ell(q,vec3(1.3,-0.1,0.1),vec3(0.1,0.32,0.17)));d=min(d,ell(q,vec3(0.53,-4.2,0.18),vec3(0.15,0.12,0.42)));return d;}
+float map(vec3 p){vec3 q=vec3(abs(p.x),p.y,p.z);float d=min(core(q),neutral(q));float h;for(int i=0;i<N;i++)d=smin(d,mus(q,i,h),0.045);return d;}
+// what is at a point: the nearest muscle, the place along it, or the deep layer
+void info(vec3 p,out int id,out float hh,out float kind){vec3 q=vec3(abs(p.x),p.y,p.z);float best=1e9,h;id=-1;hh=0.;for(int i=0;i<N;i++){float d=mus(q,i,h);if(d<best){best=d;id=i;hh=h;}}
+  float dc=core(q),dn=neutral(q);kind=0.;if(dn<best&&dn<dc)kind=2.;else if(dc<best-0.01)kind=1.;}
+vec3 nrm(vec3 p){vec2 e=vec2(0.004,0);return normalize(vec3(map(p+e.xyy)-map(p-e.xyy),map(p+e.yxy)-map(p-e.yxy),map(p+e.yyx)-map(p-e.yyx)));}
+float ao(vec3 p,vec3 n){float s=0.,w=1.;for(int i=1;i<=5;i++){float h=0.025*float(i*i);s+=w*(h-map(p+n*h));w*=0.6;}return clamp(1.-s*3.5,0.,1.);}
+float hash(vec3 p){p=fract(p*0.3183+0.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+void main(){
+  vec2 fc=gl_FragCoord.xy;bool back=uSplit>0.5&&fc.x>uRes.x*0.5;vec2 res=uSplit>0.5?vec2(uRes.x*0.5,uRes.y):uRes;if(back)fc.x-=uRes.x*0.5;
+  vec2 uv=(fc-0.5*res)/(0.5*res.y);float yaw=uYaw+(back?3.14159:0.);
+  vec3 ro=vec3(sin(yaw)*cos(uPitch),sin(uPitch),cos(yaw)*cos(uPitch))*15.+vec3(0,-0.2,0),ta=vec3(0,-0.25,0),f=normalize(ta-ro),r=normalize(cross(f,vec3(0,1,0))),u=cross(r,f);
+  vec3 rd=normalize(uv.x*r+uv.y*u+3.0*f);
+  // bounding box of the figure
+  vec3 bmin=vec3(-1.7,-4.6,-1.0),bmax=vec3(1.7,4.2,1.0),t0=(bmin-ro)/rd,t1=(bmax-ro)/rd,tn=min(t0,t1),tf=max(t0,t1);float tN=max(max(tn.x,tn.y),tn.z),tF=min(min(tf.x,tf.y),tf.z);
+  o=vec4(0);if(tF<max(tN,0.))return;float t=max(tN,0.);bool hit=false;
+  for(int i=0;i<110;i++){vec3 p=ro+rd*t;float d=map(p);if(d<0.0015*t){hit=true;break;}t+=d*0.75;if(t>tF)break;}
+  if(!hit)return;
+  vec3 p=ro+rd*t,n=nrm(p);int id;float hh,kind;info(p,id,hh,kind);bool right=p.x>=0.;
+  float act=0.;for(int i=0;i<N;i++)if(i==id)act=right?uAR[i]:uAL[i];
+  vec3 base;float spec=0.6,fib=0.;
+  if(kind==2.){base=vec3(0.42,0.55,0.68);spec=0.5;}
+  else if(kind==1.){base=vec3(0.16,0.035,0.04);spec=0.2;}
+  else{vec3 a=MA[id],b=MB[id];a.x*=right?1.:-1.;b.x*=right?1.:-1.;vec3 ax=normalize(b-a),pp=p-a-ax*dot(p-a,ax);vec3 s1=normalize(cross(ax,vec3(0.3,0.1,1.)));
+    fib=sin(dot(pp,s1)*90.+hash(floor(p*30.))*2.)*0.5+0.5;
+    vec3 rest=vec3(0.5,0.07,0.07),hot=vec3(1.0,0.42,0.14);base=mix(rest,hot,act)*(0.82+0.3*fib);
+    float tend=smoothstep(0.09,0.01,hh)+smoothstep(0.91,0.99,hh);base=mix(base,vec3(0.74,0.66,0.6),clamp(tend,0.,1.)*0.85);
+    if(id==8){float band=abs(fract((p.y-0.0)/0.45)-0.5);vec3 tc=mix(base,vec3(0.8,0.7,0.65),0.55);base=mix(tc,base,smoothstep(0.01,0.035,band));base=mix(tc,base,smoothstep(0.008,0.022,abs(p.x)));}}
+  vec3 L=normalize(-0.55*r+0.7*u-0.75*f),V=-rd,H=normalize(L+V);float dif=max(dot(n,L),0.),wrap=max(dot(n,L)*0.5+0.5,0.),occ=ao(p,n);
+  float sp=pow(max(dot(n,H),0.),48.)*spec*(0.6+0.4*fib),rim=pow(1.-max(dot(n,V),0.),3.);
+  vec3 keyC=vec3(0.86,0.93,1.0),fillC=vec3(0.25,0.35,0.55);float bl2=max(dot(n,normalize(0.6*r+0.3*u+0.8*f)),0.);
+  vec3 col=base*(keyC*(0.95*dif+0.22*wrap)+fillC*0.35)*occ+keyC*sp*occ+uRim*(rim*0.9+bl2*0.35)*occ;if(kind==2.)col+=vec3(0.4,0.8,1.)*rim*0.6;
+  col+=vec3(1.,0.45,0.15)*act*act*(0.35+0.15*sin(uT*75.+float(id)))*(kind==0.?1.:0.);
+  col=clamp((col*(2.51*col+0.03))/(col*(2.43*col+0.59)+0.14),0.,1.);o=vec4(pow(col,vec3(0.95)),1.);
+}`;
+const M3G={};
+function m3Init(){if(M3G.ok!==undefined)return M3G.ok;try{const cv=document.createElement('canvas');cv.width=cv.height=8;const g=cv.getContext('webgl2',{alpha:true,premultipliedAlpha:true,antialias:false,preserveDrawingBuffer:true});if(!g)return M3G.ok=false;
+  const sh=(t,src)=>{const s=g.createShader(t);g.shaderSource(s,src);g.compileShader(s);if(!g.getShaderParameter(s,g.COMPILE_STATUS))throw new Error(g.getShaderInfoLog(s));return s};
+  const pr=g.createProgram();g.attachShader(pr,sh(g.VERTEX_SHADER,'#version 300 es\nin vec2 p;void main(){gl_Position=vec4(p,0,1);}'));g.attachShader(pr,sh(g.FRAGMENT_SHADER,M3_FS));g.linkProgram(pr);if(!g.getProgramParameter(pr,g.LINK_STATUS))throw new Error(g.getProgramInfoLog(pr));
+  const b=g.createBuffer();g.bindBuffer(g.ARRAY_BUFFER,b);g.bufferData(g.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),g.STATIC_DRAW);const loc=g.getAttribLocation(pr,'p');g.enableVertexAttribArray(loc);g.vertexAttribPointer(loc,2,g.FLOAT,false,0,0);
+  const U={};['uRes','uYaw','uPitch','uT','uSplit','uAR','uAL','uRim'].forEach(k=>U[k]=g.getUniformLocation(pr,k));Object.assign(M3G,{cv,g,pr,U,scale:0.6});return M3G.ok=true}catch(e){console.warn('3D muscles off:',e.message);return M3G.ok=false}}
+// camera projection in JS (the same as the shader) for the labels
+function m3Proj(P,yaw,pitch,cx,cy,hh){const ro=[Math.sin(yaw)*Math.cos(pitch)*15,Math.sin(pitch)*15-0.2,Math.cos(yaw)*Math.cos(pitch)*15],f=v3.norm(v3.sub([0,-0.25,0],ro)),r=v3.norm(v3.cross(f,[0,1,0])),u=v3.cross(r,f),d=v3.sub(P,ro),z=v3.dot(d,f);
+  return [cx+v3.dot(d,r)/z*3*hh*0.5,cy-v3.dot(d,u)/z*3*hh*0.5,z]}
+function lvMuscle3D(c,b){if(!m3Init())return lvMuscleMap(c,b);const G=M3G,g=G.g,patK=musPat(),pat=MUS_PAT[patK],ph=(st.t*pat.hz)%1,M=Math.min(W,H);
+  const dt=st.dtReal||0.016;if(G.fixed)G.scale=G.fixed;else if(dt>0.045)G.scale=Math.max(0.32,G.scale*0.97);else if(dt<0.022)G.scale=Math.min(0.75,G.scale*1.01);
+  const w=Math.max(64,Math.round(b.w*G.scale)),h=Math.max(64,Math.round(b.h*G.scale));if(G.cv.width!==w||G.cv.height!==h){G.cv.width=w;G.cv.height=h}
+  G.yaw=(G.yaw||0)+dt*(BODY.spin===false?0:0.18);const yaw=G.yaw+FLY.yaw*2,pitch=0.06+FLY.pitch*0.5;
+  const AR=new Float32Array(M3N),AL=new Float32Array(M3N),act={};
+  M3.forEach((m,i)=>{const gk=m[1]==='delt'?null:m[1];const f=s=>clamp((gk?pat.f(gk,ph,s):Math.max(pat.f('deltA',ph,s),pat.f('deltP',ph,s))),0,1);AR[i]=f(1);AL[i]=f(-1);act[i]=Math.max(AR[i],AL[i])});
+  g.viewport(0,0,w,h);g.clearColor(0,0,0,0);g.clear(g.COLOR_BUFFER_BIT);g.useProgram(G.pr);g.uniform2f(G.U.uRes,w,h);g.uniform1f(G.U.uYaw,yaw);g.uniform1f(G.U.uPitch,pitch);g.uniform1f(G.U.uT,st.t);g.uniform1f(G.U.uSplit,1);
+  g.uniform1fv(G.U.uAR,AR);g.uniform1fv(G.U.uAL,AL);g.uniform3f(G.U.uRim,0.35,0.82,1.0);g.drawArrays(g.TRIANGLES,0,3);
+  c.save();c.globalCompositeOperation='source-over';c.imageSmoothingQuality='high';c.drawImage(G.cv,b.x,b.y,b.w,b.h);c.restore();
+  // glow, labels for the strongest muscles that face the viewer, and the activation list
+  const views=[[b.x+b.w*0.25,yaw,'Front'],[b.x+b.w*0.75,yaw+Math.PI,'Back']],cy=b.y+b.h*0.5,cand=[];
+  views.forEach(([cx,yw,vn])=>{M3.forEach((m,i)=>{for(const s of [1,-1]){const a=s>0?AR[i]:AL[i];if(a<0.45)continue;const P=[(m[2][0]+m[3][0])/2*s,(m[2][1]+m[3][1])/2,(m[2][2]+m[3][2])/2],nx=[P[0],0,P[2]];
+      const facing=Math.sin(yw)*P[0]+Math.cos(yw)*P[2];if(facing<0.05)continue;const q=m3Proj(P,yw,pitch,cx,cy,b.h);cand.push({n:m[0],a,x:q[0],y:q[1],vn,cx})}})});
+  const seen={},pick=cand.sort((p,q)=>q.a-p.a).filter(o=>{const k=o.n+o.vn;if(seen[o.n]||seen[k])return false;seen[o.n]=1;return true}).slice(0,6);
+  c.save();c.globalCompositeOperation='lighter';pick.forEach(o=>softDot(c,o.x,o.y,M*0.035*o.a,'rgba(255,160,70,'+(0.22*o.a).toFixed(3)+')'));c.restore();
+  for(const vn of ['Front','Back']){let last=-1e9;pick.filter(o=>o.vn===vn).sort((p,q)=>p.y-q.y).forEach(o=>{const ly=Math.max(o.y,last+M*0.04);last=ly;atlLabel(o.x,o.y,vn==='Front'?b.x+b.w*0.05:b.x+b.w*0.53,ly,o.n)})}
+  atlDrawLabels(c);c.save();c.font=(M*0.016|0)+'px "Chakra Petch",system-ui,sans-serif';c.fillStyle='rgba(236,230,214,0.7)';c.textAlign='center';c.fillText('FRONT',b.x+b.w*0.25,b.y+b.h*0.99);c.fillText('BACK',b.x+b.w*0.75,b.y+b.h*0.99);c.restore();
+  const all={};M3.forEach((m,i)=>{if(!all[m[0]]||all[m[0]].a<act[i])all[m[0]]={a:act[i]}});BODY.mpTop=Object.entries(all).sort((p,q)=>q[1].a-p[1].a).slice(0,7);BODY.mpLabel=pat.name;BODY.mpHz=[pat.name+' rhythm',pat.hz,pat.note]}
+
+const BODY_LV={musclemap:lvMuscle3D,alveoli:lvAlveoli,rbc:lvRBC,muscle:lvMuscle,neuron:lvNeuron,synapse:lvSynapse,liver:lvLiver,glom:lvGlom,mito:lvMito};
 // ---------- the HUD: breadcrumb, title card, Activate line, rhythms, healthy ranges, scale ladder, breath pacer ----------
+/* ---------- cinematic high-tech backdrop: deep navy, soft drifting glows, a fading grid, a holographic platform, a slow scan ---------- */
+function labBackdrop(c,acc,fx,fy,grid){const M=Math.min(W,H),t=st.t;c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1;
+  const g=c.createRadialGradient(fx,fy,0,fx,fy,Math.hypot(W,H)*0.75);g.addColorStop(0,'rgb(14,34,58)');g.addColorStop(0.45,'rgb(6,14,28)');g.addColorStop(1,'rgb(1,2,6)');c.fillStyle=g;c.fillRect(0,0,W,H);
+  c.globalCompositeOperation='lighter';
+  const blob=(x,y,r,rgb,al)=>{const b=c.createRadialGradient(x,y,0,x,y,r);b.addColorStop(0,'rgba('+rgb.join(',')+','+al+')');b.addColorStop(0.5,'rgba('+rgb.join(',')+','+(al*0.35)+')');b.addColorStop(1,'rgba('+rgb.join(',')+',0)');c.fillStyle=b;c.fillRect(x-r,y-r,r*2,r*2)};
+  blob(fx+Math.sin(t*0.05)*M*0.25,fy-M*0.15+Math.cos(t*0.04)*M*0.1,M*0.75,acc,0.13);
+  blob(W*0.15+Math.cos(t*0.03)*M*0.2,H*0.85,M*0.7,[40,200,255],0.07);blob(W*0.9,H*0.12+Math.sin(t*0.035)*M*0.1,M*0.6,[120,90,255],0.06);
+  if(grid){c.strokeStyle='rgba(120,220,255,1)';const gy=fy+M*0.38,hz=fy-M*0.05;for(let i=-14;i<=14;i++){const x0=fx+i*M*0.11,x1=fx+i*M*0.022;const lg=c.createLinearGradient(0,hz,0,H);lg.addColorStop(0,'rgba(120,220,255,0)');lg.addColorStop(1,'rgba(120,220,255,0.07)');c.strokeStyle=lg;c.lineWidth=1;c.beginPath();c.moveTo(x1,hz);c.lineTo(x0,H);c.stroke()}
+    for(let k=0;k<10;k++){const u=((k+(t*0.15)%1)/10),y=hz+(H-hz)*u*u;c.strokeStyle='rgba(120,220,255,'+(0.07*u).toFixed(3)+')';c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke()}}
+  // soft cool light shafts
+  for(let i=0;i<3;i++){const an=0.95+i*0.09+Math.sin(t*0.04+i)*0.04,len=Math.hypot(W,H),w=0.05,ox=W*(0.3+i*0.12),oy=-H*0.15,sg=c.createLinearGradient(ox,oy,ox+Math.cos(an)*len,oy+Math.sin(an)*len);
+    sg.addColorStop(0,'rgba(160,220,255,0.06)');sg.addColorStop(1,'rgba(160,220,255,0)');c.fillStyle=sg;c.beginPath();c.moveTo(ox,oy);c.lineTo(ox+Math.cos(an-w)*len,oy+Math.sin(an-w)*len);c.lineTo(ox+Math.cos(an+w)*len,oy+Math.sin(an+w)*len);c.closePath();c.fill()}
+  c.restore()}
+function labPlatform(c,cx,cy,rx,acc){const ry=rx*0.22,t=st.t;c.save();c.globalCompositeOperation='lighter';
+  const d=c.createRadialGradient(cx,cy,0,cx,cy,rx*1.2);d.addColorStop(0,'rgba('+acc.join(',')+',0.22)');d.addColorStop(0.6,'rgba(80,200,255,0.06)');d.addColorStop(1,'rgba(80,200,255,0)');c.fillStyle=d;c.save();c.translate(cx,cy);c.scale(1,0.22);c.beginPath();c.arc(0,0,rx*1.2,0,TAU);c.fill();c.restore();
+  for(const [k,al,dash] of [[1,0.55,0],[0.78,0.3,1],[0.55,0.22,0],[1.15,0.15,2]]){c.save();c.translate(cx,cy);c.scale(1,0.22);c.rotate(dash?t*0.2*(dash===2?-1:1):0);c.strokeStyle='rgba(140,225,255,'+al+')';c.lineWidth=Math.max(1,rx*0.006)/0.22*0.3;
+    if(dash){c.setLineDash([rx*0.03,rx*0.05])}c.beginPath();c.arc(0,0,rx*k,0,TAU);c.stroke();c.restore()}
+  c.restore()}
+function labScan(c,b){const t=(st.t%7)/7,y=b.y+b.h*(t*1.3-0.15),h=b.h*0.12;c.save();c.globalCompositeOperation='lighter';const g=c.createLinearGradient(0,y-h,0,y+h);g.addColorStop(0,'rgba(120,220,255,0)');g.addColorStop(0.5,'rgba(120,220,255,0.07)');g.addColorStop(1,'rgba(120,220,255,0)');c.fillStyle=g;c.fillRect(b.x,y-h,b.w,h*2);
+  c.fillStyle='rgba(170,235,255,0.18)';c.fillRect(b.x,y,b.w,Math.max(1,Math.min(W,H)*0.0012));c.restore()}
+
 function bodyHUD(c,box,sys,L,li,age,isAll){const M=Math.min(W,H),k=age<1.2?sstep(age/1.2):1,col=sys?sys.col:[242,184,75];
   c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1;c.textBaseline='alphabetic';c.textAlign='left';
   const px=box.x+box.w*0.022,pw=box.w*0.325,py=box.y+M*0.03,ph=box.h-M*0.06,x=px+M*0.028,maxW=pw-M*0.056,bottom=py+ph-M*0.02;
-  const pg=c.createLinearGradient(px,0,px+pw,0);pg.addColorStop(0,'rgba(4,6,12,0.78)');pg.addColorStop(1,'rgba(4,6,12,0.55)');c.fillStyle=pg;c.beginPath();c.roundRect(px,py,pw,ph,M*0.012);c.fill();
-  c.strokeStyle='rgba('+col.join(',')+',0.28)';c.lineWidth=Math.max(1,M*0.0012);c.stroke();c.save();c.beginPath();c.roundRect(px,py,pw,ph,M*0.012);c.clip();c.globalAlpha=k;
+  const pg=c.createLinearGradient(px,py,px+pw,py+ph);pg.addColorStop(0,'rgba(22,44,78,0.62)');pg.addColorStop(0.5,'rgba(8,16,32,0.7)');pg.addColorStop(1,'rgba(4,8,18,0.82)');c.shadowColor='rgba(0,10,30,0.6)';c.shadowBlur=M*0.04;c.fillStyle=pg;c.beginPath();c.roundRect(px,py,pw,ph,M*0.022);c.fill();c.shadowBlur=0;
+  const bgr=c.createLinearGradient(px,py,px+pw,py+ph);bgr.addColorStop(0,'rgba(140,225,255,0.55)');bgr.addColorStop(0.5,'rgba(140,225,255,0.08)');bgr.addColorStop(1,'rgba('+col.join(',')+',0.45)');c.strokeStyle=bgr;c.lineWidth=Math.max(1,M*0.0015);c.stroke();
+  const sh2=c.createLinearGradient(0,py,0,py+ph*0.25);sh2.addColorStop(0,'rgba(255,255,255,0.06)');sh2.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=sh2;c.fill();c.save();c.beginPath();c.roundRect(px,py,pw,ph,M*0.022);c.clip();c.globalAlpha=k;
   const font=(px2,w)=>(w||'')+' '+(px2|0)+'px "Chakra Petch",system-ui,sans-serif';let y=py+M*0.045;
   const ls=v=>{try{c.letterSpacing=v}catch(_){}};
   const wrap=(txt,size,lh,style,fill)=>{c.font=font(size,style);c.fillStyle=fill;let ln='';for(const w of txt.split(' ')){const t2=ln?ln+' '+w:w;if(c.measureText(t2).width>maxW){if(y<bottom)c.fillText(ln,x,y);ln=w;y+=lh}else ln=t2}if(ln){if(y<bottom)c.fillText(ln,x,y);y+=lh}};
@@ -6234,13 +6356,13 @@ function bodyLabScene(c,a){BODY.rt=(BODY.rt||0)+Math.min(0.1,st.dtReal||0.016);
     if(L.bind&&(!LAB.guests.length)&&st.t-B.t0>2.5&&st.t-(LAB.bindT||-99)>16)labBind();
     labScene(c,a);c.globalCompositeOperation='source-over'}
   else{LAB.ext=null;c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1;
-    const bg=c.createRadialGradient(W*0.62,H*0.45,0,W*0.55,H*0.5,Math.hypot(W,H)*0.65);bg.addColorStop(0,'rgb('+env.bg[0].join(',')+')');bg.addColorStop(1,'rgb('+env.bg[1].join(',')+')');c.fillStyle=B.cine?bg:'rgb(3,4,10)';c.fillRect(0,0,W,H);
-    if(B.cine){c.globalCompositeOperation='lighter';for(let i=0;i<4;i++){const an=0.6+i*0.12+Math.sin(st.t*0.05+i)*0.05,len=Math.hypot(W,H),w=0.03,ox=-W*0.05+i*W*0.07,oy=-H*0.1,g=c.createLinearGradient(ox,oy,ox+Math.cos(an)*len,oy+Math.sin(an)*len);
-      g.addColorStop(0,'rgba('+env.shaft.join(',')+',0.05)');g.addColorStop(1,'rgba('+env.shaft.join(',')+',0)');c.fillStyle=g;c.beginPath();c.moveTo(ox,oy);c.lineTo(ox+Math.cos(an-w)*len,oy+Math.sin(an-w)*len);c.lineTo(ox+Math.cos(an+w)*len,oy+Math.sin(an+w)*len);c.closePath();c.fill()}c.globalCompositeOperation='source-over'}
     const vb={x:box.x+box.w*0.35,y:box.y,w:box.w*0.63,h:box.h};
+    if(B.cine){const fig=L.kind==='body'||L.kind==='musclemap';labBackdrop(c,sys.col,vb.x+vb.w*0.5,vb.y+vb.h*0.45,fig);if(fig){const fy=vb.y+vb.h*0.95;if(L.kind==='musclemap'){labPlatform(c,vb.x+vb.w*0.25,fy,vb.h*0.16,sys.col);labPlatform(c,vb.x+vb.w*0.75,fy,vb.h*0.16,sys.col)}else labPlatform(c,vb.x+vb.w*0.5,fy,vb.h*0.2,sys.col)}}
+    else{c.fillStyle='rgb(3,4,10)';c.fillRect(0,0,W,H)}
     if(L.kind==='body'){if(B.allView){const order=['breathe','move','signal','clean','fuel'];B.hl=order[Math.floor(st.t/4)%5]}bodyDraw(c,vb,B.allView?'all':sys.k,a)}
     else{const ib=L.kind==='musclemap'?vb:{x:vb.x+vb.w*0.06,y:vb.y+vb.h*0.08,w:vb.w*0.8,h:vb.h*0.84};(BODY_LV[L.kind]||lvAlveoli)(c,ib,a);if(L.kind!=='musclemap'){lvLabels(L.kind,ib);atlDrawLabels(c)}}
-    const vg=c.createRadialGradient(W/2,H/2,M*0.35,W/2,H/2,Math.hypot(W,H)*0.6);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.6)');c.fillStyle=vg;c.fillRect(0,0,W,H);
+    if(B.cine)labScan(c,vb);
+    const vg=c.createRadialGradient(W*0.6,H*0.45,M*0.3,W/2,H/2,Math.hypot(W,H)*0.62);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(0.7,'rgba(0,2,6,0.25)');vg.addColorStop(1,'rgba(0,2,6,0.7)');c.fillStyle=vg;c.fillRect(0,0,W,H);
     if(bh>0.5){c.fillStyle='#000';c.fillRect(0,0,W,bh);c.fillRect(0,H-bh,W,bh)}c.restore()}
   // zoom transition: the last shot grows (zoom in) or shrinks (zoom out) and fades away
   const tt=(st.t-B.tr)/1.6;if(B.snap&&tt>=0&&tt<1){const e=sstep(tt),s2=B.dir>0?1+e*3:1-e*0.6;c.save();c.globalCompositeOperation='source-over';c.globalAlpha=1-e;c.translate(W*0.58,H*0.5);c.scale(s2,s2);c.translate(-W*0.58,-H*0.5);c.drawImage(B.snap,0,0);c.restore();
