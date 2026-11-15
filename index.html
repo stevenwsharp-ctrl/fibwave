@@ -7920,6 +7920,105 @@ addMode({id:'penta',name:'Pentatonic',key:'9',
       PT.tip.innerHTML=t}
   }});
 
+/* ===== SONG CHART: a chord progression, chord shapes by level, and how they sit in the pentatonic boxes ===== */
+const CQ={'':[0,4,7],m:[0,3,7],'7':[0,4,7,10],m7:[0,3,7,10],maj7:[0,4,7,11],maj9:[0,4,7,11,2],madd9:[0,3,7,2],add9:[0,4,7,2],sus4:[0,5,7],sus2:[0,2,7],'6':[0,4,7,9],m6:[0,3,7,9],'9':[0,4,7,10,2],m9:[0,3,7,10,2],dim:[0,3,6],aug:[0,4,8]};
+const TONE_NAME={0:'R',1:'♭9',2:'9',3:'♭3',4:'3',5:'4',6:'♭5',7:'5',8:'♯5',9:'6',10:'♭7',11:'7'};
+const PCN={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+function chParse(name){const m=name.trim().match(/^([A-G])([#b♯♭]?)(.*?)(?:\/([A-G][#b♯♭]?))?$/);if(!m)return null;
+  let r=(PCN[m[1]]+(m[2]==='#'||m[2]==='♯'?1:m[2]==='b'||m[2]==='♭'?-1:0)+12)%12;let q=m[3].replace(/\s/g,'').replace('min','m').replace('M7','maj7').replace(/^m?add9$/,x=>x).replace('(add9)','add9').replace('m(add9)','madd9');
+  if(q==='madd9'||q==='m add9')q='madd9';if(!(q in CQ))q=q.startsWith('m')&&!q.startsWith('maj')?'m'+(q.includes('7')?'7':''):q.includes('7')?'7':'';
+  let bass=null;if(m[4]){bass=(PCN[m[4][0]]+(m[4][1]==='#'||m[4][1]==='♯'?1:m[4][1]==='b'||m[4][1]==='♭'?-1:0)+12)%12}
+  return {name:name.trim(),root:r,q,bass,pcs:CQ[q].map(i=>(r+i)%12).concat(bass!==null?[bass]:[])}}
+// voicings: frets from the low E string to the high e string (-1 = do not play). Several shapes per chord, first = the usual one
+const CV={
+ beginner:{'F#m':[[-1,-1,4,2,2,2]],'B7':[[-1,2,1,2,0,2]],'E':[[0,2,2,1,0,0]],'A':[[-1,0,2,2,2,0]],'C#m':[[-1,-1,2,1,2,0],[-1,4,6,6,5,4]],'Am':[[-1,0,2,2,1,0]],'Em':[[0,2,2,0,0,0]],'G':[[3,2,0,0,0,3]],'C':[[-1,3,2,0,1,0]],'D':[[-1,-1,0,2,3,2]],'Dm':[[-1,-1,0,2,3,1]],'E7':[[0,2,0,1,0,0]],'A7':[[-1,0,2,0,2,0]],'D7':[[-1,-1,0,2,1,2]],'G7':[[3,2,0,0,0,1]],'C7':[[-1,3,2,3,1,0]],'Bm':[[-1,-1,4,4,3,2]],'F':[[-1,-1,3,2,1,1]]},
+ intermediate:{'F#m7':[[2,4,2,2,2,2]],'B7':[[-1,2,4,2,4,2],[-1,2,1,2,0,2]],'E/G#':[[4,-1,2,1,0,0]],'Emaj7':[[0,2,1,1,0,0]],'Amaj7':[[-1,0,2,1,2,0]],'E':[[0,2,2,1,0,0]],'C#m':[[-1,4,6,6,5,4]],'C#m7':[[-1,4,6,4,5,4]],'A':[[-1,0,2,2,2,0]],'F#m':[[2,4,4,2,2,2]]},
+ advanced:{'F#m7':[[2,-1,2,2,2,-1],[-1,9,11,9,10,9]],'B7':[[7,-1,7,8,7,-1],[-1,2,4,2,4,2]],'E/G#':[[4,-1,2,4,5,4],[4,-1,2,1,0,0]],'Emaj7':[[-1,7,9,8,9,7],[0,2,1,1,0,0]],'Amaj7':[[5,-1,6,6,5,-1],[-1,0,2,1,2,0]],
+   'Emaj9':[[0,2,1,1,0,2],[-1,7,6,8,7,-1]],'C#madd9':[[-1,4,2,1,4,-1],[-1,4,6,8,5,4]],'C#m7/A':[[-1,0,2,4,2,4],[5,-1,6,6,5,4]]}};
+// a barre shape for any chord (E shape or A shape), used when there is no shape in the tables
+function cvGeneric(ch){const E={'':[0,2,2,1,0,0],m:[0,2,2,0,0,0],'7':[0,2,0,1,0,0],m7:[0,2,0,0,0,0],maj7:[0,-9,1,1,0,-9],sus4:[0,2,2,2,0,0]},A={'':[-9,0,2,2,2,0],m:[-9,0,2,2,1,0],'7':[-9,0,2,0,2,0],m7:[-9,0,2,0,1,0],maj7:[-9,0,2,1,2,0],sus2:[-9,0,2,2,0,0]};
+  const q=ch.q in E||ch.q in A?ch.q:(CQ[ch.q].includes(3)?(CQ[ch.q].includes(10)?'m7':'m'):CQ[ch.q].includes(10)?'7':CQ[ch.q].includes(11)?'maj7':''),out=[];
+  if(E[q]){const r=(ch.root-4+12)%12;out.push(E[q].map(x=>x<-1?-1:x+r))}if(A[q]){const r=(ch.root-9+12)%12;out.push(A[q].map(x=>x<-1?-1:x+r))}
+  return out.sort((a,b)=>Math.max(...a)-Math.max(...b))}
+function cvFor(name,level,alt){const ch=chParse(name);if(!ch)return null;const key=name.replace(/\s/g,'').replace('m(add9)','madd9').replace('madd9','madd9').replace('min','m');
+  const lists=[CV[level]&&CV[level][key],level!=='beginner'&&CV.intermediate[key],CV.beginner[key]].filter(Boolean);let L=lists[0]||cvGeneric(ch);if(!L.length)L=cvGeneric(ch);return {ch,fr:L[(alt||0)%L.length],n:L.length}}
+const CHART_PRESETS={
+ friend:{name:"Friend's progression · E major · 85 BPM",bpm:85,loops:2,
+   beginner:'F#m B7 E E+A | E C#m E C#m C#m C#m',
+   intermediate:'F#m7 B7 E/G# Emaj7+Amaj7 | E C#m E C#m C#m7 C#m7',
+   advanced:'F#m7 B7 E/G# Emaj7+Amaj7 | Emaj9 C#madd9 Emaj9 C#madd9 C#m7/A C#m7/A'},
+ blues:{name:'12-bar blues in A · 90 BPM',bpm:90,loops:0,beginner:'A7 A7 A7 A7 | D7 D7 A7 A7 | E7 D7 A7 E7',intermediate:'A7 D7 A7 A7 | D7 D7 A7 A7 | E7 D7 A7 E7',advanced:'A7 D7 A7 A7 | D7 D7 A7 A7 | E7 D7 A7 E7'},
+ pop:{name:'Pop I–V–vi–IV in G · 100 BPM',bpm:100,loops:0,beginner:'G D Em C',intermediate:'G D/F# Em C',advanced:'Gadd9 D/F# Em7 Cmaj7'}};
+const SC={preset:store.get('sc.preset','friend'),level:store.get('sc.level','beginner'),mode:store.get('sc.mode','static'),loops:store.get('sc.loops','preset'),play:false,t0:0,alt:{},custom:store.get('sc.custom',''),bpm:85,hear:true,click:true,lastI:-1,lastBeat:-1};
+// one bar = one word; "E+A" = two chords in one bar (2 beats each)
+function scSeq(){const P=CHART_PRESETS[SC.preset],txt=SC.preset==='custom'?SC.custom:P[SC.level];const out=[];txt.split(/[\s|]+/).filter(Boolean).forEach((t,bar)=>{const parts=t.split('+').filter(Boolean);parts.forEach(n=>out.push({name:n,beats:4/parts.length,bar,split:parts.length>1}))});return out}
+function scChords(){return scSeq().map(x=>x.name)}
+function scBpm(){return SC.preset==='custom'?SC.bpm:CHART_PRESETS[SC.preset].bpm}
+function scLoops(){if(SC.loops!=='preset')return +SC.loops;return SC.preset==='custom'?0:CHART_PRESETS[SC.preset].loops}
+function scPos(){const Q=scSeq(),n=Q.length,bars=n?Q[n-1].bar+1:0;if(!SC.play||!n)return {i:-1,beat:0,loop:0,n,bars};const beats=(performance.now()-SC.t0)/1000*scBpm()/60-4;   // 4 beats count-in
+  if(beats<0)return {i:-1,count:Math.ceil(-beats),beat:beats,loop:0,n,bars};const T=Q.reduce((a,q)=>a+q.beats,0),loop=Math.floor(beats/T),lp=scLoops();if(lp&&loop>=lp){SC.play=false;return {i:-1,done:true,n,bars}}
+  let w=beats-loop*T,i=0;while(i<n-1&&w>=Q[i].beats){w-=Q[i].beats;i++}return {i,beat:beats,loop,n,bars,bar:Q[i].bar}}
+function scStrum(fr){ensureCtx();const t0=actx.currentTime+0.02;let k=0;fr.forEach((f,i)=>{if(f>=0){plk(TUNE[5-i]+f,t0+k*0.035,0.35,1.6);k++}})}
+// how one chord sits in the scale: chord tones in and out of the pentatonic, and tips
+function scFit(ch,sc){const inS=pc=>sc.iv.includes((pc-sc.root+12)%12),ref=keyRef(sc.k),tone=pc=>TONE_NAME[(pc-ch.root+12)%12];
+  const good=ch.pcs.filter(inS),out=ch.pcs.filter(pc=>!inS(pc));
+  let t='<b>'+ch.name+'</b> = '+ch.pcs.map(pc=>nName(pc,ref)+' ('+tone(pc)+')').join(', ')+'.<br>In '+sc.name+': '+(good.length?'<b>'+good.map(pc=>nName(pc,ref)).join(', ')+'</b> are in the scale: ringed notes, safe to land on.':'no chord notes are in the scale.');
+  if(out.length)t+=' '+out.map(pc=>nName(pc,ref)).join(', ')+' '+(out.length>1?'are':'is')+' not in the pentatonic (it is the '+out.map(pc=>DEG_NAME[(pc-sc.root+12)%12]).join(', ')+' of the scale): play it as part of the chord, or as a short passing note.';
+  const third=ch.pcs.find(pc=>[3,4].includes((pc-ch.root+12)%12));if(third!==undefined)t+=' Target tone: the 3rd of the chord, <b>'+nName(third,ref)+'</b>, makes the change clear.';
+  return t}
+addMode({id:'chart',name:'Song chart',key:'0',
+  build(p){
+    const pSel=opt(el('select',{'aria-label':'Progression'}),Object.entries(CHART_PRESETS).map(([k,v])=>[k,v.name]).concat([['custom','Your own chords…']]),SC.preset);
+    const lv=seg([['beginner','Beginner'],['intermediate','Intermediate'],['advanced','Advanced']],SC.level,v=>{SC.level=v;store.set('sc.level',v);SC.alt={}});
+    const mSel=opt(el('select',{'aria-label':'How it moves'}),[['static','Static: show the whole chart'],['step','Step with the beat: now and next'],['follow','Step, and the box follows the chord']],SC.mode);
+    const lSel=opt(el('select',{'aria-label':'Loops'}),[['preset','Loops: as written'],['1','Play once'],['2','Play twice'],['0','Loop always']],String(SC.loops));
+    const cIn=el('input',{type:'text',placeholder:'One bar = one chord. Two in a bar: E+A. Example: Am F C G | Am F C+G E7',value:SC.custom,style:'flex:1;min-width:220px;background:#0d0f15;border:1px solid var(--line);border-radius:6px;padding:4px 8px;color:inherit'});
+    const bIn=el('input',{type:'number',min:'40',max:'220',value:'85',style:'width:62px;background:#0d0f15;border:1px solid var(--line);border-radius:6px;padding:3px 6px;color:inherit'});
+    const crow=el('div',{class:'prow'},[cIn,el('label',{class:'ctl'},['BPM ',bIn])]);crow.hidden=SC.preset!=='custom';
+    pSel.onchange=()=>{SC.preset=pSel.value;store.set('sc.preset',SC.preset);crow.hidden=SC.preset!=='custom';SC.alt={};SC.play=false;
+      if(SC.preset==='friend'){PT.root=4;PT.type='majp';if(PT.sync)PT.sync()}};
+    mSel.onchange=()=>{SC.mode=mSel.value;store.set('sc.mode',SC.mode)};lSel.onchange=()=>{SC.loops=lSel.value==='preset'?'preset':+lSel.value;store.set('sc.loops',SC.loops)};
+    cIn.onchange=()=>{SC.custom=cIn.value;store.set('sc.custom',SC.custom);SC.alt={}};bIn.onchange=()=>{SC.bpm=clamp(+bIn.value||85,40,220)};
+    const bPlay=el('button',{class:'btn',type:'button',text:'▶ Start (4 beats count-in)'}),bStop=el('button',{class:'btn',type:'button',text:'■ Stop'}),bAlt=el('button',{class:'btn',type:'button',text:'Other shape'});
+    bPlay.onclick=()=>{ensureCtx();SC.play=true;SC.t0=performance.now();SC.lastI=-1;SC.lastBeat=-1};bStop.onclick=()=>{SC.play=false};
+    bAlt.onclick=()=>{const L=scChords(),pos=scPos(),i=pos.i>=0?pos.i:(SC.sel||0);SC.alt[L[i]]=(SC.alt[L[i]]||0)+1};
+    const hear=el('input',{type:'checkbox'});hear.checked=SC.hear;hear.onchange=()=>SC.hear=hear.checked;const clk=el('input',{type:'checkbox'});clk.checked=SC.click;clk.onchange=()=>SC.click=clk.checked;
+    p.append(el('div',{class:'prow'},[el('label',{class:'ctl'},['Chart ',pSel]),lv]),crow,el('div',{class:'prow'},[el('label',{class:'ctl'},['Moves ',mSel]),lSel,bPlay,bStop,bAlt,el('label',{class:'chk'},[hear,' Hear the chords']),el('label',{class:'chk'},[clk,' Click'])]));
+    SC.cv=el('canvas',{'aria-label':'Chord shapes'});SC.cv.addEventListener('click',e=>{const r=SC.cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;if(SC.hit){const h=SC.hit.find(q=>x>=q.x&&x<=q.x+q.w&&y>=q.y&&y<=q.y+q.h);if(h){SC.sel=h.i;const v=cvFor(scChords()[h.i],SC.level,SC.alt[scChords()[h.i]]);if(v)scStrum(v.fr)}}});
+    p.append(SC.cv);SC.nk=el('canvas',{'aria-label':'The chord in the pentatonic box'});p.append(SC.nk);SC.tip=el('div',{class:'ptip'});p.append(SC.tip);
+    p.append(el('p',{class:'pnote',text:'Big dots = the chord shape (R = root, 3, 5, 7, 9). Small dots = the pentatonic box from the Pentatonic mode. A ring = a note in the chord and in the box: the safest note to land on. Click a chord to hear it and to see it in the box.'}));
+  },
+  frame(now){const L=scChords(),pos=scPos(),sc=ptScale(),M=Math.min(innerWidth,innerHeight);if(!L.length)return;
+    // sounds on the beat and on each chord change
+    if(SC.play&&pos.i>=0){const bt=Math.floor(pos.beat);if(bt!==SC.lastBeat){SC.lastBeat=bt;if(SC.click)try{clickAt(bt%4===0)}catch(_){}}if(pos.i!==SC.lastI){SC.lastI=pos.i;if(SC.hear){const v=cvFor(L[pos.i],SC.level,SC.alt[L[pos.i]]);if(v)scStrum(v.fr)}}}
+    else if(SC.play&&pos.count){const bt=Math.floor(pos.beat);if(bt!==SC.lastBeat){SC.lastBeat=bt;if(SC.click)try{clickAt(true)}catch(_){}}}
+    const cur=pos.i>=0?pos.i:(SC.sel||0);
+    // the chart: static = all chords; step = now and next
+    const stat=SC.mode==='static',show=stat?L.map((n,i)=>i):[cur,(cur+1)%L.length],per=stat?Math.min(6,L.length):2,rows=Math.ceil(show.length/per);
+    const ch=stat?rows*(small()?96:118)+8:(small()?130:170);const {c,w,h}=fitCv(SC.cv,ch);SC.hit=[];
+    const bw=Math.min((w-8)/per,stat?130:180),bh=stat?(small()?92:112):ch-8;
+    show.forEach((i,k)=>{const v=cvFor(L[i],SC.level,SC.alt[L[i]]);if(!v)return;const x=(k%per)*bw+4,y=Math.floor(k/per)*(bh+6)+2,now2=i===cur&&(SC.play||SC.sel!==undefined);
+      if(now2){c.fillStyle='rgba(143,215,255,0.12)';c.strokeStyle='#8fd7ff';c.lineWidth=1.5;c.beginPath();c.roundRect(x,y,bw-6,bh,8);c.fill();c.stroke()}
+      const label=(stat?'':k===0?'NOW · ':'NEXT · ')+(scSeq()[i].split?'½ ':'')+v.ch.name.replace('madd9','m(add9)').replace('C#m7/A','C#m7/A = Amaj9');
+      drawChordBox(c,x+4,y+2,bw-14,bh-6,v.fr,{title:label,tcol:now2?'#8fd7ff':GOLD,dot:now2?'#8fd7ff':GOLD});SC.hit.push({x,y,w:bw-6,h:bh,i})});
+    // the chord inside the pentatonic box
+    const v=cvFor(L[cur],SC.level,SC.alt[L[cur]]);if(!v)return;const boxes=ptBoxes(sc),fs=v.fr.filter(f=>f>=0),pf=v.fr.filter(f=>f>0),clo=pf.length?Math.min(...pf):0,chi=Math.max(...fs,1);
+    // the copy of a box (an octave lower, the same, or higher) nearest to the chord shape
+    const place=j=>{let best=null;for(const o of [-12,0,12]){const f0=boxes[j].f0+o,f1=boxes[j].f1+o;if(f0<-1||f1>22)continue;const ov=Math.min(chi,f1)-Math.max(clo,f0),dist=Math.abs((f0+f1)/2-(clo+chi)/2);if(!best||ov>best.ov+0.5||(Math.abs(ov-best.ov)<=0.5&&dist<best.dist))best={o,ov,dist,f0:Math.max(0,f0),f1}}return best};
+    let bi=PT.box,pl=place(bi),near=false;
+    if(SC.mode==='follow'||!pl||pl.ov<0){let bj=bi,bp=pl;boxes.forEach((_,j)=>{const q=place(j);if(q&&(!bp||q.ov>bp.ov||(q.ov===bp.ov&&q.dist<bp.dist))){bp=q;bj=j}});near=bj!==bi&&SC.mode!=='follow';bi=bj;pl=bp;if(SC.mode==='follow'&&PT.box!==bi){PT.box=bi;if(PT.sync)PT.sync()}}
+    const B=boxes[bi],off=pl?pl.o:0;let lo=Math.min(...fs,pl?pl.f0:0),hi=Math.max(...fs,pl?pl.f1:4);if(hi-lo>14){lo=Math.max(0,clo-2);hi=lo+12}
+    const set=new Map();v.fr.forEach((f,i)=>{if(f>=0)set.set((5-i)+','+f,true)});
+    const inBox=(s,f)=>B.cells.some(q=>q.s===s&&q.f+off===f);
+    const {c:c2,w:w2,h:h2}=fitCv(SC.nk,small()?140:Math.min(220,Math.max(160,SC.nk.clientWidth*0.2)));
+    const N=drawNeck(c2,w2,h2,{f0:Math.max(0,lo-1),f1:Math.max(lo+5,hi+1),compact:small(),cell(s,f){const m=TUNE[s]+f,pc=pcOf(m),isC=set.has(s+','+f),inP=sc.iv.includes((pc-sc.root+12)%12)&&inBox(s,f),isTone=v.ch.pcs.includes(pc);
+      if(isC){const d={fill:'#8fd7ff',text:TONE_NAME[(pc-v.ch.root+12)%12]||'',size:1.12};if(inP)d.ring=GOLD;return d}
+      if(inP){const d={fill:'rgba(236,230,214,0.55)',size:0.62,text:''};if(isTone){d.ring=GOLD;d.rw=2.2;d.fill='rgba(242,184,75,0.55)'}return d}return null}});
+    // muted strings: an x at the left
+    c2.fillStyle='rgba(255,120,120,0.9)';c2.font='600 12px "Chakra Petch",system-ui,sans-serif';c2.textAlign='center';v.fr.forEach((f,i)=>{if(f<0)c2.fillText('×',N.pl+8,N.Y(5-i)+4)});
+    if(!SC.tT||now-SC.tT>250){SC.tT=now;const st2=pos.count?'Count-in: '+pos.count+'…':pos.done?'Done. Press ▶ Start to play it again.':SC.play?'Bar '+(pos.bar+1)+' of '+pos.bars+(scSeq()[pos.i].split?' (2 chords in this bar)':'')+(scLoops()?' · loop '+(pos.loop+1)+' of '+scLoops():'')+' · '+scBpm()+' BPM':'Press ▶ Start, or click a chord. '+scBpm()+' BPM, one bar for each chord; a split bar (E+A) has 2 beats for each chord.';
+      SC.tip.innerHTML=st2+'<br>'+scFit(v.ch,sc)+' The box shown is <b>Box '+(bi+1)+'</b>'+(SC.mode==='follow'?' (it follows the chord)':near?' (your Box '+(PT.box+1)+' is far from this shape, so the nearest box is shown)':' (change it in Pentatonic, or select "box follows the chord")')+'.'}}});
+
 /* ---------- movable and resizable panels: drag the title bar, drag the corner, double-click the title bar to reset ---------- */
 function makeMovable(box,handle,key,onReset){const k='fibwave.geom.'+key;let geo=null;try{geo=JSON.parse(localStorage.getItem(k)||'null')}catch(_){}
   const M={key:k,
