@@ -56,10 +56,10 @@ Click **Health Lab** in the controls (or choose the scene **Health Laboratory**)
 | System | Levels |
 |---|---|
 | Muscles | 3D muscle map (a GPU-rendered figure seen from the front and back, turning slowly; drag to rotate; 28 muscle groups, activation for walking, squat, push-up, pull, curl and plank) → muscle fibers → actin and myosin |
-| Breathe | Lungs, heart and blood → alveoli → red blood cell → heme and oxygen → electron clouds |
+| Breathe | Lungs, heart and blood → **the heart in section** (4 chambers, valves that open and close in phase, ECG with P, QRS, T and heart sounds S1, S2) → alveoli → red blood cell → heme and oxygen → electron clouds |
 | Move | Skeleton and muscles → muscle fibers → actin and myosin → ATP → electron clouds |
 | Signal | Brain and nerves → neuron → nerve meets muscle → acetylcholine → electron clouds |
-| Clean | Liver, kidneys and lymph → liver lobule → kidney filter → albumin → urea |
+| Clean | Liver, kidneys and lymph → liver lobule → **the nephron** (every segment with its function and drug targets: SGLT2, loop diuretics, thiazides, ADH, aldosterone) → kidney filter → albumin → urea |
 | Fuel | Food to energy → mitochondrion → glucose → ATP → electron clouds |
 
 **Atlas style:** anatomical body (skeleton, organs, vessels, nerves, muscles with fiber direction), textbook labels with leader lines on every level, a lub-dub heartbeat, breathing with the diaphragm, and correct sarcomere banding (A band constant, I band and H zone shorten).
@@ -69,6 +69,8 @@ Click **Health Lab** in the controls (or choose the scene **Health Laboratory**)
 **Lecture layout:** an information panel on the left (title, simple text, medical text, Activate line, rhythms in Hz, optimal ranges, activation list and scale ladder), the picture on the right.
 
 **Detail:** *Simple*, *Medical* or *Simple + medical* (for a mixed audience).
+
+**Clinical orientation:** anterior view with the patient's right and left marked; the **Landmarks** option shows vertebral levels and surface landmarks (C7, sternal angle T4/T5, transpyloric plane L1, umbilicus L3/L4, iliac crests L4/L5). The spine has correct proportions (small cervical, large lumbar vertebrae). The neuron trace shows rest, threshold and peak and the phases of the action potential. Standard textbook colours: red = oxygenated blood and arteries, blue = deoxygenated blood and veins, yellow = nerves, green = lymphatics, ivory = bone.
 
 **Presenter controls:** Back, Pause and Next in the panel, or Page Up / Page Down (a presentation clicker), `,` / `.` and Enter.
 
