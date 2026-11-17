@@ -312,10 +312,36 @@ const EX=[
   {t:.8,p:{'root.roll':-16,'root.yaw':-10,'spine.s':14,'R.kn':72,'R.hip.f':52,'R.an':36,'L.kn':52,'L.hip.f':38,'L.an':30,'R.hip.a':-6,'L.hip.a':8,'R.sh.f':40,'R.el':70,'R.pole':-30},cap:'Right turn: now the left leg is the outside leg. It carries the load.'}]},
 ];
 
+// RUNNING: one cycle = left step + right step. Leg table: [u, hip flexion, knee bend, ankle]
+(function(){
+ const LEG=[[0,25,15,5],[.15,5,38,18],[.3,-18,15,-25],[.45,-8,85,-10],[.6,35,110,0],[.75,55,60,5],[.9,40,20,8]];
+ const leg=u=>{u=((u%1)+1)%1;for(let i=0;i<LEG.length;i++){const a=LEG[i],b=LEG[(i+1)%LEG.length];const ub=i+1<LEG.length?b[0]:1;
+  if(u>=a[0]&&u<ub){const k=(u-a[0])/(ub-a[0]);return[1,2,3].map(j=>a[j]+(b[j]-a[j])*k);}}return LEG[0].slice(1);};
+ const fly=t=>{for(const s of[.3,.8]){const d=t-s;if(d>0&&d<.2)return 7*Math.sin(Math.PI*d/.2);}return 0;};
+ const CAP={0:'Left foot strike: the foot lands under the body. The quads and calf get longer under load (eccentric). They absorb the impact.',
+  .125:'Midstance: the glutes and glute medius hold the pelvis level. The calf and Achilles tendon store energy like a spring.',
+  .25:'Push off: the calf and glutes shorten (concentric). The left foot leaves the ground.',
+  .3125:'Flight: both feet are off the ground. The hip flexor pulls the left thigh forward. The knee folds so the leg swings fast.',
+  .5:'Right foot strike: the same pattern now on the right leg.',
+  .6875:'Late swing (left leg): the hamstrings get longer under load. They brake the lower leg before the foot lands.',
+  .8125:'Flight: the arms swing opposite to the legs for balance. The obliques control the turn of the trunk.'};
+ const keys=[];const N=16;
+ for(let i=0;i<N;i++){const t=i/N;const L_=leg(t),R_=leg(t+.5);
+  keys.push({t,cap:CAP[t]||'',p:{'L.hip.f':L_[0],'L.kn':L_[1],'L.an':L_[2],'R.hip.f':R_[0],'R.kn':R_[1],'R.an':R_[2],
+   'L.sh.f':.8*R_[0]-12,'R.sh.f':.8*L_[0]-12,'root.y':fly(t),'root.yaw':-.12*(L_[0]-R_[0]),'chest.t':.25*(L_[0]-R_[0])}});}
+ EX.splice(6,0,{id:'run',name:'Running',icon:'»',dur:.85,anchor:'run',view:[90,6],props:['track'],scroll:300,cr:true,
+  base:{'root.pitch':8,'B.el':85,'B.sh.a':8,'B.sh.r':10,'spine.f':2,'neck.f':-6,'B.hip.a':2},
+  work:['gluteMax','hamstrings','vastLat','vastMed','rectFem','iliopsoas','gastroc','soleus','tibAnt','gluteMed','adductors','oblique','deltAnt','deltPost'],
+  stab:['rectusAbd','erector','biceps'],keys});
+})();
+
 function expand(p){const o={};for(const k in p)if(k.startsWith('B.')){o['L.'+k.slice(2)]=p[k];o['R.'+k.slice(2)]=p[k];}for(const k in p)if(!k.startsWith('B.'))o[k]=p[k];return o;}
 function interp(ex,t){
  const K=ex.K,n=K.length;let i=0;for(let j=0;j<n;j++)if(K[j].t<=t)i=j;
  const a=K[i],b=K[(i+1)%n];const t1=(i+1<n)?b.t:1;
+ if(ex.cr){const u=clamp((t-a.t)/((t1-a.t)||1),0,1);const k0=K[(i-1+n)%n].P,k1=a.P,k2=b.P,k3=K[(i+2)%n].P;const P={};
+  for(const k of ex.keyList){const p0=k0[k]||0,p1=k1[k]||0,p2=k2[k]||0,p3=k3[k]||0;P[k]=.5*(2*p1+(-p0+p2)*u+(2*p0-5*p1+4*p2-p3)*u*u+(-p0+3*p1-3*p2+p3)*u*u*u);}
+  P._cap=a.cap;return P;}
  let u=clamp((t-a.t)/((t1-a.t)||1),0,1);const e=u*u*(3-2*u);
  const P={};for(const k of ex.keyList){const va=a.P[k]||0,vb=b.P[k]||0;P[k]=va+(vb-va)*e;}
  P._cap=a.cap;return P;
@@ -344,7 +370,7 @@ function solve(ex,t){
  else{
   const C=ex.anchor==='pushup'?[['L','toe'],['R','toe'],['L','palm'],['R','palm']]:[['L','heel'],['L','toe'],['R','heel'],['R','toe']];
   let mn=1e9;for(const[s,k]of C){const y=cpt(W,s,k)[1];if(y<mn)mn=y;}
-  const A=ex.anchor==='pushup'?mix(cpt(W,'L','palm'),cpt(W,'R','palm'),.5):mix(cpt(W,'L','heel'),cpt(W,'R','heel'),.5);
+  const A=ex.anchor==='pushup'?mix(cpt(W,'L','palm'),cpt(W,'R','palm'),.5):ex.anchor==='run'?W.pelvis.p:mix(cpt(W,'L','heel'),cpt(W,'R','heel'),.5);
   d=[-A[0],-mn+(P['root.y']||0),-A[2]];
  }
  shiftW(W,d);W._P=P;return W;
@@ -352,7 +378,7 @@ function solve(ex,t){
 function prep(ex){
  if(ex.K)return;
  let cur=expand(ex.base||{});
- ex.K=ex.keys.map(k=>{cur=Object.assign({},cur,expand(k.p||{}));return{t:k.t,P:cur,cap:k.cap};});
+ let lc='';ex.K=ex.keys.map(k=>{cur=Object.assign({},cur,expand(k.p||{}));lc=k.cap||lc;return{t:k.t,P:cur,cap:lc};});
  const ks=new Set();ex.K.forEach(k=>Object.keys(k.P).forEach(x=>ks.add(x)));ex.keyList=[...ks];
  ex.workSet=new Set(ex.work);ex.stabSet=new Set(ex.stab||[]);
  if(ex.anchor==='pushup')solve(ex,0);
@@ -459,14 +485,15 @@ function layoutCam(){
 function resize(){dpr=Math.min(window.devicePixelRatio||1,2);VW=innerWidth;VH=innerHeight;cv.width=VW*dpr;cv.height=VH*dpr;layoutCam();}
 
 function drawGrid(){
- const ski=ex.props.includes('snow');const step=20,R=180;const off=ski?(simT*140)%step:0;
+ const ski=ex.props.includes('snow');const step=20,R=180;const off=ex.scroll?(simT*ex.scroll)%step:ski?(simT*140)%step:0;
  if(ski){const c=[[-R,0,-R],[R,0,-R],[R,0,R],[-R,0,R]].map(proj);ctx.fillStyle='rgba(225,238,255,.07)';ctx.beginPath();c.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.fill();}
  ctx.lineWidth=1;
  for(let v=-R;v<=R;v+=step){
-  const z=v-off;const a=proj([-R,0,z]),b=proj([R,0,z]);const al=.12*(1-Math.abs(v)/R*.8);
+  const z=v-off;const a=proj([-R,0,z]),b=proj([R,0,z]);if(ex.scroll&&v===-R)continue;const al=.12*(1-Math.abs(v)/R*.8);
   ctx.strokeStyle=ski?`rgba(230,240,255,${al*1.4})`:`rgba(94,224,255,${al})`;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
   const c=proj([v,0,-R]),d=proj([v,0,R]);ctx.strokeStyle=ski?`rgba(230,240,255,${al*1.4})`:`rgba(94,224,255,${al})`;ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(d[0],d[1]);ctx.stroke();
  }
+ if(ex.props.includes('track')){ctx.strokeStyle='rgba(255,140,90,.55)';ctx.lineWidth=2;for(const x of[-40,40]){const a=proj([x,0,-R]),b=proj([x,0,R]);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}}
  if(ski){ctx.fillStyle='rgba(255,255,255,.55)';for(let i=0;i<90;i++){const x=((i*73.13)%360)-180,z=((((i*41.7)%360)-180-simT*140)%360+540)%360-180;const q=proj([x,.2,z]);ctx.fillRect(q[0],q[1],1.6,1.6);}}
 }
 function drawShadow(W){const c=W.pelvis.p;const h=Math.max(0,c[1]);const a=clamp(.38-h/600,.08,.38);ctx.fillStyle=`rgba(0,0,0,${a})`;ctx.beginPath();
