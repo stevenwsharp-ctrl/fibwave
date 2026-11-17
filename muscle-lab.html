@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fibwave Muscle Lab</title>
+<meta name="description" content="A movement plan in 3D: watch which muscles work, oppose and stabilize, from the feet to the neck.">
+<meta property="og:title" content="Fibwave Muscle Lab — movement plan">
+<meta property="og:description" content="Watch the plan in 3D slow motion: the muscles that work, oppose and stabilize, from the feet to the neck.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@600;700&display=swap">
 <style>
@@ -47,6 +50,14 @@ button.b.on{background:rgba(94,224,255,.18);border-color:rgba(94,224,255,.6)}
 #legend div{display:flex;align-items:center;gap:7px;margin:2px 0}
 #legend .dot{box-shadow:none}
 #tMus{display:none}
+body.shared #left{display:none}
+.sban{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 10px;margin-bottom:10px;border-radius:10px;background:rgba(94,224,255,.1);border:1px solid rgba(94,224,255,.35);font-size:12.5px}
+.cshare[hidden]{display:none}
+.cshare{margin:4px 0 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.cshare .csub{width:100%;margin:0}
+.cshare input{flex:1;min-width:0;background:rgba(255,255,255,.06);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px;font:12px "JetBrains Mono",monospace}
+.cshr{padding:4px 7px}
+#toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:rgba(10,20,35,.95);border:1px solid rgba(94,224,255,.5);color:#e6f6ff;padding:8px 14px;border-radius:10px;font-size:13px;z-index:50;transition:all .25s}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 #coach{top:14px;left:14px;bottom:96px;width:410px;padding:12px 14px;overflow:auto;z-index:9}
 #coach .chd{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--acc);margin-bottom:4px}
 #cMus{width:100%;background:rgba(255,255,255,.06);color:var(--txt);border:1px solid var(--line);border-radius:8px;font:inherit;padding:6px}
@@ -97,6 +108,7 @@ body.zhide #zoom{display:none}
 </head>
 <body>
 <canvas id="c"></canvas>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <div id="left" class="panel">
   <a href="index.html" style="color:var(--dim);font-size:11.5px;text-decoration:none;display:block;margin-bottom:6px">◀ Back to Fibwave</a><h1>Muscle Lab</h1>
@@ -1383,7 +1395,7 @@ function openCoach(T){cT=T||cT||'deltLat';$('coach').hidden=false;$('cMus').valu
 function renderCoach(){
  const T=cT,d=MDEFK[T];cPlan=buildPlan(T,cGoal);const R=cPlan.R;
  const tip=COMP[T]||`The muscles that share its job (${listNames(R.syn.slice(0,3))||'its helpers'}) can take over. Move slowly, so the ${d.short.toLowerCase()} does the work.`;
- let h=`<div class="ctgt"><div class="cn" style="color:${ROLECOL.target}">${d.name}</div><div>${d.does}</div>
+ let h=(document.body.classList.contains('shared')?`<div class="sban"><div><b>Shared movement plan</b><div class="csub" style="margin:0">Watch the body. Follow each block and its dose.</div></div><button class="b" id="exitShare">Open the full Muscle Lab</button></div>`:'')+`<div class="ctgt"><div class="cn" style="color:${ROLECOL.target}">${d.name}</div><div>${d.does}</div>
   <div class="ctip"><b>${cGoal==='wake'?'If it is underactive':'If it is overactive'}:</b> ${cGoal==='wake'?tip:`It often stays tight to protect a weak neighbor. Strengthen the opposing muscles and the chain, then lengthen it with slow breathing.`}</div></div>`;
  const sec=(t,ids,role,sub)=>ids.length?`<div class="csec"><div class="ch3"><span class="dot" style="background:${ROLECOL[role]}"></span>${t}</div>${sub?`<div class="csub">${sub}</div>`:''}<div>${ids.map(i=>chip(i,role)).join('')}</div></div>`:'';
  h+=sec('Works with it',R.syn,'syn','Same main job (synergists).');
@@ -1391,19 +1403,39 @@ function renderCoach(){
  h+=sec('Stabilizes it',R.stab,'stab','They hold the base still so it can work.');
  h+=`<div class="csec"><div class="ch3"><span class="dot" style="background:${ROLECOL.chain}"></span>Connected chain, feet to head</div><div class="csub">Fascial lines after Myers. The dashed line on the body shows the path.</div>`;
  for(const l of R.lines){const C=CHAINS[l];h+=`<div class="cline"><div><b>${C.name}</b> <span class="ev ev-${C.ev.startsWith('strong')?'s':C.ev.startsWith('partial')?'p':'n'}">${C.ev}</span></div><div class="cpath">${C.m.map(i=>i===T?chip(i,'target'):chip(i,'chain')).join('<span class="arr">›</span>')}</div></div>`;}
- h+=`</div><div class="csec"><div class="ch3">Your movement plan — ${cGoal==='wake'?'wake it up':'calm it down'}</div>
-  <button class="b on cplay" id="cPlayAll">▶ Play the whole plan</button>`;
- cPlan.blocks.forEach((b,i)=>{h+=`<div class="cblk"><div class="cbh"><span class="num">${i+1}</span><div><div class="cbl">${b.label}</div><div class="cbm">${b.m.name} <span class="src">${b.m.src}</span></div></div><button class="b cone" data-i="${i}">▶</button></div><div class="cbw">${b.why}</div><div class="cbd">Dose: ${b.m.dose}</div></div>`;});
+ h+=`</div><div class="csec" id="cPlanSec"><div class="ch3">Your movement plan — ${cGoal==='wake'?'wake it up':'calm it down'}</div>
+  <div style="display:flex;gap:6px"><button class="b on cplay" id="cPlayAll" style="flex:1;width:auto">▶ Play the whole plan</button><button class="b cplay" id="cShareBtn" style="flex:0 0 auto;width:auto;white-space:nowrap">🔗 Share this plan</button></div>
+  <div id="cShare" class="cshare" hidden><div class="csub">Send this link. It opens straight to this plan, playing.</div><input readonly aria-label="Share link"><button class="b" id="cCopy">Copy</button></div>`;
+ cPlan.blocks.forEach((b,i)=>{h+=`<div class="cblk"><div class="cbh"><span class="num">${i+1}</span><div><div class="cbl">${b.label}</div><div class="cbm">${b.m.name} <span class="src">${b.m.src}</span></div></div><button class="b cone" data-i="${i}" title="Play this block">▶</button><button class="b cshr" data-i="${i}" title="Share this block">🔗</button></div><div class="cbw">${b.why}</div><div class="cbd">Dose: ${b.m.dose}</div></div>`;});
  const more=cPlan.more.filter(k=>!cPlan.blocks.some(b=>b.k===k));
  if(more.length)h+=`<div class="ch3" style="margin-top:10px">More movements that use the ${d.short.toLowerCase()}</div><div>${more.map(k=>`<button class="b cmore" data-k="${k}">▶ ${MOVES[k].name} <span class="src">${MOVES[k].src}</span></button>`).join('')}</div>`;
  h+=`</div><div class="cnote">Chain evidence: dissection studies support the superficial back line and the two functional lines strongly, and parts of the spiral and lateral lines (Wilke et al. 2016). Links from foot posture to the spine are still debated. This is education, not medical advice. If a movement hurts, stop and ask a physical therapist.</div>`;
  $('cOut').innerHTML=h;
+ if(document.body.classList.contains('shared')){const ps=$('cPlanSec'),tg=$('cOut').querySelector('.ctgt');if(ps&&tg)tg.after(ps);$('coach').scrollTop=0;}
+ const xs=$('exitShare');if(xs)xs.onclick=()=>{document.body.classList.remove('shared');try{history.replaceState(null,'',location.pathname);}catch(_){}renderCoach();};
  $('cOut').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{sel=c.dataset.id;});
- $('cPlayAll').onclick=()=>playPlan(cPlan.blocks,`Coach plan: ${d.short}`);
- $('cOut').querySelectorAll('.cone').forEach(b=>b.onclick=()=>playPlan([cPlan.blocks[+b.dataset.i]],cPlan.blocks[+b.dataset.i].m.name));
+ $('cPlayAll').onclick=()=>playPlan(cPlan.blocks,`Coach plan: ${d.short}`,planHash(T,cGoal));
+ $('cShareBtn').onclick=()=>sharePlan(null);
+ $('cCopy').onclick=async()=>{const inp=$('cShare').querySelector('input');try{await navigator.clipboard.writeText(inp.value);toast('Link copied');}catch(e){inp.select();toast('Select the link and copy it');}};
+ $('cOut').querySelectorAll('.cshr').forEach(b=>b.onclick=()=>sharePlan(+b.dataset.i));
+ $('cOut').querySelectorAll('.cone').forEach(b=>b.onclick=()=>playPlan([cPlan.blocks[+b.dataset.i]],cPlan.blocks[+b.dataset.i].m.name,planHash(T,cGoal,+b.dataset.i)));
  $('cOut').querySelectorAll('.cmore').forEach(b=>b.onclick=()=>{const m=MOVES[b.dataset.k];playPlan([{m,label:'',k:b.dataset.k}],m.name);});
 }
-function playPlan(blocks,title){const e=buildPlanEx(cT,{R:cPlan.R,blocks},title);selectEx(e);sel=cT;}
+function playPlan(blocks,title,hash){const e=buildPlanEx(cT,{R:cPlan.R,blocks},title);selectEx(e);sel=cT;
+ if(hash)try{history.replaceState(null,'',hash);}catch(_){}}
+const planHash=(T,g,i)=>'#plan-'+T+'-'+g+(i!=null?'-'+(i+1):'');
+const shareURL=(T,g,i)=>location.href.split('#')[0]+planHash(T,g,i);
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>el.classList.remove('on'),2200);}
+async function sharePlan(i){const url=shareURL(cT,cGoal,i);const d=MDEFK[cT];
+ const text=(i!=null?`${cPlan.blocks[i].m.name} — `:'')+`my ${cGoal==='wake'?'wake-up':'calm-down'} plan for the ${d.name.toLowerCase()} (Fibwave Muscle Lab)`;
+ const box=$('cShare');box.hidden=false;const inp=box.querySelector('input');inp.value=url;
+ try{if(navigator.share){await navigator.share({title:'Fibwave Muscle Lab',text,url});toast('Shared');return;}}catch(e){if(e&&e.name==='AbortError')return;}
+ try{await navigator.clipboard.writeText(url);toast('Link copied — paste it in a text or email');}catch(e){inp.select();toast('Copy the link below');}}
+function readHash(){const m=location.hash.match(/^#plan-([A-Za-z]+)-(wake|calm)(?:-(\d+))?$/);if(!m||!MDEFK[m[1]]||!ACTS[m[1]])return false;
+ cT=m[1];cGoal=m[2];document.querySelectorAll('.cg').forEach(x=>x.classList.toggle('on',x.dataset.g===cGoal));
+ document.body.classList.add('shared');openCoach(cT);
+ const i=m[3]?(+m[3]-1):null;if(i!=null&&cPlan.blocks[i])playPlan([cPlan.blocks[i]],cPlan.blocks[i].m.name);else playPlan(cPlan.blocks,`Plan: ${MDEFK[cT].short} — ${cGoal==='wake'?'wake it up':'calm it down'}`);
+ speed=.5;document.querySelectorAll('.sp').forEach(x=>x.classList.toggle('on',x.dataset.s==='0.5'));playing=true;return true;}
 function initCoach(){
  const s=$('cMus');let h='';for(const r in REGION){h+=`<optgroup label="${REGNAME[r]}">`+REGION[r].map(id=>`<option value="${id}">${MDEFK[id].name}</option>`).join('')+'</optgroup>';}s.innerHTML=h;
  s.onchange=()=>{cT=s.value;renderCoach();};
@@ -1555,6 +1587,7 @@ function init(){
  if(innerWidth<=1000){zOn=false;document.body.classList.add('zhide');$('tZoom').classList.remove('on');}
  addEventListener('resize',resize);resize();
  selectEx(EX[3]);
+ readHash();addEventListener('hashchange',readHash);
  const setPlay=v=>{playing=v;$('play').textContent=v?'❚❚ Pause':'▶ Play';};
  $('play').onclick=()=>setPlay(!playing);
  $('step').onclick=()=>{setPlay(false);phase=(phase+.01)%1;};
