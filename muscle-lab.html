@@ -51,7 +51,7 @@ button.b.on{background:rgba(94,224,255,.18);border-color:rgba(94,224,255,.6)}
 #legend .dot{box-shadow:none}
 #tMus{display:none}
 body.shared #left{display:none}
-.sban{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 10px;margin-bottom:10px;border-radius:10px;background:rgba(94,224,255,.1);border:1px solid rgba(94,224,255,.35);font-size:12.5px}
+.sban{display:block;padding:8px 10px;margin-bottom:10px;border-radius:10px;background:rgba(94,224,255,.1);border:1px solid rgba(94,224,255,.35);font-size:12.5px}
 .cshare[hidden]{display:none}
 .cshare{margin:4px 0 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.cshare .csub{width:100%;margin:0}
 .cshare input{flex:1;min-width:0;background:rgba(255,255,255,.06);color:var(--txt);border:1px solid var(--line);border-radius:7px;padding:6px;font:12px "JetBrains Mono",monospace}
@@ -748,7 +748,7 @@ function drawMuscle(it,labels){
  const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;
  const isSel=sel===mu.d.id,isHov=hover===mu.d.id;
  ctx.globalAlpha=Z?(mu.d.deep?.88:.97):anat?(mu.d.deep&&layer==='all'?.8:.97):(active?.96:.55);
- const crole=!Z&&ex.coach?coachRole(mu.d.id):'x';if(!crole)ctx.globalAlpha*=.18;
+ const crole=!Z&&ex.coach?coachRole(mu.d.id):'x';if(!crole&&!ex.explore)ctx.globalAlpha*=.18;
  if(st==='con'||st==='ecc'){ctx.shadowColor=scol;ctx.shadowBlur=(anat||Z?14:10)*clamp(Math.abs(mu.v)*4,.3,1.2);}
  const g=ctx.createLinearGradient(mx-nx*hw,my-ny*hw,mx+nx*hw,my+ny*hw);
  g.addColorStop(0,shade(col,.4));g.addColorStop(.42,col);g.addColorStop(.6,shade(col,1.3));g.addColorStop(1,shade(col,.4));
@@ -761,6 +761,7 @@ function drawMuscle(it,labels){
   ctx.bezierCurveTo(b[0]-dx*u-nx*k,b[1]-dy*u-ny*k,a[0]+dx*u-nx*k,a[1]+dy*u-ny*k,a[0],a[1]);}
  ctx.fill();ctx.shadowBlur=0;
  if((anat||Z)&&active&&!(isSel||isHov)){ctx.lineWidth=1.8;ctx.strokeStyle=scol;}else{ctx.lineWidth=isSel||isHov?2:.7;ctx.strokeStyle=isSel||isHov?'#ffffff':'rgba(0,0,0,.35)';}ctx.stroke();
+ if(ex.explore&&crole&&crole!=='x'&&crole!=='target'&&!(isSel||isHov)){ctx.lineWidth=1.8;ctx.strokeStyle=ROLECOL[crole];ctx.stroke();}
  if(crole==='target'){ctx.save();ctx.strokeStyle='#ff4fd8';ctx.lineWidth=2.6;ctx.shadowColor='#ff4fd8';ctx.shadowBlur=12+8*Math.sin(RT*4);ctx.stroke();ctx.restore();}
  // fibers
  if(bl>=hw*1.1&&hw>1.6){
@@ -1395,7 +1396,7 @@ function openCoach(T){cT=T||cT||'deltLat';$('coach').hidden=false;$('cMus').valu
 function renderCoach(){
  const T=cT,d=MDEFK[T];cPlan=buildPlan(T,cGoal);const R=cPlan.R;
  const tip=COMP[T]||`The muscles that share its job (${listNames(R.syn.slice(0,3))||'its helpers'}) can take over. Move slowly, so the ${d.short.toLowerCase()} does the work.`;
- let h=(document.body.classList.contains('shared')?`<div class="sban"><div><b>Shared movement plan</b><div class="csub" style="margin:0">Watch the body. Follow each block and its dose.</div></div><button class="b" id="exitShare">Open the full Muscle Lab</button></div>`:'')+`<div class="ctgt"><div class="cn" style="color:${ROLECOL.target}">${d.name}</div><div>${d.does}</div>
+ let h=(document.body.classList.contains('shared')?`<div class="sban"><div><b>Shared movement plan</b><div class="csub" style="margin:0">The plan plays once. Then coach mode opens: click any muscle.</div></div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px"><button class="b" id="replayShare">▶ Replay plan</button><button class="b" id="exploreShare">🎯 Coach mode</button><button class="b" id="exitShare">Full Muscle Lab</button></div></div>`:'')+`<div class="ctgt"><div class="cn" style="color:${ROLECOL.target}">${d.name}</div><div>${d.does}</div>
   <div class="ctip"><b>${cGoal==='wake'?'If it is underactive':'If it is overactive'}:</b> ${cGoal==='wake'?tip:`It often stays tight to protect a weak neighbor. Strengthen the opposing muscles and the chain, then lengthen it with slow breathing.`}</div></div>`;
  const sec=(t,ids,role,sub)=>ids.length?`<div class="csec"><div class="ch3"><span class="dot" style="background:${ROLECOL[role]}"></span>${t}</div>${sub?`<div class="csub">${sub}</div>`:''}<div>${ids.map(i=>chip(i,role)).join('')}</div></div>`:'';
  h+=sec('Works with it',R.syn,'syn','Same main job (synergists).');
@@ -1404,7 +1405,7 @@ function renderCoach(){
  h+=`<div class="csec"><div class="ch3"><span class="dot" style="background:${ROLECOL.chain}"></span>Connected chain, feet to head</div><div class="csub">Fascial lines after Myers. The dashed line on the body shows the path.</div>`;
  for(const l of R.lines){const C=CHAINS[l];h+=`<div class="cline"><div><b>${C.name}</b> <span class="ev ev-${C.ev.startsWith('strong')?'s':C.ev.startsWith('partial')?'p':'n'}">${C.ev}</span></div><div class="cpath">${C.m.map(i=>i===T?chip(i,'target'):chip(i,'chain')).join('<span class="arr">›</span>')}</div></div>`;}
  h+=`</div><div class="csec" id="cPlanSec"><div class="ch3">Your movement plan — ${cGoal==='wake'?'wake it up':'calm it down'}</div>
-  <div style="display:flex;gap:6px"><button class="b on cplay" id="cPlayAll" style="flex:1;width:auto">▶ Play the whole plan</button><button class="b cplay" id="cShareBtn" style="flex:0 0 auto;width:auto;white-space:nowrap">🔗 Share this plan</button></div>
+  <div style="display:flex;gap:6px"><button class="b on cplay" id="cPlayAll" style="flex:1;width:auto">▶ Play the whole plan</button><button class="b cplay" id="cShareBtn" style="flex:0 0 auto;width:auto;white-space:nowrap">🔗 Share this plan</button><button class="b cplay" id="cExplore" style="flex:0 0 auto;width:auto" title="Coach mode: click any muscle">🎯</button></div>
   <div id="cShare" class="cshare" hidden><div class="csub">Send this link. It opens straight to this plan, playing.</div><input readonly aria-label="Share link"><button class="b" id="cCopy">Copy</button></div>`;
  cPlan.blocks.forEach((b,i)=>{h+=`<div class="cblk"><div class="cbh"><span class="num">${i+1}</span><div><div class="cbl">${b.label}</div><div class="cbm">${b.m.name} <span class="src">${b.m.src}</span></div></div><button class="b cone" data-i="${i}" title="Play this block">▶</button><button class="b cshr" data-i="${i}" title="Share this block">🔗</button></div><div class="cbw">${b.why}</div><div class="cbd">Dose: ${b.m.dose}</div></div>`;});
  const more=cPlan.more.filter(k=>!cPlan.blocks.some(b=>b.k===k));
@@ -1412,10 +1413,13 @@ function renderCoach(){
  h+=`</div><div class="cnote">Chain evidence: dissection studies support the superficial back line and the two functional lines strongly, and parts of the spiral and lateral lines (Wilke et al. 2016). Links from foot posture to the spine are still debated. This is education, not medical advice. If a movement hurts, stop and ask a physical therapist.</div>`;
  $('cOut').innerHTML=h;
  if(document.body.classList.contains('shared')){const ps=$('cPlanSec'),tg=$('cOut').querySelector('.ctgt');if(ps&&tg)tg.after(ps);$('coach').scrollTop=0;}
+ if(ex.explore){ex.coach=cPlan.R;const zr=REG2ZOOM[cPlan.R.reg];if(zr&&zr!==zReg){zReg=zr;TRACE.ids=[];buildZTabs();}}
+ const rp=$('replayShare');if(rp)rp.onclick=()=>{try{history.replaceState(null,'',planHash(cT,cGoal));}catch(_){}readHash();};
+ const eb=$('exploreShare');if(eb)eb.onclick=()=>enterExplore();
  const xs=$('exitShare');if(xs)xs.onclick=()=>{document.body.classList.remove('shared');try{history.replaceState(null,'',location.pathname);}catch(_){}renderCoach();};
  $('cOut').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{sel=c.dataset.id;});
  $('cPlayAll').onclick=()=>playPlan(cPlan.blocks,`Coach plan: ${d.short}`,planHash(T,cGoal));
- $('cShareBtn').onclick=()=>sharePlan(null);
+ $('cShareBtn').onclick=()=>sharePlan(null);$('cExplore').onclick=()=>enterExplore();
  $('cCopy').onclick=async()=>{const inp=$('cShare').querySelector('input');try{await navigator.clipboard.writeText(inp.value);toast('Link copied');}catch(e){inp.select();toast('Select the link and copy it');}};
  $('cOut').querySelectorAll('.cshr').forEach(b=>b.onclick=()=>sharePlan(+b.dataset.i));
  $('cOut').querySelectorAll('.cone').forEach(b=>b.onclick=()=>playPlan([cPlan.blocks[+b.dataset.i]],cPlan.blocks[+b.dataset.i].m.name,planHash(T,cGoal,+b.dataset.i)));
@@ -1423,6 +1427,11 @@ function renderCoach(){
 }
 function playPlan(blocks,title,hash){const e=buildPlanEx(cT,{R:cPlan.R,blocks},title);selectEx(e);sel=cT;
  if(hash)try{history.replaceState(null,'',hash);}catch(_){}}
+const EXPLORE={id:'explore',name:'Muscle coach — click any muscle',icon:'🎯',dur:6,anchor:'ground',view:[20,6],props:[],explore:true,
+ base:{'B.sh.a':24,'B.el':10,'B.hip.a':4,'B.sh.r':-10},
+ keys:[{t:0,p:{},cap:'Coach mode: click any muscle on the body. The coach shows what works with it, what opposes it, its chain from the feet to the head, and a plan.'},{t:.5,p:{'chest.f':-2,'B.clav.e':2},cap:''}],work:[],stab:[]};
+function enterExplore(){EXPLORE.focus=[REG2ZOOM[regionOf(cT)]||'shoulder','core','foot','neck','shoulder','hip','knee','leg'].filter((v,i,a)=>a.indexOf(v)===i);
+ prep(EXPLORE);selectEx(EXPLORE);EXPLORE.coach=(cPlan&&cPlan.R.T===cT)?cPlan.R:rolesFor(cT);sel=cT;anat=true;$('tAnat').classList.add('on');$('coach').hidden=false;renderCoach();}
 const planHash=(T,g,i)=>'#plan-'+T+'-'+g+(i!=null?'-'+(i+1):'');
 const shareURL=(T,g,i)=>location.href.split('#')[0]+planHash(T,g,i);
 function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>el.classList.remove('on'),2200);}
@@ -1435,6 +1444,7 @@ function readHash(){const m=location.hash.match(/^#plan-([A-Za-z]+)-(wake|calm)(
  cT=m[1];cGoal=m[2];document.querySelectorAll('.cg').forEach(x=>x.classList.toggle('on',x.dataset.g===cGoal));
  document.body.classList.add('shared');openCoach(cT);
  const i=m[3]?(+m[3]-1):null;if(i!=null&&cPlan.blocks[i])playPlan([cPlan.blocks[i]],cPlan.blocks[i].m.name);else playPlan(cPlan.blocks,`Plan: ${MDEFK[cT].short} — ${cGoal==='wake'?'wake it up':'calm it down'}`);
+ ex.playOnce=true;anat=true;$('tAnat').classList.add('on');
  speed=.5;document.querySelectorAll('.sp').forEach(x=>x.classList.toggle('on',x.dataset.s==='0.5'));playing=true;return true;}
 function initCoach(){
  const s=$('cMus');let h='';for(const r in REGION){h+=`<optgroup label="${REGNAME[r]}">`+REGION[r].map(id=>`<option value="${id}">${MDEFK[id].name}</option>`).join('')+'</optgroup>';}s.innerHTML=h;
@@ -1566,7 +1576,8 @@ function updateUI(){
 let scrubbing=false;
 function loop(now){
  const dt=Math.min(.05,(now-(lastT||now))/1000);lastT=now;
- if(playing&&!scrubbing){phase=(phase+dt*speed/ex.dur)%1;simT+=dt*speed;}
+ const prevP=phase;if(playing&&!scrubbing){phase=(phase+dt*speed/ex.dur)%1;simT+=dt*speed;}
+ if(ex.playOnce&&playing&&!scrubbing&&phase<prevP){ex.playOnce=false;enterExplore();}
  if(orbit)cam.yaw+=dt*14;
  RT=now/1000;const W=solve(ex,phase);updateMuscles(W);updateTracks(W,dt);render(W);
  if(zOn&&(zBig||(++zTick%2===0))){renderZoom(W,LASTITEMS);updateTrace();renderPhys(W);}
