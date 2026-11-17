@@ -1400,7 +1400,7 @@ function buildPlan(T,goal){
  pick(x=>x.neck*2+x.stab*.2+(x.inT?2:0),'Head and neck reset',()=>'Finish with the head stacked over the feet. The deep neck flexors and the shoulder blade muscles reset your posture.');
  const more=sc.filter(x=>x.inT||x.stT).sort((a,b)=>(b.inT-a.inT)||(b.met.rom-a.met.rom)).map(x=>x.k);
  return{R,blocks,more,goal};}
-const REPS=2,READY=1.8;
+const REPS=2,READY=1.2;
 function buildPlanEx(T,plan,title){
  const parts=plan.blocks;parts.forEach(b=>prep(b.m));const bd=parts.map(b=>READY+REPS*b.m.dur);const total=bd.reduce((a,b)=>a+b,0);
  const ks=new Set();parts.forEach(b=>b.m.keyList.forEach(k=>ks.add(k)));const KL=[...ks];const full=P0=>{const P={};for(const kk of KL)P[kk]=P0[kk]||0;return P;};
@@ -1437,7 +1437,7 @@ function applyPhone(){const ph=detectPhone();const was=document.body.classList.c
 function renderCoach(){
  const T=cT,d=MDEFK[T];cPlan=buildPlan(T,cGoal);if($('cMus').value!==T)$('cMus').value=T;const R=cPlan.R;
  const tip=COMP[T]||`The muscles that share its job (${listNames(R.syn.slice(0,3))||'its helpers'}) can take over. Move slowly, so the ${d.short.toLowerCase()} does the work.`;
- let h=(document.body.classList.contains('shared')?`<div class="sban"><div><b>Shared movement plan</b><div class="csub" style="margin:0">The plan plays once. Then coach mode opens: click any muscle.</div></div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px"><button class="b" id="replayShare">▶ Replay plan</button><button class="b" id="exploreShare">🎯 Coach mode</button><button class="b" id="exitShare">Full Muscle Lab</button></div></div>`:'')+`<div class="ctgt"><div class="cn" style="color:${ROLECOL.target}">${d.name}</div><div>${d.does}</div>
+ let h=(document.body.classList.contains('shared')?`<div class="sban"><div><b>Shared movement plan</b><div class="csub" style="margin:0">${/#move-/.test(decodeURIComponent(location.hash))?'The exercise repeats. Tap 🎯 Coach mode to explore any muscle.':'The plan plays once. Then coach mode opens: click any muscle.'}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px"><button class="b" id="replayShare">▶ Replay plan</button><button class="b" id="exploreShare">🎯 Coach mode</button><button class="b" id="exitShare">Full Muscle Lab</button></div></div>`:'')+`<div class="ctgt"><div class="cn" style="color:${ROLECOL.target}">${d.name}</div><div>${d.does}</div>
   <div class="ctip"><b>${cGoal==='wake'?'If it is underactive':'If it is overactive'}:</b> ${cGoal==='wake'?tip:`It often stays tight to protect a weak neighbor. Strengthen the opposing muscles and the chain, then lengthen it with slow breathing.`}</div></div>`;
  const sec=(t,ids,role,sub)=>ids.length?`<div class="csec"><div class="ch3"><span class="dot" style="background:${ROLECOL[role]}"></span>${t}</div>${sub?`<div class="csub">${sub}</div>`:''}<div>${ids.map(i=>chip(i,role)).join('')}</div></div>`:'';
  h+=sec('Works with it',R.syn,'syn','Same main job (synergists).');
@@ -1492,8 +1492,8 @@ function readHash(){
  let hs=location.hash;try{hs=decodeURIComponent(hs);}catch(_){}
  const mv=hs.match(/#move-([A-Za-z]+)-([A-Za-z0-9]+)/);
  if(mv&&MDEFK[mv[1]]&&ACTS[mv[1]]&&MOVES[mv[2]]){cT=mv[1];document.body.classList.add('shared');openCoach(cT);const m=MOVES[mv[2]];
-  playPlan([{m,label:'For the '+MDEFK[cT].short.toLowerCase(),k:mv[2]}],m.name);ex.playOnce=true;anat=true;$('tAnat').classList.add('on');
-  speed=.5;document.querySelectorAll('.sp').forEach(x=>x.classList.toggle('on',x.dataset.s==='0.5'));playing=true;return true;}const m=hs.match(/#plan-([A-Za-z]+)-(wake|calm)(?:-(\d+))?/);if(!m||!MDEFK[m[1]]||!ACTS[m[1]])return false;
+  playPlan([{m,label:'For the '+MDEFK[cT].short.toLowerCase(),k:mv[2]}],m.name);ex.playOnce=false;ex.loopMove=true;anat=true;$('tAnat').classList.add('on');
+  speed=1;document.querySelectorAll('.sp').forEach(x=>x.classList.toggle('on',x.dataset.s==='1'));playing=true;return true;}const m=hs.match(/#plan-([A-Za-z]+)-(wake|calm)(?:-(\d+))?/);if(!m||!MDEFK[m[1]]||!ACTS[m[1]])return false;
  cT=m[1];cGoal=m[2];document.querySelectorAll('.cg').forEach(x=>x.classList.toggle('on',x.dataset.g===cGoal));
  document.body.classList.add('shared');openCoach(cT);
  const i=m[3]?(+m[3]-1):null;if(i!=null&&cPlan.blocks[i])playPlan([cPlan.blocks[i]],cPlan.blocks[i].m.name);else playPlan(cPlan.blocks,`Plan: ${MDEFK[cT].short} — ${cGoal==='wake'?'wake it up':'calm it down'}`);
