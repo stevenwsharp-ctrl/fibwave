@@ -187,7 +187,7 @@ body.phone #zBig{display:none}
     <button class="b vw" data-y="0" data-p="8">Front</button><button class="b vw" data-y="90" data-p="8">Side</button><button class="b vw" data-y="180" data-p="8">Back</button><button class="b vw" data-y="38" data-p="16">¾</button><button class="b" id="orbit">Orbit</button>
   </div>
   <div class="grp pm"><span class="lbl">Layer</span><button class="b ly" data-l="surface">Surface</button><button class="b ly" data-l="deep">Deep</button><button class="b ly on" data-l="all">All</button><button class="b" id="tAnat" title="Anatomy colors: real muscle color with an activity outline">Anatomy</button><button class="b on" id="tLab">Labels</button><button class="b on" id="tBody">Body</button></div>
-  <div class="grp"><button class="b on" id="tZoom">Zoom</button><button class="b" id="tMus">Muscles</button><button class="b ph" id="pMore" aria-label="More controls">⋯</button></div>
+  <div class="grp"><button class="b on" id="tGrav" title="Gravity: center of mass, line of gravity, joint loads, Ease score">Gravity</button><button class="b on" id="tZoom">Zoom</button><button class="b" id="tMus">Muscles</button><button class="b ph" id="pMore" aria-label="More controls">⋯</button></div>
 </div>
 
 <script>
@@ -703,9 +703,10 @@ function fitCamera(){
  cam.target=[(mn[0]+mx[0])/2,(mn[1]+mx[1])/2,(mn[2]+mx[2])/2];
  cam.box=[mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2]];layoutCam();
 }
+let camArea={x0:0,x1:0,y0:0,y1:0};
 function layoutCam(){
- const B=document.body.classList;const wide=VW>1000;let x0=wide?250:0,x1=wide?VW-(zOn?458:322):VW,y0=wide?(B.contains('follow')?160:96):120,y1=VH-(wide?84:150);if(B.contains('phone')){const co=document.getElementById('coach');const sh=co&&!co.hidden?(B.contains('sheetMini')?56:VH*.46):0;x0=0;x1=VW;y0=B.contains('follow')?150:96;y1=VH-sh-(B.contains('showMore')?160:108);}
- cam.cx=(x0+x1)/2;cam.cy=(y0+y1)/2+8;
+ const B=document.body.classList;const wide=VW>1000;const coOpen=(()=>{const c=document.getElementById('coach');return c&&!c.hidden;})();let x0=wide?(coOpen?438:250):0,x1=wide?VW-(zOn?458:322):VW,y0=wide?(B.contains('follow')?160:96):120,y1=VH-(wide?84:150);if(B.contains('phone')){const co=document.getElementById('coach');const sh=co&&!co.hidden?(B.contains('sheetMini')?56:VH*.46):0;x0=0;x1=VW;y0=B.contains('follow')?150:96;y1=VH-sh-(B.contains('showMore')?160:108);}
+ camArea={x0,x1,y0,y1};cam.cx=(x0+x1)/2;cam.cy=(y0+y1)/2+8;
  const b=cam.box||[100,200,100];const horiz=Math.hypot(b[0],b[2]);
  cam.s=Math.min((y1-y0)*.9/b[1],(x1-x0)*.92/horiz);
 }
@@ -846,8 +847,11 @@ function render(W){
  if(ex.env==='run')drawRunFX(W);
  if(ex.env==='mountain')drawVibFX(W);
  if(ex.coach)drawChainPath(W);
+ if(showGrav)drawGravity(W);
  if(svM){cam.M=svM;cam.target=svT;}
+ drawVignette();
  if(labels)drawLabels(labels);
+ if(showGrav)drawGravHUD();
  // hover tip
  if(hover&&mouse){const d=MDEFK[hover];const mu=MUSL[hover];const txt=d.name+' — L: '+STATETXT[MUSK[hover+'L'].state]+' · R: '+STATETXT[MUSK[hover+'R'].state];ctx.font='600 12px system-ui,sans-serif';const tw=ctx.measureText(txt).width+14;
   ctx.fillStyle='rgba(5,10,20,.9)';ctx.fillRect(mouse[0]+14,mouse[1]+10,tw,22);ctx.fillStyle=STATECOL[mu.state];ctx.fillRect(mouse[0]+14,mouse[1]+10,3,22);ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.fillText(txt,mouse[0]+21,mouse[1]+21);}
@@ -1438,6 +1442,7 @@ function renderCoach(){
  const T=cT,d=MDEFK[T];cPlan=buildPlan(T,cGoal);if($('cMus').value!==T)$('cMus').value=T;const R=cPlan.R;
  const tip=COMP[T]||`The muscles that share its job (${listNames(R.syn.slice(0,3))||'its helpers'}) can take over. Move slowly, so the ${d.short.toLowerCase()} does the work.`;
  let h=(document.body.classList.contains('shared')?`<div class="sban"><div><b>Shared movement plan</b><div class="csub" style="margin:0">${/#move-/.test(decodeURIComponent(location.hash))?'The exercise repeats. Tap 🎯 Coach mode to explore any muscle.':'The plan plays once. Then coach mode opens: click any muscle.'}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px"><button class="b" id="replayShare">▶ Replay plan</button><button class="b" id="exploreShare">🎯 Coach mode</button><button class="b" id="exitShare">Full Muscle Lab</button></div></div>`:'')+`<div class="ctgt"><div class="cn" style="color:${ROLECOL.target}">${d.name}</div><div>${d.does}</div>
+  <div class="ctip" style="color:#fde68a"><b>Work with gravity:</b> ${GRAVTIP[regionOf(T)]||''}</div>
   <div class="ctip"><b>${cGoal==='wake'?'If it is underactive':'If it is overactive'}:</b> ${cGoal==='wake'?tip:`It often stays tight to protect a weak neighbor. Strengthen the opposing muscles and the chain, then lengthen it with slow breathing.`}</div></div>`;
  const sec=(t,ids,role,sub)=>ids.length?`<div class="csec"><div class="ch3"><span class="dot" style="background:${ROLECOL[role]}"></span>${t}</div>${sub?`<div class="csub">${sub}</div>`:''}<div>${ids.map(i=>chip(i,role)).join('')}</div></div>`:'';
  h+=sec('Works with it',R.syn,'syn','Same main job (synergists).');
@@ -1503,7 +1508,7 @@ function initCoach(){
  const s=$('cMus');let h='';for(const r in REGION){h+=`<optgroup label="${REGNAME[r]}">`+REGION[r].map(id=>`<option value="${id}">${MDEFK[id].name}</option>`).join('')+'</optgroup>';}s.innerHTML=h;
  s.onchange=()=>{cT=s.value;renderCoach();};
  document.querySelectorAll('.cg').forEach(b=>b.onclick=()=>{cGoal=b.dataset.g;document.querySelectorAll('.cg').forEach(x=>x.classList.toggle('on',x===b));renderCoach();});
- $('coachX').onclick=()=>{$('coach').hidden=true;syncSheet();};
+ $('coachX').onclick=()=>{$('coach').hidden=true;syncSheet();fitCamera();};
  $('cMin').onclick=()=>{const m=document.body.classList.toggle('sheetMini');$('coach').scrollTop=0;$('cMin').textContent=m?'▴':'▾';syncSheet();};
  const list=$('exList');const h2=document.createElement('h2');h2.className='gh';h2.textContent='Muscle coach';list.appendChild(h2);
  const b=document.createElement('button');b.className='ex';b.innerHTML='<span class="i">🎯</span>Train one muscle';b.onclick=()=>openCoach(sel||cT);list.appendChild(b);
@@ -1528,9 +1533,9 @@ function initCoach(){
   [.72,'Head: the neck muscles (splenius, SCM, deep neck flexors) keep the eyes level with the horizon. Looking at the horizon helps many people with seasickness.']];
  const capAt=t=>{let c='';for(const[a,s]of CAP)if(t>=a)c=s;return c;};
  const keys=[];let last='';
- for(let i=0;i<N;i++){const t=i/N,d=deck(t),a=clamp(acc(t)/am,-1,1),kn=22+18*a,rr=-.55*d.roll,rp=8-.6*d.pitch,w=ws(t),th=thr(t);const c=capAt(t);
-  keys.push({t,cap:c!==last?c:'',p:{'root.roll':rr,'spine.s':-.15*d.roll,'root.pitch':rp,'B.kn':kn,'B.hip.f':rp+kn/2,'B.an':kn/2,'L.hip.a':8+rr,'R.hip.a':8-rr,
-   'neck.s':-.3*d.roll,'neck.f':-(.4*d.pitch+8)+4,'L.sh.f':55+.12*w,'L.sh.a':22+.3*w,'L.el':75-.1*w,'L.sh.r':10,'R.sh.f':35+9*th,'R.el':85-8*th,'R.sh.a':18,'R.wr':10*th,'chest.t':.1*w}});last=c;}
+ for(let i=0;i<N;i++){const t=i/N,d=deck(t),a=clamp(acc(t)/am,-1,1),kn=22+18*a,rr=-.75*d.roll,rp=8-.95*d.pitch,w=ws(t),th=thr(t);const c=capAt(t);
+  keys.push({t,cap:c!==last?c:'',p:{'root.roll':rr,'spine.s':-.2*d.roll,'root.pitch':rp,'B.kn':kn,'B.hip.f':rp+kn/2,'B.an':kn/2,'L.hip.a':8+rr,'R.hip.a':8-rr,
+   'neck.s':-.05*d.roll,'neck.f':-(.05*d.pitch+8)+4,'L.sh.f':55+.12*w,'L.sh.a':22+.3*w,'L.el':75-.1*w,'L.sh.r':10,'R.sh.f':35+9*th,'R.el':85-8*th,'R.sh.a':18,'R.wr':10*th,'chest.t':.1*w}});last=c;}
  EX.push({id:'boat',group:'Boating',name:'Piloting in rough seas',icon:'⛵',dur,anchor:'ground',view:[132,14],props:['boat'],cr:true,env:'sea',deck,ws,thr,keys,
   work:['gluteMed','adductors','QL','oblique','intOblique','multifidus','erector','peroneals','tibPost','tibAnt','gastroc','soleus','vastLat','vastMed','rectFem','abdHallucis','flexDigBrev','flexHalLong','abdDigMin','splenius','scm','longusColli','semispinalis','forearmFlex','forearmExt','biceps','brachiorad','deltAnt','deltLat','infraspinatus','subscap','triceps','gluteMin','tfl','gracilis'],
   stab:['rectusAbd','trapUpper','levScap','serratus','gluteMax','hamstrings','scalenes','supraspinatus','trapLower'],
@@ -1578,6 +1583,126 @@ function drawDeck(){const R=[[-120,0,-165],[120,0,-165],[120,0,232],[-120,0,232]
 function drawFace(it){const q=it.pts.map(proj);ctx.fillStyle=it.fill;ctx.beginPath();q.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill();if(it.stroke){ctx.strokeStyle=it.stroke;ctx.lineWidth=1.2;ctx.stroke();}}
 
 /* =========================================================
+   GRAVITY + EASE  (static gravity load; segment masses: adjusted Zatsiorsky, male; body mass 70 kg)
+   ========================================================= */
+const BW=70,GACC=9.81;let showGrav=true;const COMTRAIL=[];
+const JTH={ankle:[10,60],knee:[10,90],hip:[10,100],back:[10,80],neck:[1.5,6],shoulder:[3,18]};
+const JNAME={ankle:'Ankles',knee:'Knees',hip:'Hips',back:'Low back',neck:'Neck',shoulderL:'L shoulder',shoulderR:'R shoulder'};
+const GCUE={ankle:'Ankles: stack the hips over the middle of the feet.',knee:'Knees: let the shins and thighs stack closer to the line of gravity.',
+ hip:'Hips: bring the trunk back over the hips. Hinge only as far as you need.',back:'Low back: stack the ribs over the pelvis. Let the spine carry the load.',
+ neck:'Neck: float the head back over the shoulders — ears over shoulders.',shoulder:'Shoulders: use shorter levers — arms closer to the body, or bend the elbows.'};
+const GRAVTIP={shoulder:'Lift the arm from a stacked rib cage, with the shoulder blade sliding down and around. A bent elbow is a shorter lever, so the shoulder holds less load.',
+ arm:'Keep the elbows close to the body when you hold something. Every centimeter away from the body adds load.',
+ neck:'Ears over shoulders. The further the head moves forward of the line of gravity, the harder the neck muscles must hold it.',
+ trunk:'Stack the ribs over the pelvis. When the trunk is stacked, gravity goes down the spine and the core only fine-tunes.',
+ hip:'Hips over the feet. A hinge loads the hips and back; use it on purpose, then return to stacked.',
+ thigh:'Knees track over the toes. Bend just as much as the task needs, then let the bones stack again.',
+ leg:'Weight over the middle of the foot. Small sways are normal — the calf corrects them with tiny contractions.',
+ foot:'Three points on the floor: big toe, little toe and heel. The arch then rises, and the load spreads.'};
+function convexHull(P){P=P.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);const lo=[],up=[];
+ for(const p of P){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p);}
+ for(let i=P.length-1;i>=0;i--){const p=P[i];while(up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p);}up.pop();lo.pop();return lo.concat(up);}
+function inPoly(pt,H){let ins=true,md=1e9;for(let i=0;i<H.length;i++){const a=H[i],b=H[(i+1)%H.length];const ex_=b[0]-a[0],ez=b[1]-a[1];const c=ex_*(pt[1]-a[1])-ez*(pt[0]-a[0]);const l=Math.hypot(ex_,ez)||1;if(c<0)ins=false;md=Math.min(md,Math.abs(c)/l);}return[ins,md];}
+function gravityCalc(W){
+ let gv=[0,-1,0];if(ex.env==='sea'){const d=ex.deck(phase);gv=ap(transpose(mm(rz(-d.roll*D),rx(d.pitch*D))),[0,-1,0]);}
+ const segs=[];const A=(m,p,tag,S)=>segs.push({m,p,tag,S});
+ A(.0694,wp(W,'head',[0,10,1.5]),'head');const tr=.4346/4;
+ A(tr,wp(W,'pelvis',[0,2,0]),'pel');A(tr,wp(W,'spine',[0,9,1]),'up');A(tr,wp(W,'chest',[0,8,2]),'up');A(tr,wp(W,'chest',[0,20,1]),'up');
+ for(const S of['L','R']){A(.0271,mix(W[S+'upper'].p,W[S+'fore'].p,.5772),'arm',S);A(.0162,mix(W[S+'fore'].p,W[S+'hand'].p,.4574),'arm',S);A(.0061,mix(W[S+'hand'].p,wp(W,S+'hand',[0,-8,0]),.79),'arm',S);
+  A(.1416,mix(W[S+'thigh'].p,W[S+'shin'].p,.4095),'thigh',S);A(.0433,mix(W[S+'shin'].p,W[S+'foot'].p,.4395),'shank',S);A(.0137,mix(cpt(W,S,'heel'),cpt(W,S,'toe'),.5),'foot',S);}
+ let mt=0,c=[0,0,0];for(const s of segs){mt+=s.m;c=add(c,mulS(s.p,s.m));}const COM=mulS(c,1/mt);
+ const turning=ex.env==='mountain'&&/^(ski|mogul|powder)$/.test(ex.id);
+ if(turning){const fc=mix(W.Lfoot.p,W.Rfoot.p,.5);gv=norm(mix(gv,norm(sub(fc,COM)),.7));}
+ const y0=ex.drop?-ex.drop(phase):0;const gy=(x,z)=>y0+(ex.terr?ex.terr(x,z,phase):0)+(ex.powder?0:0);
+ const sup={};for(const S of['L','R']){const pts=['heel','ball','toe'].map(k=>cpt(W,S,k));const mn=Math.min(...pts.map(p=>p[1]-gy(p[0],p[2])));sup[S]=mn<(ex.props.includes('skis')?6:2.5);}
+ const hands=ex.anchor==='bar'?'bar':ex.anchor==='pushup'?'push':null;
+ const mom=(J,f)=>{let v=[0,0,0];for(const s of segs)if(f(s))v=add(v,cross(sub(s.p,J),mulS(gv,s.m)));return Math.hypot(v[0],v[1],v[2])*BW*GACC/100;};
+ const J=[];const SS=['L','R'].filter(S=>sup[S]);
+ if(!hands&&SS.length){const avg=b=>mulS(SS.reduce((a,S)=>add(a,W[S+b].p),[0,0,0]),1/SS.length);
+  J.push({k:'ankle',pt:avg('foot'),M:mom(avg('foot'),s=>!(s.tag==='foot'&&sup[s.S]))});
+  J.push({k:'knee',pt:avg('shin'),M:mom(avg('shin'),s=>!((s.tag==='foot'||s.tag==='shank')&&sup[s.S]))});
+  J.push({k:'hip',pt:avg('thigh'),M:mom(avg('thigh'),s=>!((s.tag==='foot'||s.tag==='shank'||s.tag==='thigh')&&sup[s.S]))});}
+ if(!hands)J.push({k:'back',pt:W.spine.p,M:mom(W.spine.p,s=>s.tag==='up'||s.tag==='head'||s.tag==='arm')});
+ J.push({k:'neck',pt:W.neck.p,M:mom(W.neck.p,s=>s.tag==='head')});
+ for(const S of['L','R']){const p=W[S+'upper'].p;let M=mom(p,s=>s.tag==='arm'&&s.S===S);
+  if(hands==='bar')M=mom(p,s=>s.tag!=='arm')/2;if(hands==='push')M=mom(p,s=>['up','head','pel'].includes(s.tag))/2;J.push({k:'shoulder'+S,th:'shoulder',pt:p,M});}
+ for(const j of J){const[lo,hi]=JTH[j.th||j.k];j.f=clamp((j.M-lo)/(hi-lo),0,1);j.hi=hi;}
+ const ease=Math.round(100-100*J.reduce((a,j)=>a+j.f,0)/J.length);
+ // base of support and line of gravity
+ let bos=[];for(const S of SS){const m=S==='L'?1:-1;for(const v of[[3.5,-8,-5],[-3.5,-8,-5],[4.5,-8,11],[-4,-8,11]])bos.push(wp(W,S+'foot',[v[0]*m,v[1],v[2]]));bos.push(cpt(W,S,'toe'));}
+ if(hands==='push')for(const S of['L','R'])bos.push(cpt(W,S,'palm'));
+ const t=(y0-COM[1])/(gv[1]||-1);const P=add(COM,mulS(gv,t));
+ let hull=[],ins=false,marg=0;if(bos.length>=3){hull=convexHull(bos.map(p=>[p[0],p[2]]));[ins,marg]=inPoly([P[0],P[2]],hull);}
+ let fa=null;if(SS.length&&!hands){const fw=norm(ap(W[SS[0]+'foot'].R,[0,0,1]));const fc=mulS(SS.reduce((a,S)=>add(a,mix(cpt(W,S,'heel'),cpt(W,S,'toe'),.45)),[0,0,0]),1/SS.length);fa=dot3(sub(P,fc),fw);}
+ return{COM,gv,P,y0,hull,ins,marg,J,ease,fa,air:!SS.length&&!hands,turning};}
+const dot3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+let GR=null;
+function drawGravity(W){
+ const G=GR=gravityCalc(W);const lvl=f=>f<.33?'#34d399':f<.66?'#fbbf24':'#f87171';
+ // gravity streaks
+ const c0=proj(G.COM),c1=proj(add(G.COM,mulS(G.gv,40)));let dx=c1[0]-c0[0],dy=c1[1]-c0[1];const dl=Math.hypot(dx,dy)||1;dx/=dl;dy/=dl;
+ ctx.lineWidth=1;for(let i=0;i<34;i++){const u=hash(i)*2-1,v=((RT*.35+hash(i+40))%1);const x=c0[0]+u*260*(-dy)+dx*(v*520-260),y=c0[1]+u*260*dx+dy*(v*520-260);
+  ctx.strokeStyle=`rgba(180,220,255,${.10*Math.sin(Math.PI*v)})`;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx*16,y+dy*16);ctx.stroke();}
+ // base of support
+ if(G.hull.length>=3){const q=G.hull.map(h=>proj([h[0],G.y0+.4,h[1]]));ctx.fillStyle=G.ins?'rgba(52,211,153,.16)':'rgba(248,113,113,.16)';ctx.strokeStyle=G.ins?'rgba(52,211,153,.7)':'rgba(248,113,113,.8)';ctx.lineWidth=1.5;ctx.setLineDash([5,4]);
+  ctx.beginPath();q.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill();ctx.stroke();ctx.setLineDash([]);}
+ // COM trail
+ if(playing){COMTRAIL.push(G.COM.slice());if(COMTRAIL.length>70)COMTRAIL.shift();}
+ for(let i=1;i<COMTRAIL.length;i++){const a=proj(COMTRAIL[i-1]),b=proj(COMTRAIL[i]);ctx.strokeStyle=`rgba(255,214,102,${i/COMTRAIL.length*.6})`;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
+ // line of gravity
+ const pp=proj(G.P);ctx.strokeStyle='rgba(255,214,102,.85)';ctx.lineWidth=1.6;ctx.setLineDash([6,5]);ctx.lineDashOffset=-RT*30;ctx.beginPath();ctx.moveTo(c0[0],c0[1]);ctx.lineTo(pp[0],pp[1]);ctx.stroke();ctx.setLineDash([]);
+ ctx.fillStyle=G.ins?'#34d399':'#f87171';ctx.beginPath();ctx.ellipse(pp[0],pp[1],7,3.5,0,0,7);ctx.fill();
+ // centre of mass orb
+ const r=7+1.5*Math.sin(RT*3);const og=ctx.createRadialGradient(c0[0],c0[1],0,c0[0],c0[1],r*3.2);og.addColorStop(0,'rgba(255,240,190,1)');og.addColorStop(.3,'rgba(255,214,102,.9)');og.addColorStop(1,'rgba(255,214,102,0)');
+ ctx.fillStyle=og;ctx.beginPath();ctx.arc(c0[0],c0[1],r*3.2,0,7);ctx.fill();ctx.strokeStyle='#fff6d6';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(c0[0],c0[1],r*.7,0,7);ctx.moveTo(c0[0]-r*1.4,c0[1]);ctx.lineTo(c0[0]+r*1.4,c0[1]);ctx.moveTo(c0[0],c0[1]-r*1.4);ctx.lineTo(c0[0],c0[1]+r*1.4);ctx.stroke();
+ // joint load rings
+ const top=G.J.slice().sort((a,b)=>b.f-a.f).slice(0,3).filter(j=>j.f>.15);
+ for(const j of G.J){const q=proj(j.pt);const rr=7+16*j.f;const col=lvl(j.f);ctx.strokeStyle=col;ctx.globalAlpha=.35;ctx.lineWidth=2;ctx.beginPath();ctx.arc(q[0],q[1],rr,0,7);ctx.stroke();
+  ctx.globalAlpha=1;ctx.lineWidth=3;ctx.shadowColor=col;ctx.shadowBlur=8;ctx.beginPath();ctx.arc(q[0],q[1],rr,-Math.PI/2,-Math.PI/2+Math.max(.08,j.f)*2*Math.PI);ctx.stroke();ctx.shadowBlur=0;
+  if(top.includes(j)){const t=`${JNAME[j.k]} ${Math.round(j.M)} N·m`;ctx.font='700 11px "JetBrains Mono",monospace';const tw=ctx.measureText(t).width+10;const tx=q[0]-rr-tw-6,ty=q[1]-8;
+   ctx.fillStyle='rgba(5,10,20,.8)';ctx.fillRect(tx,ty,tw,16);ctx.fillStyle=col;ctx.fillRect(tx,ty,2,16);ctx.fillStyle='#f4f7fb';ctx.textBaseline='middle';ctx.fillText(t,tx+6,ty+8);}}
+}
+function drawGravHUD(){const G=GR;if(!G)return;const ph=document.body.classList.contains('phone');const B=document.body.classList;
+ const x=ph?8:Math.max(14,camArea.x0+10),y=ph?(B.contains('follow')?150:96):(B.contains('follow')?170:100);const w=ph?206:226;
+ const rows=ph?[]:G.J;const h=ph?62:84+rows.length*17+34;
+ ctx.fillStyle='rgba(6,12,24,.78)';ctx.strokeStyle='rgba(126,249,255,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y,w,h,12):ctx.rect(x,y,w,h);ctx.fill();ctx.stroke();
+ ctx.font='700 10px Inter,system-ui,sans-serif';ctx.fillStyle='#7ef9ff';ctx.textBaseline='middle';ctx.fillText('GRAVITY · EASE',x+10,y+13);
+ const gx=x+34,gy=y+48,gr=22;const col=G.ease>66?'#34d399':G.ease>40?'#fbbf24':'#f87171';
+ ctx.lineWidth=6;ctx.strokeStyle='rgba(255,255,255,.08)';ctx.beginPath();ctx.arc(gx,gy,gr,Math.PI*.75,Math.PI*2.25);ctx.stroke();
+ ctx.strokeStyle=col;ctx.shadowColor=col;ctx.shadowBlur=10;ctx.beginPath();ctx.arc(gx,gy,gr,Math.PI*.75,Math.PI*.75+Math.PI*1.5*G.ease/100);ctx.stroke();ctx.shadowBlur=0;
+ ctx.font='700 16px "JetBrains Mono",monospace';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(G.ease,gx,gy+1);ctx.textAlign='left';
+ let bal=G.air?'Airborne: no base of support':G.ins?'Balanced over the base':'Line of gravity outside the base';
+ if(G.fa!=null&&!G.air&&ex.env==='mountain')bal=G.fa<-5?'Back seat: behind the feet':G.fa>6?'Forward of the feet':'Centered fore-aft';
+ ctx.font='600 10.5px Inter,system-ui,sans-serif';ctx.fillStyle=G.ins||G.air?'#cfe3ff':'#fca5a5';ctx.fillText(bal,x+64,y+38);ctx.fillStyle='#7d8ca3';ctx.fillText(ph?'':(G.turning?'Gravity + turning force':/^(run|rope|jump|box|boat)$/.test(ex.id)?'Dynamic: momentum adds to this':'Static load, 70 kg body'),x+64,y+54);
+ if(!ph){let yy=y+84;ctx.font='600 10px Inter,system-ui,sans-serif';for(const j of rows){const c=j.f<.33?'#34d399':j.f<.66?'#fbbf24':'#f87171';ctx.fillStyle='#cfe3ff';ctx.fillText(JNAME[j.k],x+10,yy);
+  ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(x+82,yy-3,90,6);ctx.fillStyle=c;ctx.fillRect(x+82,yy-3,90*clamp(j.M/j.hi,0,1),6);ctx.fillStyle='#9fb0c8';ctx.font='600 9.5px "JetBrains Mono",monospace';ctx.fillText(Math.round(j.M)+' N·m',x+178,yy);ctx.font='600 10px Inter,system-ui,sans-serif';yy+=17;}
+  const worst=G.J.slice().sort((a,b)=>b.f-a.f)[0];const cue=worst&&worst.f>.25?GCUE[worst.k.replace(/[LR]$/,'')]:'Stacked and easy: gravity goes through the bones. The muscles only fine-tune.';
+  ctx.fillStyle='#e9d5ff';ctx.font='600 10.5px Inter,system-ui,sans-serif';wrapText(cue,x+10,yy+4,w-20,13,2);}}
+function wrapText(t,x,y,mw,lh,max){const ws=t.split(' ');let line='',n=0;for(const w_ of ws){const tl=line?line+' '+w_:w_;if(ctx.measureText(tl).width>mw&&line){ctx.fillText(line,x,y);y+=lh;line=w_;if(++n>=max-1){}}else line=tl;}ctx.fillText(line,x,y);}
+function drawVignette(){const g=ctx.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*.35,VW/2,VH/2,Math.max(VW,VH)*.75);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.42)');ctx.fillStyle=g;ctx.fillRect(0,0,VW,VH);}
+// teaching movements: gravity and ease
+EX.push({id:'stack',group:'Gravity and ease',name:'Stacked vs slumped posture',icon:'⇣',dur:12,anchor:'ground',view:[80,6],props:[],
+ base:{'B.sh.a':6,'B.el':8},
+ work:['splenius','semispinalis','scm','longusColli','trapUpper','levScap','erector','multifidus','rectusAbd','soleus','gastroc','tibAnt','gluteMax','hamstrings'],stab:['intOblique','QL','iliopsoas'],
+ keys:[{t:0,p:{},cap:'Stacked: ears over shoulders over hips over ankles. The line of gravity passes close to each joint, so the muscles only fine-tune.'},
+  {t:.25,p:{'neck.f':24,'chest.f':16,'spine.f':6,'B.clav.p':8,'root.pitch':-5,'B.hip.f':-5,'B.sh.f':12},cap:'Slumping: the head drifts forward and the chest drops. Watch the neck and low back rings grow.'},
+  {t:.45,p:{},cap:'Slumped: gravity now pulls the head and trunk forward. The neck and back muscles must hold this all day, and the breath gets shallow.'},
+  {t:.62,p:{'neck.f':0,'chest.f':0,'spine.f':0,'B.clav.p':0,'root.pitch':0,'B.hip.f':0,'B.sh.f':0},cap:'Restack: grow tall from the crown, let the ribs float over the pelvis. The rings shrink and the Ease score rises.'},
+  {t:.85,p:{},cap:'Stacked again: less effort leaves more energy for movement, breath and connection.'}]});
+EX.push({id:'skistance',group:'Gravity and ease',name:'Ski stance: centered vs back seat',icon:'⛷',dur:12,anchor:'ground',view:[88,8],props:['skis','poles','snow'],skiLen:[-70,95],
+ env:'mountain',slope:14,cord:true,scroll:200,vib:()=>({f:12,a:.15}),
+ base:{'spine.f':8,'B.sh.f':40,'B.sh.a':22,'B.el':70,'B.sh.r':10,'root.y':2.8,'B.pole':-30},
+ work:['vastLat','vastMed','rectFem','gluteMax','hamstrings','tibAnt','gastroc','soleus','erector','rectusAbd','iliopsoas'],stab:['intOblique','multifidus','peroneals','tibPost','abdHallucis'],
+ keys:[{t:0,p:{'root.pitch':12,'B.hip.f':45,'B.kn':55,'B.an':30},cap:'Centered: shins lean into the boot tongues, hips over the feet. The line of gravity drops through the boots. The quads stay calm and the skis grip along their length.'},
+  {t:.2,p:{},cap:'Hold centered. This is the stance that lets the ski do the work.'},
+  {t:.38,p:{'root.pitch':5,'B.hip.f':70,'B.kn':80,'B.an':12},cap:'Back seat: ankles open, hips drop behind the feet. The quads must hold the body up against gravity, and the ski tips lose grip.'},
+  {t:.55,p:{},cap:'Feel it: the knee and hip load rings grow red. This is why back-seat skiing burns the thighs.'},
+  {t:.7,p:{'root.pitch':20,'B.hip.f':40,'B.kn':48,'B.an':38},cap:'Too far forward: the tails go light and the calves and shins strain.'},
+  {t:.85,p:{'root.pitch':12,'B.hip.f':45,'B.kn':55,'B.an':30},cap:'Back to centered: flex the ankles, knees and hips together. Ease returns.'}],
+ focus:['knee','leg','hip','foot']});
+EX.find(e=>e.id==='stack').focus=['neck','core','foot','hip'];
+
+/* =========================================================
    STATE (which muscles shorten, lengthen, hold)
    ========================================================= */
 const MUSL={};MUS.forEach(m=>{if(m.S==='L')MUSL[m.d.id]=m;});
@@ -1602,7 +1727,7 @@ function selectEx(e){
  ex=e;prep(ex);phase=0;sel=null;hover=null;document.body.classList.remove('movesOpen');
  document.querySelectorAll('.ex').forEach(b=>b.classList.toggle('on',b.dataset.id===ex.id));
  cam.yaw=ex.view[0];cam.pitch=ex.view[1];cam.zoom=1;fitCamera();
- zReg=ex.focus[0];buildZTabs();TRK.L=[];TRK.R=[];TRACE.ids=[];$('surfG').style.display=ex.id==='run'?'flex':'none';
+ zReg=ex.focus[0];buildZTabs();TRK.L=[];TRK.R=[];COMTRAIL.length=0;TRACE.ids=[];$('surfG').style.display=ex.id==='run'?'flex':'none';
  $('capT').textContent=ex.name;
  const ml=$('mList');ml.innerHTML='';rows=[];
  for(const id of[...ex.work,...(ex.stab||[])]){const d=MDEFK[id];const r=document.createElement('div');r.className='row';
@@ -1672,6 +1797,7 @@ function init(){
  $('tLab').onclick=()=>{showLabels=!showLabels;$('tLab').classList.toggle('on',showLabels);};
  document.querySelectorAll('.ly').forEach(b=>b.onclick=()=>{layer=b.dataset.l;document.querySelectorAll('.ly').forEach(x=>x.classList.toggle('on',x===b));});
  $('tAnat').onclick=()=>{anat=!anat;$('tAnat').classList.toggle('on',anat);};
+ $('tGrav').onclick=()=>{showGrav=!showGrav;$('tGrav').classList.toggle('on',showGrav);};
  $('tBody').onclick=()=>{showBody=!showBody;$('tBody').classList.toggle('on',showBody);};
  $('zView').onchange=e=>{zView=e.target.value;};$('zSideSel').onchange=e=>{zSidePref=e.target.value;TRACE.ids=[];};$('zClose').onclick=()=>{document.body.classList.remove('zoomOpen');zOn=false;$('tZoom').classList.remove('on');};
  $('zBig').onclick=()=>{zBig=!zBig;$('zoom').classList.toggle('big',zBig);$('zBig').classList.toggle('on',zBig);};
