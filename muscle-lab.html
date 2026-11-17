@@ -627,6 +627,7 @@ function buildScene(ex,W,t,simT,opt){
   for(let i=0;i<110;i++){const a=((simT*1.3+i/110)%1+1)%1;const te=t-a*.25;const se=Math.sin(2*Math.PI*te);const side=se>0?-1:1;const k=Math.abs(se);
    if(k<.25)continue;const j=(i*37%11)/11-.5;
    items.push({k:'ball',c:[side*(18+90*a)+j*24,hs+110*a*k-80*a*a+j*8,-15-200*a+j*30],r:3.5+11*a,col:'#f4f8ff',alpha:(1-a)*.85*k,fx:1});}}
+ if(pr.includes('boat'))boatItems(ex,W,t,items);
  if(ex.env==='mountain'||(ex.env==='run'&&runSurf==='trail')){const sp=ex.flow?ex.flow(t):simT*(ex.scroll||0);const snowy=ex.env==='mountain';const y0=ex.drop?-ex.drop(t):0;
   for(let i=0;i<14;i++){const side=snowy?(i%2?1:-1):-1;const x=side*(snowy?245:150)+side*((i*37)%(snowy?70:120));const z=((((i*97)%480)-240-sp)%480+720)%480-240;
    items.push({k:'tree',c:[x,y0+(ex.terr?ex.terr(x,z,t):0),z],h:(snowy?95:140)+(i*23)%55,snowy});}}
@@ -782,7 +783,10 @@ function render(W){
  ctx.setTransform(dpr,0,0,dpr,0,0);
  cam.M=mm(rx(cam.pitch*D),mm(ry(-cam.yaw*D),rx((ex.slope||0)*D)));
  if(ex.env)drawSky();else{const bg=ctx.createRadialGradient(cam.cx,cam.cy-60,40,cam.cx,cam.cy,Math.max(VW,VH)*.75);bg.addColorStop(0,'#0f1a2e');bg.addColorStop(1,'#03050a');ctx.fillStyle=bg;ctx.fillRect(0,0,VW,VH);}
- if(ex.env==='mountain')drawSnow(W);else if(ex.env==='run')drawRunGround();else{drawGrid();if(ex.powder)drawPowder(false);}
+ let svM=null,svT=null;
+ if(ex.env==='mountain')drawSnow(W);else if(ex.env==='run')drawRunGround();
+ else if(ex.env==='sea'){drawSea();const d=ex.deck(phase);const Rd=mm(rz(-d.roll*D),rx(d.pitch*D));svM=cam.M;svT=cam.target;cam.M=mm(cam.M,Rd);cam.target=ap(transpose(Rd),sub(cam.target,[0,d.heave,0]));drawDeck();}
+ else{drawGrid();if(ex.powder)drawPowder(false);}
  drawShadow(W);
  const{items,skin}=buildScene(ex,W,phase,simT,{body:showBody});LASTITEMS=items;
  ctx.lineCap='round';
@@ -795,6 +799,7 @@ function render(W){
  if(ex.env==='run')drawRunFX(W);
  if(ex.env==='mountain')drawVibFX(W);
  if(ex.coach)drawChainPath(W);
+ if(svM){cam.M=svM;cam.target=svT;}
  if(labels)drawLabels(labels);
  // hover tip
  if(hover&&mouse){const d=MDEFK[hover];const mu=MUSL[hover];const txt=d.name+' — '+STATETXT[mu.state];ctx.font='600 12px system-ui,sans-serif';const tw=ctx.measureText(txt).width+14;
@@ -850,10 +855,10 @@ function drawTree(it){const b=proj(it.c),t=proj(add(it.c,[0,it.h,0]));const s=b[
   if(it.snowy){ctx.strokeStyle='rgba(245,250,255,.85)';ctx.lineWidth=Math.max(1,2*s);ctx.beginPath();ctx.moveTo(b[0]-ww*.85,y1-1);ctx.lineTo(b[0]-ww*.2,y1+(y2-y1)*.25);ctx.moveTo(b[0]+ww*.1,y1+(y2-y1)*.5);ctx.lineTo(b[0]+ww*.85,y1-1);ctx.stroke();}}}
 function arrow(a,b,col,w){const dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,ux=dx/l,uy=dy/l;ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=w||2.5;ctx.shadowColor=col;ctx.shadowBlur=10;
  ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0]-ux*8,b[1]-uy*8);ctx.stroke();ctx.beginPath();ctx.moveTo(b[0],b[1]);ctx.lineTo(b[0]-ux*11-uy*5,b[1]-uy*11+ux*5);ctx.lineTo(b[0]-ux*11+uy*5,b[1]-uy*11-ux*5);ctx.fill();ctx.shadowBlur=0;}
-function itemPts(it,W){return it.k==='line'||it.k==='bone'?[it.a,it.b]:it.k==='ball'||it.k==='tree'?[it.c]:it.k==='mus'?it.pts:it.k==='poly'?it.pts:[wp(W,'head',[0,10,1.5])];}
+function itemPts(it,W){return it.k==='line'||it.k==='bone'?[it.a,it.b]:it.k==='ball'||it.k==='tree'?[it.c]:it.k==='mus'?it.pts:it.k==='poly'||it.k==='face'?it.pts:[wp(W,'head',[0,10,1.5])];}
 function itemZ(it,W){const ps=it.k==='mus'?[it.pts[0],it.pts[1]]:itemPts(it,W);let z=0;for(const p of ps)z+=ap(cam.M,sub(p,cam.target))[2];z/=ps.length;
- if(it.k==='mus')z+=it.mu.d.deep?-2.5:1.5;if(it.k==='poly')z-=1.5;return z;}
-function drawItem(it,W,labels){const k=it.k;if(k==='line')drawLine(it);else if(k==='bone')drawBone(it);else if(k==='ball')drawBall(it);else if(k==='mus')drawMuscle(it,labels);else if(k==='poly')drawPoly(it);else if(k==='tree')drawTree(it);else drawHead(W);}
+ if(it.k==='mus')z+=it.mu.d.deep?-2.5:1.5;if(it.k==='poly')z-=1.5;if(it.z0)z+=it.z0;return z;}
+function drawItem(it,W,labels){const k=it.k;if(k==='line')drawLine(it);else if(k==='bone')drawBone(it);else if(k==='ball')drawBall(it);else if(k==='mus')drawMuscle(it,labels);else if(k==='poly')drawPoly(it);else if(k==='face')drawFace(it);else if(k==='tree')drawTree(it);else drawHead(W);}
 
 /* =========================================================
    ENVIRONMENTS
@@ -865,12 +870,13 @@ function ridge(hy,amp,freq,seed,par,c1,c2){const sh=cam.yaw*par;ctx.beginPath();
  ctx.lineTo(VW+10,hy+2);ctx.closePath();const g=ctx.createLinearGradient(0,hy-amp,0,hy);g.addColorStop(0,c1);g.addColorStop(1,c2);ctx.fillStyle=g;ctx.fill();}
 function treeBand(hy,par,col,h){const sh=cam.yaw*par;ctx.fillStyle=col;ctx.beginPath();for(let x=-20;x<VW+20;x+=7){const i=Math.floor((x+sh)/7);const xx=i*7-sh;const hh=h*(.55+.45*hash(i));ctx.moveTo(xx-4,hy);ctx.lineTo(xx,hy-hh);ctx.lineTo(xx+4,hy);}ctx.fill();}
 function drawSky(){
- const hy=horizonY();const env=ex.env==='run'?runSurf:'mountain';
- const P={mountain:['#0b1f3a','#2c64a0','#cde3f6','#e9f2fb','#f7fbff'],road:['#141a33','#7b4a63','#f0a46c','#3a3632','#24221f'],trail:['#123150','#4f86b0','#cfe2ea','#33442a','#25331f'],track:['#03050c','#0d1a33','#24406a','#173a25','#0f2618']}[env];
+ const hy=horizonY();const env=ex.env==='run'?runSurf:ex.env==='sea'?'sea':'mountain';
+ const P={mountain:['#0b1f3a','#2c64a0','#cde3f6','#e9f2fb','#f7fbff'],road:['#141a33','#7b4a63','#f0a46c','#3a3632','#24221f'],trail:['#123150','#4f86b0','#cfe2ea','#33442a','#25331f'],track:['#03050c','#0d1a33','#24406a','#173a25','#0f2618'],sea:['#1a2430','#46596b','#a9bccb','#244a66','#0c2234']}[env];
  const g=ctx.createLinearGradient(0,0,0,hy);g.addColorStop(0,P[0]);g.addColorStop(.6,P[1]);g.addColorStop(1,P[2]);ctx.fillStyle=g;ctx.fillRect(0,0,VW,hy+2);
  const sx=VW*.72-cam.yaw*3,sy=hy-VH*.32;const sg=ctx.createRadialGradient(sx,sy,0,sx,sy,VH*.5);
  sg.addColorStop(0,env==='track'?'rgba(200,220,255,.35)':env==='road'?'rgba(255,200,140,.55)':'rgba(255,250,235,.55)');sg.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=sg;ctx.fillRect(0,0,VW,hy);
  if(env==='mountain'){ridge(hy-VH*.05,VH*.3,.004,1.3,1.5,'#f4f8ff','#7f98b8');ridge(hy-VH*.02,VH*.2,.006,4.1,3,'#e8f0fa','#5c7899');ridge(hy,VH*.11,.011,7.7,6,'#cfdcec','#3e5875');treeBand(hy+1,9,'#14302d',18);}
+ else if(env==='sea'){ridge(hy,VH*.035,.008,2.9,4,'#3b4a55','#26333d');for(let i=0;i<5;i++){const x=((i*311-cam.yaw*3)%VW+VW)%VW,y=VH*.06+i*VH*.035;const cg=ctx.createRadialGradient(x,y,0,x,y,VW*.25);cg.addColorStop(0,'rgba(70,85,100,.55)');cg.addColorStop(1,'rgba(70,85,100,0)');ctx.fillStyle=cg;ctx.fillRect(0,0,VW,hy);}}
  else if(env==='road'){ridge(hy,VH*.22,.005,2.2,2,'#5b3e5d','#2a2236');ctx.fillStyle='rgba(255,210,150,.75)';for(let i=0;i<60;i++){const x=((i*53.7-cam.yaw*5)%VW+VW)%VW,y=hy-2-hash(i)*12;ctx.fillRect(x,y,1.6,1.6);}}
  else if(env==='trail'){ridge(hy-VH*.02,VH*.2,.006,3.3,2.5,'#6d8fa8','#3d5a5a');ridge(hy,VH*.1,.012,5.5,6,'#2e4d36','#1d3322');treeBand(hy+1,10,'#152a1a',30);}
  else{for(const x0 of[.15,.85]){const x=VW*x0-cam.yaw*2,y=hy-VH*.28;const lg=ctx.createRadialGradient(x,y,0,x,y,VH*.35);lg.addColorStop(0,'rgba(220,235,255,.55)');lg.addColorStop(1,'rgba(220,235,255,0)');ctx.fillStyle=lg;ctx.fillRect(0,0,VW,hy);ctx.fillStyle='#cfe0ff';ctx.fillRect(x-14,y-3,28,6);}
@@ -1405,6 +1411,74 @@ function initCoach(){
  const list=$('exList');const h2=document.createElement('h2');h2.className='gh';h2.textContent='Muscle coach';list.appendChild(h2);
  const b=document.createElement('button');b.className='ex';b.innerHTML='<span class="i">🎯</span>Train one muscle';b.onclick=()=>openCoach(sel||cT);list.appendChild(b);
 }
+
+/* =========================================================
+   BOATING: piloting a powerboat in rough, irregular seas
+   ========================================================= */
+(function(){
+ const dur=16,N=48,PI=Math.PI;const g=(t,c,w)=>Math.exp(-Math.pow((t-c)/w,2));
+ const deck=t=>({roll:10*Math.sin(4*PI*t)+4*Math.sin(10*PI*t+1),
+  pitch:5*Math.sin(4*PI*t+1.5)+2.5*Math.sin(14*PI*t)+10*g(t,.6,.025)-6*g(t,.66,.03),
+  heave:10*Math.sin(4*PI*t+.8)+4*Math.sin(12*PI*t)-16*g(t,.61,.03),slam:g(t,.615,.035)});
+ const hv=t=>deck(((t%1)+1)%1).heave;const acc=t=>{const e=.003;return(hv(t+e)-2*hv(t)+hv(t-e))/(e*e);};
+ let am=1e-6;for(let i=0;i<300;i++)am=Math.max(am,Math.abs(acc(i/300)));
+ const ws=t=>35*Math.sin(6*PI*t+.5)+15*Math.sin(10*PI*t);const thr=t=>Math.sin(4*PI*t+2)-1.2*g(t,.57,.04);
+ const CAP=[[0,'Rough water: the deck rolls, pitches and heaves in an irregular pattern. Knees and hips stay soft. Feet are flat and a little wide.'],
+  [.12,'Roll: the hips move under the trunk (hip strategy). The glute medius and adductors of both legs work in turns. The QL and obliques keep the trunk upright.'],
+  [.3,'Feet: the peroneals, tibialis posterior and the small foot muscles make constant corrections, like on a balance board.'],
+  [.45,'Steering: the hand on the wheel turns it (grip, biceps, rotator cuff). The other hand trims the throttle before the big wave (wrist and triceps).'],
+  [.58,'Wave impact: the bow drops into a trough and slams. The quads, glutes and calves absorb it (eccentric), like a mogul skier.'],
+  [.72,'Head: the neck muscles (splenius, SCM, deep neck flexors) keep the eyes level with the horizon. Looking at the horizon helps many people with seasickness.']];
+ const capAt=t=>{let c='';for(const[a,s]of CAP)if(t>=a)c=s;return c;};
+ const keys=[];let last='';
+ for(let i=0;i<N;i++){const t=i/N,d=deck(t),a=clamp(acc(t)/am,-1,1),kn=22+18*a,rr=-.55*d.roll,rp=8-.6*d.pitch,w=ws(t),th=thr(t);const c=capAt(t);
+  keys.push({t,cap:c!==last?c:'',p:{'root.roll':rr,'spine.s':-.15*d.roll,'root.pitch':rp,'B.kn':kn,'B.hip.f':rp+kn/2,'B.an':kn/2,'L.hip.a':8+rr,'R.hip.a':8-rr,
+   'neck.s':-.3*d.roll,'neck.f':-(.4*d.pitch+8)+4,'L.sh.f':55+.12*w,'L.sh.a':22+.3*w,'L.el':75-.1*w,'L.sh.r':10,'R.sh.f':35+9*th,'R.el':85-8*th,'R.sh.a':18,'R.wr':10*th,'chest.t':.1*w}});last=c;}
+ EX.push({id:'boat',group:'Boating',name:'Piloting in rough seas',icon:'⛵',dur,anchor:'ground',view:[132,14],props:['boat'],cr:true,env:'sea',deck,ws,thr,keys,
+  work:['gluteMed','adductors','QL','oblique','intOblique','multifidus','erector','peroneals','tibPost','tibAnt','gastroc','soleus','vastLat','vastMed','rectFem','abdHallucis','flexDigBrev','flexHalLong','abdDigMin','splenius','scm','longusColli','semispinalis','forearmFlex','forearmExt','biceps','brachiorad','deltAnt','deltLat','infraspinatus','subscap','triceps','gluteMin','tfl','gracilis'],
+  stab:['rectusAbd','trapUpper','levScap','serratus','gluteMax','hamstrings','scalenes','supraspinatus','trapLower'],
+  focus:['foot','hip','core','neck','shoulder']});
+})();
+const transpose=m=>[m[0],m[3],m[6],m[1],m[4],m[7],m[2],m[5],m[8]];
+function boatGeom(ex_){if(ex_.helm)return ex_.helm;const W=solve(ex_,0);const gL=wp(W,'Lhand',[0,-5,0]),gR=wp(W,'Rhand',[0,-5,0]);
+ return ex_.helm={wc:add(gL,[-17,0,0]),tp:add(gR,[0,-16,8])};}
+function boatItems(ex_,W,t,items){
+ const H=boatGeom(ex_);const ws=ex_.ws(t)*D;
+ const F=(pts,fill,stroke,o)=>items.push(Object.assign({k:'face',pts,fill,stroke},o||{}));
+ // console, dash and windshield
+ const cz0=H.wc[2]+10,cz1=cz0+32,top=H.wc[1]-6;
+ F([[-52,0,cz0],[52,0,cz0],[52,top,cz0],[-52,top,cz0]],'rgba(232,237,242,.42)','rgba(200,212,224,.9)',{z0:-30});
+ F([[-52,top,cz0],[52,top,cz0],[52,top+6,cz1],[-52,top+6,cz1]],'rgba(31,42,54,.85)','#3c4a5a',{z0:-30});
+ F([[-52,top+6,cz1],[52,top+6,cz1],[48,top+52,cz1+16],[-48,top+52,cz1+16]],'rgba(150,200,235,.16)','rgba(220,235,250,.75)',{z0:-6});
+ for(const x of[-30,-12,20]){items.push({k:'ball',c:[x,top+3,cz0+14],r:3.2,col:'#7ef9ff',shade:true,fx:1});}
+ // wheel
+ const ex1=[1,0,0],ey1=[0,.94,.34];const rim=a=>add(H.wc,add(mulS(ex1,17*Math.cos(a)),mulS(ey1,17*Math.sin(a))));
+ let pv=rim(0);for(let i=1;i<=28;i++){const q=rim(i/28*2*Math.PI);items.push(L(pv,q,2.2,'#2a2f38'));pv=q;}
+ for(let k=0;k<3;k++)items.push(L(H.wc,rim(ws+k*2*Math.PI/3),1.3,'#b8c2cc'));items.push({k:'ball',c:H.wc,r:2.6,col:'#9aa4b2',shade:true});
+ items.push(L(add(H.wc,[0,-2,4]),[H.wc[0],top,cz0+4],3,'#3a4250'));
+ // throttle
+ const gR=wp(W,'Rhand',[0,-5,0]);items.push(L(H.tp,gR,1.6,'#c9d1da'),{k:'ball',c:gR,r:2.2,col:'#d8263b',shade:true},{k:'ball',c:H.tp,r:3,col:'#3a4250',shade:true});
+ // rails (both sides) and stern
+ for(const x of[-118,118]){let p0=null;for(let z=-160;z<=230;z+=30){const p1=[x,58,z];if(p0)items.push(L(p0,p1,1.8,'#d7dee6',{fx:1}));items.push(L([x,0,z],p1,1.1,'#aeb8c2',{fx:1}));p0=p1;}}
+ // spray at the slam
+ const sl=ex_.deck(t).slam;if(sl>.08)for(let i=0;i<60;i++){const a=((simT*.9+i/60)%1);const side=i%2?1:-1;const j=hash(i)-.5;
+  items.push({k:'ball',c:[side*(60+120*a)+j*40,20+160*a*sl-140*a*a,240-60*a+j*30],r:4+10*a,col:'#eef6ff',alpha:(1-a)*.8*sl,fx:1});}
+}
+function seaH(x,z){const ph=phase;return 22*Math.sin(2*Math.PI*(z/300)+4*Math.PI*ph)+10*Math.sin(2*Math.PI*((x*.5+z*.86)/140)+10*Math.PI*ph+1.3)+5*Math.sin(2*Math.PI*((x*.9-z*.4)/60)+18*Math.PI*ph+.7);}
+function drawSea(){const R=520,st=40,y0=-60;const Lt=norm([-.3,.75,.6]);const Q=[];
+ for(let x=-R;x<R;x+=st)for(let z=-R;z<R;z+=st){const c=[[x,y0+seaH(x,z),z],[x+st,y0+seaH(x+st,z),z],[x+st,y0+seaH(x+st,z+st),z+st],[x,y0+seaH(x,z+st),z+st]];
+  const n=norm(cross(sub(c[3],c[0]),sub(c[1],c[0])));const dif=Math.max(0,n[0]*Lt[0]+n[1]*Lt[1]+n[2]*Lt[2]);const hh=(c[0][1]-y0)/37;Q.push({c,dif,hh,z:ap(cam.M,sub(c[0],cam.target))[2]});}
+ Q.sort((a,b)=>a.z-b.z);
+ for(const q of Q){const k=clamp(.25+.6*q.dif+.25*q.hh,0,1);const r=Math.round(12+40*k),g=Math.round(40+75*k),b=Math.round(62+85*k);const col=`rgb(${r},${g},${b})`;const pp=q.c.map(proj);
+  ctx.fillStyle=col;ctx.strokeStyle=col;ctx.lineWidth=.6;ctx.beginPath();pp.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill();ctx.stroke();}
+ for(let i=0;i<420;i++){const x=hash(i)*2*R-R,z=hash(i+500)*2*R-R;const h=seaH(x,z);if(h<18)continue;const q=proj([x,y0+h+.5,z]);const a=clamp((h-18)/14,0,1);
+  ctx.fillStyle=`rgba(240,248,255,${.35+.5*a})`;ctx.beginPath();ctx.ellipse(q[0],q[1],2+3*a,1+1.2*a,0,0,7);ctx.fill();}}
+function drawDeck(){const R=[[-120,0,-165],[120,0,-165],[120,0,232],[-120,0,232]];
+ const hullCol='#eef2f6';polyFill([[-120,0,-165],[-120,-48,-160],[-120,-48,215],[-120,0,232]],hullCol);polyFill([[120,0,-165],[120,-48,-160],[120,-48,215],[120,0,232]],hullCol);
+ polyFill([[-120,0,232],[120,0,232],[0,-30,300]],'#e2e8ee');polyFill([[-120,0,-165],[120,0,-165],[120,-48,-160],[-120,-48,-160]],'#d9e0e7');
+ polyFill(R,'#9a6b3f');ctx.strokeStyle='rgba(50,30,15,.45)';ctx.lineWidth=1;for(let x=-108;x<=108;x+=12){const a=proj([x,.2,-165]),b=proj([x,.2,232]);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
+ ctx.strokeStyle='rgba(255,220,170,.18)';for(let x=-102;x<=108;x+=24){const a=proj([x,.25,-165]),b=proj([x,.25,232]);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}}
+function drawFace(it){const q=it.pts.map(proj);ctx.fillStyle=it.fill;ctx.beginPath();q.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill();if(it.stroke){ctx.strokeStyle=it.stroke;ctx.lineWidth=1.2;ctx.stroke();}}
 
 /* =========================================================
    STATE (which muscles shorten, lengthen, hold)

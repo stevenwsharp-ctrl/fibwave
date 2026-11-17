@@ -297,7 +297,7 @@ A graphics card with WebGL 2 is needed for the 3D scenes. Fibwave lowers its res
 |---|---|
 | `index.html` | The website (the same as `fibwave.html`). |
 | `fibwave.html` | The full app in one file. You can open it directly from your computer. |
-| `muscle-lab.html` | Muscle Lab: 3D muscles in slow motion for 13 movements (about 60 muscles per side, Surface / Deep / All layers, close-up Zoom with sarcomere, length-tension, pennation, GRF and ski-vibration views; mountain, road, trail and track scenes; Muscle Coach: pick a muscle to see what works with it, opposes it, stabilizes it and its feet-to-head chain, then play a generated plan from martial arts, sports, yoga, ballet and qigong) (open it from the Health Lab panel). |
+| `muscle-lab.html` | Muscle Lab: 3D muscles in slow motion for 14 movements, including piloting a boat in rough seas (about 60 muscles per side, Surface / Deep / All layers, close-up Zoom with sarcomere, length-tension, pennation, GRF and ski-vibration views; mountain, road, trail and track scenes; Muscle Coach: pick a muscle to see what works with it, opposes it, stabilizes it and its feet-to-head chain, then play a generated plan from martial arts, sports, yoga, ballet and qigong) (open it from the Health Lab panel). |
 | `README.md` | This file. |
 
 **To update the website:** in the GitHub repository, click **Add file → Upload files**, drop in the new `index.html` and `fibwave.html`, and click **Commit changes**. GitHub Pages updates the site in about one minute. In Chrome, reload with **Cmd + Shift + R** to get the new version.
