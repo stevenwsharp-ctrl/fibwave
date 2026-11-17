@@ -1482,17 +1482,18 @@ function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');cl
 async function sharePlan(i){if(i!=null&&cPlan.blocks[i])return shareMove(cPlan.blocks[i].k);const url=shareURL(cT,cGoal,i);const d=MDEFK[cT];
  const text=(i!=null?`${cPlan.blocks[i].m.name} — `:'')+`my ${cGoal==='wake'?'wake-up':'calm-down'} plan for the ${d.name.toLowerCase()} (Fibwave Muscle Lab)`;
  const box=$('cShare');box.hidden=false;const inp=box.querySelector('input');inp.value=url;
- try{if(navigator.share){await navigator.share({title:'Fibwave Muscle Lab',text,url});toast('Shared');return;}}catch(e){if(e&&e.name==='AbortError')return;}
+ try{if(navigator.share&&document.body.classList.contains('phone')){await navigator.share({title:'Fibwave Muscle Lab',text,url});toast('Shared');return;}}catch(e){if(e&&e.name==='AbortError')return;}
  try{await navigator.clipboard.writeText(url);toast('Link copied — paste it in a text or email');}catch(e){inp.select();toast('Copy the link below');}}
 async function shareMove(k){const m=MOVES[k];const url=location.href.split('#')[0]+'#move-'+cT+'-'+k;const text=`${m.name} (${m.src}) — for the ${MDEFK[cT].name.toLowerCase()} · Fibwave Muscle Lab`;
  const box=$('cShare');box.hidden=false;const inp=box.querySelector('input');inp.value=url;
- try{if(navigator.share){await navigator.share({title:'Fibwave Muscle Lab',text,url});toast('Shared');return;}}catch(e){if(e&&e.name==='AbortError')return;}
+ try{if(navigator.share&&document.body.classList.contains('phone')){await navigator.share({title:'Fibwave Muscle Lab',text,url});toast('Shared');return;}}catch(e){if(e&&e.name==='AbortError')return;}
  try{await navigator.clipboard.writeText(url);toast('Link copied — paste it in a text or email');}catch(e){inp.select();toast('Copy the link below');}}
 function readHash(){
- const mv=location.hash.match(/^#move-([A-Za-z]+)-([A-Za-z0-9]+)$/);
+ let hs=location.hash;try{hs=decodeURIComponent(hs);}catch(_){}
+ const mv=hs.match(/#move-([A-Za-z]+)-([A-Za-z0-9]+)/);
  if(mv&&MDEFK[mv[1]]&&ACTS[mv[1]]&&MOVES[mv[2]]){cT=mv[1];document.body.classList.add('shared');openCoach(cT);const m=MOVES[mv[2]];
   playPlan([{m,label:'For the '+MDEFK[cT].short.toLowerCase(),k:mv[2]}],m.name);ex.playOnce=true;anat=true;$('tAnat').classList.add('on');
-  speed=.5;document.querySelectorAll('.sp').forEach(x=>x.classList.toggle('on',x.dataset.s==='0.5'));playing=true;return true;}const m=location.hash.match(/^#plan-([A-Za-z]+)-(wake|calm)(?:-(\d+))?$/);if(!m||!MDEFK[m[1]]||!ACTS[m[1]])return false;
+  speed=.5;document.querySelectorAll('.sp').forEach(x=>x.classList.toggle('on',x.dataset.s==='0.5'));playing=true;return true;}const m=hs.match(/#plan-([A-Za-z]+)-(wake|calm)(?:-(\d+))?/);if(!m||!MDEFK[m[1]]||!ACTS[m[1]])return false;
  cT=m[1];cGoal=m[2];document.querySelectorAll('.cg').forEach(x=>x.classList.toggle('on',x.dataset.g===cGoal));
  document.body.classList.add('shared');openCoach(cT);
  const i=m[3]?(+m[3]-1):null;if(i!=null&&cPlan.blocks[i])playPlan([cPlan.blocks[i]],cPlan.blocks[i].m.name);else playPlan(cPlan.blocks,`Plan: ${MDEFK[cT].short} — ${cGoal==='wake'?'wake it up':'calm it down'}`);
