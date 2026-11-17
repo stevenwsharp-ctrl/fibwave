@@ -46,6 +46,26 @@ button.b.on{background:rgba(94,224,255,.18);border-color:rgba(94,224,255,.6)}
 #legend div{display:flex;align-items:center;gap:7px;margin:2px 0}
 #legend .dot{box-shadow:none}
 #tMus{display:none}
+#coach{top:14px;left:14px;bottom:96px;width:410px;padding:12px 14px;overflow:auto;z-index:9}
+#coach .chd{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--acc);margin-bottom:4px}
+#cMus{width:100%;background:rgba(255,255,255,.06);color:var(--txt);border:1px solid var(--line);border-radius:8px;font:inherit;padding:6px}
+#cMus option,#cMus optgroup{background:#0b1220}
+.ctgt{padding:10px;border-radius:10px;background:rgba(255,79,216,.07);border:1px solid rgba(255,79,216,.3);font-size:12.5px}
+.ctgt .cn{font-weight:700;font-size:14px;margin-bottom:3px}.ctip{margin-top:6px;color:#e9d5ff}
+.csec{margin-top:12px}.ch3{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.csub{font-size:11px;color:var(--dim);margin-bottom:4px}
+.chip{display:inline-block;font-size:11.5px;padding:2px 7px;margin:2px 3px 2px 0;border:1px solid;border-radius:20px;cursor:pointer;background:rgba(255,255,255,.03)}
+.chip:hover{background:rgba(255,255,255,.1)}
+.cline{margin:6px 0 8px;font-size:12px}.cpath{margin-top:3px;line-height:1.9}.arr{color:var(--dim);margin:0 1px}
+.ev{font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px}.ev-s{background:rgba(45,212,191,.18);color:#5eead4}.ev-p{background:rgba(250,204,21,.15);color:#fde047}.ev-n{background:rgba(148,163,184,.15);color:#cbd5e1}
+.cplay{width:100%;margin:4px 0 8px;padding:8px}
+.cblk{padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04);margin-bottom:6px;font-size:12px}
+.cbh{display:flex;align-items:center;gap:8px}.cbh>div{flex:1}.num{width:22px;height:22px;border-radius:50%;background:rgba(94,224,255,.18);color:var(--acc);display:grid;place-items:center;font-weight:700;font-size:12px}
+.cbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--acc)}.cbm{font-weight:600;font-size:13px}
+.src{font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(255,255,255,.08);color:var(--dim);font-weight:400}
+.cbw{margin-top:4px;color:#cbd5e1}.cbd{margin-top:3px;color:var(--dim);font-size:11px}
+.cmore{display:block;width:100%;text-align:left;margin:3px 0;font-size:12px}
+.cnote{margin-top:12px;font-size:10.5px;color:var(--dim);line-height:1.45}
 #zoom{top:14px;right:14px;bottom:96px;width:430px;display:flex;flex-direction:column;padding:8px;gap:6px;z-index:5}
 #zoom.big{right:auto;bottom:auto;left:50%;top:50%;transform:translate(-50%,-50%);width:min(1180px,94vw);height:min(860px,90vh);z-index:30}
 #zoom .zh{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
@@ -68,6 +88,7 @@ body.zhide #zoom{display:none}
  #cap{top:66px;width:calc(100% - 28px)}
  #legend{display:none}
  #tMus{display:inline-block}
+ #coach{left:8px;right:8px;width:auto;top:60px;bottom:150px}
  #zoom{top:auto;left:14px;right:14px;width:auto;bottom:150px;height:64vh}
  body:not(.zhide) #right{display:none}
 }
@@ -82,6 +103,13 @@ body.zhide #zoom{display:none}
     <div id="exList"></div>
 </div>
 
+<div id="coach" class="panel" hidden>
+  <div class="chd"><b>🎯 Muscle coach</b><button class="b" id="coachX" aria-label="Close">✕</button></div>
+  <div class="csub" style="margin-bottom:6px">Pick a muscle here, or click one on the body.</div>
+  <select id="cMus" aria-label="Muscle"></select>
+  <div class="grp" style="margin:8px 0;flex-wrap:wrap"><button class="b cg on" data-g="wake">Wake it up (underactive)</button><button class="b cg" data-g="calm">Calm it down (overactive)</button></div>
+  <div id="cOut"></div>
+</div>
 <div id="cap" class="panel"><div class="t" id="capT"></div><div class="c" id="capC"></div></div>
 
 <div id="right" class="panel">
@@ -191,9 +219,9 @@ const cpt=(W,S,k)=>wp(W,S+CP[k][0],CP[k][1]);
    strand = [origin, (via), insertion]; each point = [bone,x,y,z]
    ========================================================= */
 const MDEF=[
- {id:'deltAnt',name:'Front deltoid',short:'Front delt',w:4.2,s:[[['clav',11,.5,.5],['upper',2,-13,1.5]],[['clav',13.5,1,-1],['upper',2.3,-12,1]]],does:'Lifts the arm forward and up. Helps you push.'},
- {id:'deltLat',name:'Side deltoid',short:'Side delt',w:4.4,s:[[['clav',15,1.5,-3],['upper',2.6,-13,0]],[['clav',15.5,1,-5],['upper',2.6,-12.5,-.5]]],does:'Lifts the arm out to the side.'},
- {id:'deltPost',name:'Rear deltoid',short:'Rear delt',w:4,s:[[['clav',11,0,-8.5],['upper',2,-13,-1.5]],[['clav',13.5,.5,-7],['upper',2.2,-12,-1.5]]],does:'Pulls the arm back. Helps you row and pull.'},
+ {id:'deltAnt',name:'Front deltoid',short:'Front delt',w:4.2,s:[[['clav',11.5,3,1],['upper',2,-13,1.5]],[['clav',13.8,3.6,-.5],['upper',2.3,-12,1]]],does:'Lifts the arm forward and up. Helps you push.'},
+ {id:'deltLat',name:'Side deltoid',short:'Side delt',w:4.4,s:[[['clav',15.8,4,-3],['upper',2.6,-13,0]],[['clav',16.2,3.6,-5],['upper',2.6,-12.5,-.5]]],does:'Lifts the arm out to the side.'},
+ {id:'deltPost',name:'Rear deltoid',short:'Rear delt',w:4,s:[[['clav',11.5,3,-8.5],['upper',2,-13,-1.5]],[['clav',13.8,3.6,-7],['upper',2.2,-12,-1.5]]],does:'Pulls the arm back. Helps you row and pull.'},
  {id:'pec',name:'Pectoralis major (chest)',short:'Chest',w:4.6,s:[[['clav',7,0,1.5],['upper',1,-7,3]],[['chest',1.5,22,9],['upper',1,-7,3]],[['chest',2,15,10],['upper',1,-7.5,2.5]],[['chest',4,8,10],['upper',.5,-8,2]]],does:'Pulls the arm forward and across the body. The main pushing muscle.'},
  {id:'lats',name:'Latissimus dorsi (lats)',short:'Lats',w:5,s:[[['chest',2,14,-10],['upper',-.5,-7,.5]],[['chest',3,4,-9.5],['upper',-.5,-7.5,.5]],[['spine',3,8,-8],['upper',-.5,-8,.5]],[['pelvis',10,8,-5],['upper',-.5,-8,.5]]],does:'Pulls the arm down and back to the body. The main pull-up muscle.'},
  {id:'trapUpper',name:'Upper trapezius',short:'Upper trap',w:4,s:[[['neck',1.5,7,-4],['clav',13,1,-6]],[['chest',1.5,30,-6],['clav',11,.5,-7]]],does:'Lifts and rotates the shoulder blade up. Supports the neck.'},
@@ -706,6 +734,7 @@ function drawMuscle(it,labels){
  const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;
  const isSel=sel===mu.d.id,isHov=hover===mu.d.id;
  ctx.globalAlpha=Z?(mu.d.deep?.88:.97):anat?(mu.d.deep&&layer==='all'?.8:.97):(active?.96:.55);
+ const crole=!Z&&ex.coach?coachRole(mu.d.id):'x';if(!crole)ctx.globalAlpha*=.18;
  if(st==='con'||st==='ecc'){ctx.shadowColor=scol;ctx.shadowBlur=(anat||Z?14:10)*clamp(Math.abs(mu.v)*4,.3,1.2);}
  const g=ctx.createLinearGradient(mx-nx*hw,my-ny*hw,mx+nx*hw,my+ny*hw);
  g.addColorStop(0,shade(col,.4));g.addColorStop(.42,col);g.addColorStop(.6,shade(col,1.3));g.addColorStop(1,shade(col,.4));
@@ -718,6 +747,7 @@ function drawMuscle(it,labels){
   ctx.bezierCurveTo(b[0]-dx*u-nx*k,b[1]-dy*u-ny*k,a[0]+dx*u-nx*k,a[1]+dy*u-ny*k,a[0],a[1]);}
  ctx.fill();ctx.shadowBlur=0;
  if((anat||Z)&&active&&!(isSel||isHov)){ctx.lineWidth=1.8;ctx.strokeStyle=scol;}else{ctx.lineWidth=isSel||isHov?2:.7;ctx.strokeStyle=isSel||isHov?'#ffffff':'rgba(0,0,0,.35)';}ctx.stroke();
+ if(crole==='target'){ctx.save();ctx.strokeStyle='#ff4fd8';ctx.lineWidth=2.6;ctx.shadowColor='#ff4fd8';ctx.shadowBlur=12+8*Math.sin(RT*4);ctx.stroke();ctx.restore();}
  // fibers
  if(bl>=hw*1.1&&hw>1.6){
   if(mu.d.pen&&(Z||hw>6)){ // pennate muscle: fibers run at an angle from a central tendon sheet (aponeurosis)
@@ -764,6 +794,7 @@ function render(W){
  if(ex.powder)drawPowder(true);
  if(ex.env==='run')drawRunFX(W);
  if(ex.env==='mountain')drawVibFX(W);
+ if(ex.coach)drawChainPath(W);
  if(labels)drawLabels(labels);
  // hover tip
  if(hover&&mouse){const d=MDEFK[hover];const mu=MUSL[hover];const txt=d.name+' — '+STATETXT[mu.state];ctx.font='600 12px system-ui,sans-serif';const tw=ctx.measureText(txt).width+14;
@@ -1027,6 +1058,355 @@ function renderPhys(W){
 }
 
 /* =========================================================
+   MUSCLE COACH — knowledge base
+   ========================================================= */
+const ACTS={deltAnt:['sh.flex','sh.ir'],deltLat:['sh.abd'],deltPost:['sh.ext','sh.er','sh.habd'],pec:['sh.add','sh.ir','sh.hadd','sh.flex'],lats:['sh.add','sh.ext','sh.ir','scap.dep'],
+ trapUpper:['scap.elev','scap.upr','neck.ext'],trapMid:['scap.ret'],trapLower:['scap.dep','scap.upr','scap.ret'],rhomboid:['scap.ret','scap.downr','scap.elev'],serratus:['scap.prot','scap.upr'],
+ biceps:['el.flex','sh.flex'],brachialis:['el.flex'],triceps:['el.ext','sh.ext'],brachiorad:['el.flex'],forearmFlex:['wr.flex'],forearmExt:['wr.ext'],
+ rectusAbd:['tr.flex'],oblique:['tr.rot','tr.side','tr.flex'],erector:['tr.ext','tr.side'],scm:['neck.flex','neck.rot','neck.side'],
+ gluteMax:['hip.ext','hip.er'],gluteMed:['hip.abd','pelvis.level'],iliopsoas:['hip.flex'],rectFem:['kn.ext','hip.flex'],vastLat:['kn.ext'],vastMed:['kn.ext'],hamstrings:['kn.flex','hip.ext'],adductors:['hip.add'],
+ gastroc:['ank.pf','kn.flex'],soleus:['ank.pf'],tibAnt:['ank.df','ft.inv'],
+ supraspinatus:['sh.abd','sh.er'],infraspinatus:['sh.er'],teresMinor:['sh.er'],subscap:['sh.ir'],teresMajor:['sh.add','sh.ext','sh.ir'],pecMinor:['scap.prot','scap.downr','scap.dep'],coracobrach:['sh.flex','sh.add'],
+ splenius:['neck.ext','neck.rot'],levScap:['scap.elev','scap.downr','neck.side'],scalenes:['neck.side','neck.flex'],longusColli:['neck.flex'],semispinalis:['neck.ext'],
+ intOblique:['tr.rot','tr.side','tr.flex'],QL:['tr.side','pelvis.hike'],multifidus:['tr.ext'],tfl:['hip.abd','hip.flex','hip.ir'],sartorius:['hip.flex','hip.er','kn.flex'],gracilis:['hip.add','kn.flex'],gluteMin:['hip.abd','hip.ir'],piriformis:['hip.er'],
+ peroneals:['ft.ev','ank.pf'],tibPost:['ft.inv','ank.pf','arch'],extDigLong:['toe.ext','ank.df'],flexHalLong:['toe.flex','ank.pf','arch'],flexDigBrev:['toe.flex','arch'],abdHallucis:['arch','toe.abd'],abdDigMin:['arch'],extDigBrev:['toe.ext']};
+const OPP={};[['sh.flex','sh.ext'],['sh.abd','sh.add'],['sh.ir','sh.er'],['sh.habd','sh.hadd'],['scap.elev','scap.dep'],['scap.ret','scap.prot'],['scap.upr','scap.downr'],['el.flex','el.ext'],['wr.flex','wr.ext'],['tr.flex','tr.ext'],['neck.flex','neck.ext'],['hip.flex','hip.ext'],['hip.abd','hip.add'],['hip.er','hip.ir'],['kn.ext','kn.flex'],['ank.pf','ank.df'],['ft.ev','ft.inv'],['toe.flex','toe.ext']].forEach(([a,b])=>{OPP[a]=b;OPP[b]=a;});
+const REGION={shoulder:['deltAnt','deltLat','deltPost','pec','lats','trapUpper','trapMid','trapLower','rhomboid','serratus','supraspinatus','infraspinatus','teresMinor','subscap','teresMajor','pecMinor','coracobrach','levScap'],
+ arm:['biceps','brachialis','triceps','brachiorad','forearmFlex','forearmExt'],neck:['scm','splenius','scalenes','longusColli','semispinalis'],trunk:['rectusAbd','oblique','intOblique','erector','QL','multifidus'],
+ hip:['gluteMax','gluteMed','gluteMin','piriformis','iliopsoas','tfl','adductors','sartorius','gracilis'],thigh:['rectFem','vastLat','vastMed','hamstrings'],
+ leg:['gastroc','soleus','tibAnt','peroneals','tibPost','extDigLong','flexHalLong'],foot:['flexDigBrev','abdHallucis','abdDigMin','extDigBrev']};
+const REGNAME={shoulder:'Shoulder and shoulder blade',arm:'Arm and forearm',neck:'Neck',trunk:'Trunk and core',hip:'Hip',thigh:'Thigh',leg:'Lower leg',foot:'Foot'};
+const REG2ZOOM={shoulder:'shoulder',arm:'shoulder',neck:'neck',trunk:'core',hip:'hip',thigh:'knee',leg:'leg',foot:'foot'};
+const regionOf=id=>Object.keys(REGION).find(r=>REGION[r].includes(id));
+const STABS={shoulder:['supraspinatus','infraspinatus','teresMinor','subscap','serratus','trapLower','longusColli','intOblique','multifidus'],arm:['supraspinatus','infraspinatus','subscap','serratus','trapLower'],
+ neck:['longusColli','semispinalis','trapLower','serratus','multifidus'],trunk:['multifidus','intOblique','gluteMed','gluteMax','longusColli'],hip:['intOblique','multifidus','QL','abdHallucis','peroneals','tibPost'],
+ thigh:['gluteMed','gluteMax','tibPost','abdHallucis','intOblique'],leg:['gluteMed','tibPost','abdHallucis','intOblique','longusColli'],foot:['tibPost','peroneals','gluteMed','intOblique','longusColli']};
+// Anatomy Trains lines (Myers), feet -> head. Evidence: Wilke et al. 2016 dissection review.
+const CHAINS={
+ SBL:{name:'Superficial back line',ev:'strong evidence',m:['flexDigBrev','gastroc','soleus','hamstrings','erector','multifidus','semispinalis','splenius']},
+ LL:{name:'Lateral line',ev:'partial evidence',m:['peroneals','abdDigMin','tfl','gluteMed','gluteMin','oblique','intOblique','QL','splenius','scm']},
+ SPL:{name:'Spiral line',ev:'partial evidence',m:['peroneals','tibAnt','tfl','oblique','intOblique','serratus','rhomboid','splenius']},
+ DFL:{name:'Deep front line',ev:'not tested in the 2016 review',m:['tibPost','flexHalLong','abdHallucis','adductors','iliopsoas','QL','scalenes','longusColli']},
+ SFL:{name:'Superficial front line',ev:'no evidence found',m:['extDigBrev','extDigLong','tibAnt','rectFem','vastLat','vastMed','rectusAbd','scm']},
+ BFL:{name:'Back functional line (crosses to the other side)',ev:'strong evidence',m:['vastLat','gluteMax','lats']},
+ FFL:{name:'Front functional line (crosses to the other side)',ev:'strong evidence',m:['adductors','rectusAbd','pec']},
+ SBAL:{name:'Superficial back arm line',ev:'not tested in the 2016 review',m:['trapLower','trapMid','trapUpper','deltPost','deltLat','deltAnt','forearmExt'],arm:1},
+ DBAL:{name:'Deep back arm line',ev:'not tested in the 2016 review',m:['rhomboid','levScap','supraspinatus','infraspinatus','teresMinor','triceps'],arm:1},
+ SFAL:{name:'Superficial front arm line',ev:'not tested in the 2016 review',m:['pec','lats','teresMajor','forearmFlex'],arm:1},
+ DFAL:{name:'Deep front arm line',ev:'not tested in the 2016 review',m:['pecMinor','coracobrach','biceps','brachiorad'],arm:1}};
+const ARMBRIDGE={SBAL:['SPL','LL'],DBAL:['SPL','LL'],SFAL:['BFL','FFL'],DFAL:['FFL','DFL']};
+const COMP={deltLat:'The upper trapezius and levator scapulae often take over: the shoulder shrugs up. Keep the neck long and the shoulder down while the arm lifts.',
+ gluteMed:'The TFL and QL often take over: the hip hikes or the knee turns in. Keep the pelvis level.',gluteMax:'The hamstrings and low-back erectors often take over. Squeeze the glute first, then move.',
+ serratus:'Pec minor and levator scapulae often take over: the shoulder blade tips forward or wings.',trapLower:'The upper trapezius and levator scapulae often take over. Think "shoulder blade down into the back pocket".',
+ longusColli:'The SCM and scalenes often take over: the chin pokes forward. Make a small, gentle nod.',tibAnt:'The toe extensors often take over: the toes lift and claw. Keep the toes relaxed.',
+ abdHallucis:'The long toe flexors often take over: the toes curl. Keep the toes long and lift the arch.',flexDigBrev:'The long toe flexors often take over. Keep the toes long.',
+ infraspinatus:'The rear deltoid often takes over. Keep the elbow by the side and turn the arm out slowly.',intOblique:'The hip flexors often take over. Breathe out and draw the lower ribs down.',
+ rectusAbd:'The hip flexors often take over. Breathe out and curl the ribs toward the pelvis.',vastMed:'The vastus lateralis and TFL often dominate. Keep the knee over the second toe.',
+ supraspinatus:'The upper trapezius often takes over. Lift only to about 30° first, slowly.',deltPost:'The rhomboids and lats often take over. Keep the shoulder blade still and move the arm.'};
+function rolesFor(T){
+ const a0=ACTS[T]||[],main=a0[0];const syn=[],ant=[];
+ for(const id in ACTS){if(id===T)continue;const a=ACTS[id];if(main&&a.includes(main))syn.push(id);else if(main&&OPP[main]&&a.includes(OPP[main]))ant.push(id);}
+ if(a0[1]&&OPP[a0[1]])for(const id in ACTS){if(id!==T&&!ant.includes(id)&&!syn.includes(id)&&ACTS[id][0]===OPP[a0[1]])ant.push(id);}
+ const reg=regionOf(T);const stab=(STABS[reg]||[]).filter(x=>x!==T&&!syn.includes(x)&&!ant.includes(x));
+ const lines=[];for(const k in CHAINS)if(CHAINS[k].m.includes(T))lines.push(k);
+ for(const k of [...lines])if(ARMBRIDGE[k])for(const b of ARMBRIDGE[k])if(!lines.includes(b))lines.push(b);
+ if(!lines.length){for(const k in CHAINS)if(syn.some(s=>CHAINS[k].m.includes(s))){lines.push(k);break;}}
+ const chain=[];for(const k of lines)for(const m of CHAINS[k].m)if(m!==T&&!chain.includes(m))chain.push(m);
+ // path for drawing: trunk line (feet->neck) then arm line
+ const trunkL=lines.find(k=>!CHAINS[k].arm),armL=lines.find(k=>CHAINS[k].arm);
+ const path=[...(trunkL?CHAINS[trunkL].m:[]),...(armL?CHAINS[armL].m:[])];
+ return{T,syn,ant,stab,lines,chain,path,reg};}
+
+/* =========================================================
+   MOVEMENT LIBRARY (sports, martial arts, yoga, dance, qigong)
+   ========================================================= */
+const GD={'B.sh.f':45,'B.sh.a':16,'B.sh.r':35,'B.el':128};
+const BOXST={'root.yaw':-25,'L.hip.f':18,'R.hip.f':-12,'L.hip.a':4,'R.hip.a':6,'B.kn':18,'L.an':8,'R.an':-12,'R.toe':25,'neck.f':10,'neck.t':20};
+const MOVES={
+ ageuke:{name:'Rising block (age-uke)',src:'Karate',dur:5,dose:'5 slow blocks each arm',
+  base:{'L.hip.f':15,'R.hip.f':-10,'B.kn':15,'B.hip.a':4,'R.sh.f':30,'R.el':110,'R.sh.a':10},
+  keys:[{t:0,p:{'L.sh.f':25,'L.sh.a':5,'L.el':100,'L.sh.r':70},cap:'Chamber: the blocking arm starts low, across the body.'},
+   {t:.35,p:{'L.sh.f':150,'L.sh.a':45,'L.el':100,'L.sh.r':-20,'L.clav.e':8},cap:'Block: the arm rises and turns out above the forehead. Side and front deltoid, supraspinatus and serratus lift it. The lower trapezius sets the shoulder blade.'},
+   {t:.6,p:{},cap:'Hold the block. Keep the neck long. Do not shrug.'},
+   {t:.85,p:{'L.sh.f':25,'L.sh.a':5,'L.el':100,'L.sh.r':70,'L.clav.e':0},cap:'Return slowly: the deltoid gets longer under control (eccentric).'}],
+  work:['deltLat','deltAnt','supraspinatus','serratus','trapLower','trapUpper','infraspinatus'],stab:['oblique','gluteMed','peroneals','longusColli']},
+ cloud:{name:'Cloud hands (yun shou)',src:'Tai chi',dur:8,dose:'6 slow cycles',
+  base:{'B.kn':22,'B.hip.f':14,'B.an':10,'B.hip.a':10},
+  keys:[{t:0,p:{'root.yaw':-25,'L.sh.f':75,'L.sh.a':35,'L.el':45,'L.sh.r':25,'R.sh.f':25,'R.sh.a':18,'R.el':45,'L.hip.a':14,'R.hip.a':6,'root.roll':-4},cap:'Turn left: the upper hand passes the face. Side and rear deltoids carry it. Infraspinatus turns it out.'},
+   {t:.25,p:{'root.yaw':0,'L.sh.f':50,'L.sh.a':25,'R.sh.f':50,'R.sh.a':25,'L.hip.a':10,'R.hip.a':10,'root.roll':0},cap:'Center: the hands change levels. The trunk turns from the hips (obliques).'},
+   {t:.5,p:{'root.yaw':25,'R.sh.f':75,'R.sh.a':35,'R.el':45,'R.sh.r':25,'L.sh.f':25,'L.sh.a':18,'L.el':45,'R.hip.a':14,'L.hip.a':6,'root.roll':4},cap:'Turn right: the weight moves over the right foot. The glute medius, peroneals and tibialis posterior balance it.'},
+   {t:.75,p:{'root.yaw':0,'L.sh.f':50,'L.sh.a':25,'R.sh.f':50,'R.sh.a':25,'L.hip.a':10,'R.hip.a':10,'root.roll':0},cap:'Center again. Breathe slowly.'}],
+  work:['deltLat','deltPost','infraspinatus','oblique','intOblique','gluteMed','adductors','peroneals','tibPost'],stab:['QL','longusColli','abdHallucis','trapLower','supraspinatus']},
+ ytw:{name:'Y-T-W raises',src:'Swim dry-land / physio',dur:9,dose:'2 rounds of 5 Y, 5 T, 5 W',
+  base:{'root.pitch':45,'B.hip.f':45,'B.kn':15,'B.an':8,'neck.f':-20},
+  keys:[{t:0,p:{'B.sh.f':45,'B.el':5},cap:'Hinge at the hips. Back flat. Arms hang.'},
+   {t:.15,p:{'B.sh.f':160,'B.sh.a':30,'B.clav.e':4},cap:'Y: thumbs up, arms by the ears. Lower trapezius and side deltoid.'},
+   {t:.3,p:{'B.sh.f':45,'B.sh.a':0,'B.clav.e':0},cap:'Lower slowly.'},
+   {t:.45,p:{'B.sh.f':0,'B.sh.a':90,'B.clav.p':-6},cap:'T: arms out to the sides. Middle trapezius, rhomboids and rear deltoid.'},
+   {t:.6,p:{'B.sh.f':45,'B.sh.a':0,'B.clav.p':0},cap:'Lower slowly.'},
+   {t:.75,p:{'B.sh.f':10,'B.sh.a':50,'B.el':95,'B.sh.r':-50,'B.clav.p':-8},cap:'W: elbows bend, hands turn up and back. Infraspinatus and teres minor.'},
+   {t:.9,p:{'B.sh.f':45,'B.sh.a':0,'B.el':5,'B.sh.r':0,'B.clav.p':0},cap:'Rest.'}],
+  work:['trapLower','trapMid','rhomboid','deltPost','deltLat','infraspinatus','teresMinor','supraspinatus'],stab:['erector','multifidus','gluteMax','hamstrings','longusColli']},
+ hook:{name:'Lead hook',src:'Boxing',dur:3,dose:'3 × 8 easy hooks each side',
+  base:Object.assign({},BOXST,GD),
+  keys:[{t:0,p:{},cap:'Guard.'},{t:.25,p:{'root.yaw':-35,'spine.t':-6},cap:'Load: turn a little toward the back foot.'},
+   {t:.45,p:{'L.sh.f':80,'L.sh.a':85,'L.el':95,'L.sh.r':45,'root.yaw':-5,'chest.t':20,'spine.t':12,'L.an':-15,'L.hip.r':25},cap:'Hook: the side deltoid holds the elbow level with the fist. The power comes from the hips and obliques.'},
+   {t:.65,p:Object.assign({'root.yaw':-25,'chest.t':0,'spine.t':0,'L.an':8,'L.hip.r':0,'L.sh.f':45,'L.sh.a':16,'L.sh.r':35,'L.el':128},{}),cap:'Back to guard: the rear deltoid brakes the arm.'}],
+  work:['deltLat','deltAnt','pec','oblique','intOblique','gluteMax','serratus','subscap'],stab:['rectusAbd','peroneals','gastroc','scm','longusColli']},
+ swim:{name:'Freestyle arm stroke',src:'Swimming',dur:4,dose:'3 × 20 s, slow',
+  base:{'root.pitch':28,'B.hip.f':28,'B.kn':10,'neck.f':-15},
+  keys:[{t:0,p:{'L.sh.f':170,'L.sh.a':15,'L.el':10,'R.sh.f':20,'R.sh.a':75,'R.el':95,'R.sh.r':30,'root.yaw':8},cap:'Left catch, right recovery: the side and rear deltoids lift the right elbow high.'},
+   {t:.25,p:{'L.sh.f':80,'L.el':90,'L.sh.a':20,'R.sh.f':110,'R.sh.a':40,'R.el':60,'root.yaw':0},cap:'Pull: the lats, chest and triceps drive the left arm back. These are the opposing muscles of the deltoid.'},
+   {t:.5,p:{'R.sh.f':170,'R.sh.a':15,'R.el':10,'L.sh.f':20,'L.sh.a':75,'L.el':95,'L.sh.r':30,'root.yaw':-8},cap:'Right catch, left recovery.'},
+   {t:.75,p:{'R.sh.f':80,'R.el':90,'R.sh.a':20,'L.sh.f':110,'L.sh.a':40,'L.el':60,'root.yaw':0},cap:'Right pull. The body rolls with each stroke (obliques).'}],
+  work:['lats','pec','triceps','teresMajor','deltLat','deltPost','serratus','supraspinatus'],stab:['oblique','rectusAbd','gluteMax','longusColli']},
+ climb:{name:'Climbing pull and lock-off',src:'Climbing',dur:6,dose:'3 × 6 slow pulls',
+  base:{'B.sh.r':-90,'B.kn':5},
+  keys:[{t:0,p:{'B.sh.a':160,'B.el':8,'B.clav.e':10},cap:'Hang: arms overhead. The lats are long.'},
+   {t:.15,p:{'B.clav.e':-4},cap:'Set: pull the shoulder blades down (lower trapezius, lats).'},
+   {t:.5,p:{'B.sh.a':40,'B.el':125,'B.clav.e':-4,'B.clav.p':-5},cap:'Pull and lock off: lats and teres major pull the elbows down. They are the main opposing muscles of the side deltoid.'},
+   {t:.65,p:{},cap:'Hold the lock-off (isometric).'},
+   {t:.92,p:{'B.sh.a':160,'B.el':8,'B.clav.e':10,'B.clav.p':0},cap:'Lower slowly.'}],
+  work:['lats','teresMajor','rhomboid','trapLower','biceps','brachialis','brachiorad','forearmFlex','deltPost','infraspinatus'],stab:['rectusAbd','intOblique','longusColli']},
+ kyudo:{name:'Bow draw',src:'Kyudo (Japanese archery)',dur:8,dose:'4 slow draws each side',
+  base:{'B.hip.a':16,'B.kn':5,'B.el':10},
+  keys:[{t:0,p:{'L.sh.a':20,'R.sh.a':20,'neck.t':0},cap:'Stand tall, feet wide. Weight even on both feet.'},
+   {t:.2,p:{'L.sh.a':90,'L.el':4,'R.sh.f':90,'R.sh.a':-45,'R.el':20,'neck.t':55},cap:'Raise the bow: both side deltoids lift. The head turns to the target (SCM, splenius).'},
+   {t:.5,p:{'R.sh.f':-25,'R.sh.a':85,'R.el':140,'R.clav.p':-8,'L.clav.p':4},cap:'Full draw: the right shoulder blade pulls back (rhomboids, middle trapezius, rear deltoid). The bow arm pushes out (side deltoid, triceps, serratus).'},
+   {t:.72,p:{},cap:'Hold the draw. Breathe. The lateral line on both sides keeps you tall.'},
+   {t:.88,p:{'L.sh.a':20,'R.sh.f':0,'R.sh.a':20,'R.el':10,'R.clav.p':0,'L.clav.p':0,'neck.t':0},cap:'Release and lower slowly.'}],
+  work:['deltLat','deltPost','rhomboid','trapMid','infraspinatus','teresMinor','triceps','biceps','trapLower','serratus','splenius','scm'],stab:['supraspinatus','subscap','oblique','QL','gluteMed','abdHallucis','peroneals']},
+ serve:{name:'Serve',src:'Tennis',dur:4.5,dose:'3 × 6 shadow serves',
+  base:{'L.hip.f':10,'R.hip.f':-8},
+  keys:[{t:0,p:{'B.sh.a':15,'B.el':15},cap:'Ready stance.'},
+   {t:.25,p:{'L.sh.f':165,'L.el':5,'R.sh.a':95,'R.el':95,'R.sh.r':-80,'B.kn':40,'B.hip.f':20,'spine.f':-10,'root.yaw':-30,'B.an':15},cap:'Trophy: the side deltoid holds the racket arm up. Infraspinatus and teres minor cock it back. The legs load.'},
+   {t:.45,p:{'R.sh.f':170,'R.sh.a':20,'R.el':5,'R.sh.r':40,'L.sh.f':40,'B.kn':5,'B.hip.f':0,'B.an':-30,'B.toe':30,'root.y':4,'root.yaw':15,'spine.f':0},cap:'Contact: legs drive up (calves, quads, glutes). Serratus reaches high. Subscapularis and chest turn the arm in.'},
+   {t:.65,p:{'R.sh.f':60,'R.sh.a':-30,'R.el':20,'spine.f':25,'chest.t':20,'B.kn':25,'B.an':10,'B.toe':0,'root.y':0},cap:'Follow-through: lats and chest bring the arm across. The rear deltoid and rotator cuff brake it (eccentric).'},
+   {t:.9,p:{'R.sh.f':0,'R.sh.a':15,'R.sh.r':0,'L.sh.f':0,'spine.f':0,'chest.t':0,'root.yaw':0,'B.kn':0,'B.hip.f':0},cap:'Reset.'}],
+  work:['deltLat','deltAnt','serratus','infraspinatus','teresMinor','subscap','pec','lats','oblique','gastroc','soleus','vastLat','vastMed','gluteMax'],stab:['rectusAbd','trapLower','deltPost','peroneals','flexHalLong']},
+ warrior2:{name:'Warrior II',src:'Yoga',dur:8,dose:'2 × 5 breaths each side',
+  base:{},
+  keys:[{t:0,p:{'B.sh.a':8},cap:'Stand. Feet wide.'},
+   {t:.25,p:{'L.hip.a':32,'L.hip.r':-45,'L.hip.f':35,'L.kn':70,'L.an':20,'R.hip.a':28,'B.sh.a':90,'B.el':2,'neck.t':70},cap:'Enter: bend the front knee over the ankle. Arms out to the sides. Look over the front hand.'},
+   {t:.75,p:{},cap:'Hold: the side deltoids hold the arms level (isometric). Legs: glute medius, adductors and quads. Feet: peroneals and tibialis posterior keep the arches up.'},
+   {t:.92,p:{'L.hip.a':0,'L.hip.r':0,'L.hip.f':0,'L.kn':0,'L.an':0,'R.hip.a':0,'B.sh.a':8,'neck.t':0},cap:'Come up slowly.'}],
+  work:['deltLat','supraspinatus','trapLower','serratus','gluteMed','gluteMax','adductors','vastLat','vastMed','peroneals','tibPost','abdHallucis'],stab:['QL','intOblique','longusColli','splenius','scm','infraspinatus']},
+ triangle:{name:'Triangle (trikonasana)',src:'Yoga',dur:9,dose:'2 × 5 breaths each side',
+  base:{'B.hip.a':22,'L.hip.r':-40},
+  keys:[{t:0,p:{'B.sh.a':10},cap:'Wide stance. Front foot turns out.'},
+   {t:.2,p:{'B.sh.a':90},cap:'Arms out to the sides (side deltoids).'},
+   {t:.5,p:{'spine.s':25,'chest.s':25,'root.roll':12,'neck.t':-50,'neck.f':-10},cap:'Bend sideways over the front leg. The right side lengthens: lateral line from the foot (peroneals) through the IT band, obliques and QL to the neck.'},
+   {t:.75,p:{},cap:'Hold. The top arm side deltoid holds it vertical. Turn the head up gently.'},
+   {t:.92,p:{'spine.s':0,'chest.s':0,'root.roll':0,'neck.t':0,'neck.f':0,'B.sh.a':10},cap:'Come up slowly.'}],
+  work:['deltLat','QL','oblique','intOblique','gluteMed','adductors','tfl','peroneals','abdHallucis'],stab:['splenius','scm','longusColli','supraspinatus','infraspinatus','serratus']},
+ sky:{name:'Hold up the sky + side bend',src:'Qigong',dur:8,dose:'5 slow rounds',
+  base:{},
+  keys:[{t:0,p:{'B.sh.a':8},cap:'Stand. Feet under the hips.'},
+   {t:.2,p:{'B.sh.f':175,'B.sh.a':10,'B.clav.e':8},cap:'Reach up: serratus and lower trapezius turn the shoulder blades up. The lats are stretched (blue).'},
+   {t:.4,p:{'spine.s':18,'chest.s':14},cap:'Side bend left: the right lateral line lengthens from the foot to the hand.'},
+   {t:.6,p:{'spine.s':-18,'chest.s':-14},cap:'Side bend right.'},
+   {t:.8,p:{'spine.s':0,'chest.s':0},cap:'Center, then lower the arms slowly.'},
+   {t:.94,p:{'B.sh.f':0,'B.sh.a':8,'B.clav.e':0},cap:'Rest.'}],
+  work:['serratus','trapLower','deltLat','deltAnt','QL','oblique','intOblique'],stab:['multifidus','longusColli','peroneals','abdHallucis','tibPost']},
+ releve:{name:'Plié and relevé in second',src:'Ballet',dur:8,dose:'2 × 8 slow rises',
+  base:{'B.hip.a':12,'B.hip.r':-35,'B.sh.a':78,'B.sh.f':18,'B.el':22},
+  keys:[{t:0,p:{},cap:'Second position: arms open (side deltoids hold), heels apart, toes out.'},
+   {t:.25,p:{'B.kn':45,'B.hip.f':30,'B.an':22},cap:'Plié: knees open over the toes. Adductors, glutes and quads control it.'},
+   {t:.45,p:{'B.kn':0,'B.hip.f':0,'B.an':0},cap:'Straighten.'},
+   {t:.65,p:{'B.an':-35,'B.toe':45},cap:'Relevé: rise onto the balls of the feet. Calves lift. Peroneals and tibialis posterior keep the ankle straight. Toe flexors and abductor hallucis grip the floor.'},
+   {t:.85,p:{'B.an':0,'B.toe':0},cap:'Lower slowly. Keep the head tall: the feet and the neck work together.'}],
+  work:['gastroc','soleus','peroneals','tibPost','flexHalLong','flexDigBrev','abdHallucis','abdDigMin','gluteMax','piriformis','adductors','vastLat','vastMed','deltLat'],stab:['longusColli','multifidus','intOblique','trapLower','supraspinatus']},
+ crane:{name:'Golden rooster stands on one leg',src:'Tai chi',dur:8,dose:'3 × 20 s each leg',
+  base:{'anc.R':1},
+  keys:[{t:0,p:{'B.sh.a':8},cap:'Stand. Shift the weight onto the right foot.'},
+   {t:.3,p:{'L.hip.f':90,'L.kn':95,'L.an':-15,'L.sh.f':150,'L.el':40,'L.sh.r':-20,'R.kn':12,'root.roll':-4},cap:'Lift the left knee and hand. The right glute medius holds the pelvis level. The left QL and obliques help.'},
+   {t:.7,p:{},cap:'Balance: the right foot (abductor hallucis, peroneals, tibialis posterior) makes tiny corrections. The deep neck flexors keep the head over the foot.'},
+   {t:.9,p:{'L.hip.f':0,'L.kn':0,'L.an':0,'L.sh.f':0,'L.el':0,'L.sh.r':0,'R.kn':0,'root.roll':0},cap:'Lower slowly.'}],
+  work:['gluteMed','gluteMin','QL','peroneals','tibPost','abdHallucis','flexDigBrev','flexHalLong','iliopsoas','rectFem','deltLat','deltAnt'],stab:['longusColli','intOblique','multifidus','tfl','adductors']},
+ neck:{name:'Neck reset: nod, turn, side bend',src:'Physio / qigong',dur:9,dose:'5 slow reps of each',
+  base:{},
+  keys:[{t:0,p:{},cap:'Sit or stand tall.'},
+   {t:.12,p:{'neck.f':14},cap:'Chin nod: the deep neck flexors (longus colli) tuck the chin gently. The SCM stays quiet.'},
+   {t:.24,p:{'neck.f':0},cap:'Release.'},
+   {t:.38,p:{'neck.t':60},cap:'Turn left: the right SCM and left splenius turn the head.'},
+   {t:.52,p:{'neck.t':-60},cap:'Turn right.'},
+   {t:.64,p:{'neck.t':0},cap:'Center.'},
+   {t:.76,p:{'neck.s':25},cap:'Side bend left: the left scalenes and levator scapulae work. The right side lengthens.'},
+   {t:.88,p:{'neck.s':-25},cap:'Side bend right.'}],
+  work:['longusColli','scm','splenius','scalenes','levScap','semispinalis','trapUpper'],stab:['trapLower','serratus','multifidus']},
+ scap:{name:'Shoulder blade circles',src:'Dance / qigong',dur:6,dose:'8 slow circles each way',
+  base:{'B.sh.a':8},
+  keys:[{t:0,p:{'B.clav.e':10,'B.clav.p':6},cap:'Up and forward: upper trapezius, levator scapulae, serratus.'},
+   {t:.25,p:{'B.clav.e':10,'B.clav.p':-8},cap:'Up and back: rhomboids and middle trapezius.'},
+   {t:.5,p:{'B.clav.e':-5,'B.clav.p':-8},cap:'Down and back: lower trapezius.'},
+   {t:.75,p:{'B.clav.e':-5,'B.clav.p':6},cap:'Down and forward: pec minor and serratus.'}],
+  work:['trapUpper','levScap','rhomboid','trapMid','trapLower','serratus','pecMinor'],stab:['longusColli','supraspinatus','infraspinatus']},
+ sidelunge:{name:'Side lunge',src:'Skiing / hockey dry-land',dur:6,dose:'2 × 8 each side',
+  base:{'B.hip.a':24,'B.hip.r':-10},
+  keys:[{t:0,p:{'B.sh.f':30},cap:'Wide stance.'},
+   {t:.4,p:{'L.hip.f':70,'L.kn':95,'L.an':28,'root.pitch':30,'R.kn':0,'R.hip.a':34,'B.sh.f':70,'anc.L':.7},cap:'Sit into the left hip. The right adductors and gracilis lengthen. The left glutes and quads control it.'},
+   {t:.6,p:{},cap:'Hold. The left foot arch stays up (tibialis posterior, abductor hallucis).'},
+   {t:.9,p:{'L.hip.f':0,'L.kn':0,'L.an':0,'root.pitch':0,'R.hip.a':24,'B.sh.f':30,'anc.L':0},cap:'Push back to the middle.'}],
+  work:['adductors','gluteMed','gluteMax','vastLat','vastMed','gracilis','peroneals','tibPost'],stab:['QL','intOblique','abdHallucis','multifidus']},
+ kick:{name:'Front kick (mae-geri)',src:'Karate / Muay Thai teep',dur:4,dose:'3 × 6 slow kicks each leg',
+  base:Object.assign({'anc.R':1,'R.kn':12},GD),
+  keys:[{t:0,p:{},cap:'Guard. Weight on the right foot.'},
+   {t:.25,p:{'L.hip.f':95,'L.kn':110,'L.an':-20,'L.toe':55},cap:'Chamber: the hip flexor lifts the knee. The right glute medius holds the pelvis level.'},
+   {t:.45,p:{'L.kn':10},cap:'Kick: the quads straighten the knee. Strike with the ball of the foot (toe extensors pull the toes back).'},
+   {t:.6,p:{'L.kn':110},cap:'Re-chamber: the hamstrings pull the foot back fast.'},
+   {t:.85,p:{'L.hip.f':0,'L.kn':0,'L.an':0,'L.toe':0},cap:'Step down with control.'}],
+  work:['iliopsoas','rectFem','vastLat','vastMed','extDigLong','hamstrings','gluteMed','peroneals','abdHallucis','gastroc','tibAnt'],stab:['rectusAbd','intOblique','QL','longusColli']},
+ press:{name:'Push press',src:'Weightlifting',dur:4,dose:'3 × 6 with a light weight',
+  base:{},
+  keys:[{t:0,p:{'B.sh.f':40,'B.sh.a':45,'B.el':130,'B.sh.r':-40},cap:'Rack: hands at the shoulders.'},
+   {t:.2,p:{'B.kn':25,'B.hip.f':10,'B.an':15},cap:'Dip: bend the knees a little.'},
+   {t:.45,p:{'B.kn':0,'B.hip.f':0,'B.an':-10,'B.sh.f':170,'B.sh.a':15,'B.el':5,'B.sh.r':0,'B.clav.e':10},cap:'Drive: the legs start it. Front and side deltoids, triceps and serratus finish it overhead.'},
+   {t:.65,p:{},cap:'Lockout: the lower trapezius and serratus hold the shoulder blades up and in.'},
+   {t:.9,p:{'B.sh.f':40,'B.sh.a':45,'B.el':130,'B.sh.r':-40,'B.an':0,'B.clav.e':0},cap:'Lower to the rack slowly.'}],
+  work:['deltAnt','deltLat','triceps','serratus','trapUpper','trapLower','supraspinatus','vastLat','vastMed','gluteMax'],stab:['rectusAbd','intOblique','multifidus','longusColli']},
+ row:{name:'Rowing pull',src:'Crew / gym',dur:5,dose:'3 × 10',
+  base:{'root.pitch':45,'B.hip.f':45,'B.kn':15,'B.an':8,'neck.f':-20},
+  keys:[{t:0,p:{'B.sh.f':45,'B.el':5},cap:'Hinge, back flat, arms long.'},
+   {t:.4,p:{'B.sh.f':-25,'B.sh.a':15,'B.el':95,'B.clav.p':-8},cap:'Row: the rhomboids and middle trapezius pull the shoulder blades back. The lats, teres major and rear deltoid pull the elbows back.'},
+   {t:.55,p:{},cap:'Hold for one second.'},
+   {t:.9,p:{'B.sh.f':45,'B.sh.a':0,'B.el':5,'B.clav.p':0},cap:'Lower slowly.'}],
+  work:['rhomboid','trapMid','lats','deltPost','teresMajor','biceps','brachialis','infraspinatus'],stab:['erector','multifidus','hamstrings','gluteMax','forearmFlex']},
+ crossbody:{name:'Cross-body shoulder stretch',src:'Yoga / physio',dur:7,dose:'2 × 30 s each arm, slow breaths',
+  base:{'R.sh.f':60,'R.el':110,'R.sh.a':-20},
+  keys:[{t:0,p:{'L.sh.a':8},cap:'Stand tall. Shoulders down.'},
+   {t:.3,p:{'L.sh.f':95,'L.sh.a':-48,'L.el':8,'L.sh.r':25},cap:'Bring the left arm across the chest. The other hand holds it. The side and rear deltoids, infraspinatus and rhomboids lengthen.'},
+   {t:.45,p:{},cap:'Hold and breathe out slowly. Keep the shoulder down: no shrug.'},
+   {t:.6,p:{'L.sh.f':-30,'L.sh.a':-18,'L.el':70,'L.sh.r':75},cap:'Then reach the hand behind the back toward the other hip. The side deltoid lengthens more.'},
+   {t:.8,p:{},cap:'Hold and breathe.'},
+   {t:.94,p:{'L.sh.f':0,'L.sh.a':8,'L.el':0,'L.sh.r':0},cap:'Release slowly.'}],
+  work:['pec','coracobrach'],stab:['trapLower','serratus','longusColli','intOblique']},
+ opener:{name:'Chest opener',src:'Yoga / doorway stretch',dur:7,dose:'2 × 30 s',
+  base:{},
+  keys:[{t:0,p:{'B.sh.a':8},cap:'Stand tall.'},
+   {t:.3,p:{'B.sh.a':85,'B.sh.f':-30,'B.el':80,'B.sh.r':-60,'B.clav.p':-6,'spine.f':-6},cap:'Open the arms wide and back. The chest, front deltoids and pec minor lengthen. The rhomboids and middle trapezius work.'},
+   {t:.75,p:{},cap:'Hold. Breathe into the front of the chest.'},
+   {t:.92,p:{'B.sh.a':8,'B.sh.f':0,'B.el':0,'B.sh.r':0,'B.clav.p':0,'spine.f':0},cap:'Release.'}],
+  work:['rhomboid','trapMid','deltPost','infraspinatus'],stab:['trapLower','multifidus','longusColli']},
+ fold:{name:'Forward fold',src:'Yoga',dur:8,dose:'2 × 30 s, knees soft',
+  base:{},
+  keys:[{t:0,p:{},cap:'Stand tall.'},
+   {t:.35,p:{'root.pitch':70,'B.hip.f':40,'spine.f':25,'chest.f':15,'neck.f':20,'B.kn':8,'B.sh.f':70},cap:'Hinge and fold. The hamstrings, calves and back extensors lengthen: the superficial back line from the feet to the head.'},
+   {t:.75,p:{},cap:'Hang. Let the head be heavy.'},
+   {t:.92,p:{'root.pitch':0,'B.hip.f':0,'spine.f':0,'chest.f':0,'neck.f':0,'B.kn':0,'B.sh.f':0},cap:'Roll up slowly.'}],
+  work:['erector','gluteMax'],stab:['abdHallucis','flexDigBrev','tibAnt','rectusAbd']},
+ calf:{name:'Calf stretch lunge',src:'Running',dur:7,dose:'2 × 30 s each leg',
+  base:{'B.sh.f':80,'B.el':20},
+  keys:[{t:0,p:{},cap:'Stand. Hands forward, as on a wall.'},
+   {t:.3,p:{'L.hip.f':35,'L.kn':40,'L.an':25,'R.hip.f':-25,'R.an':22,'root.pitch':12},cap:'Step the right foot back, heel down. The right calf (gastrocnemius and soleus) lengthens. The arch stays up (tibialis posterior).'},
+   {t:.75,p:{},cap:'Hold and breathe.'},
+   {t:.92,p:{'L.hip.f':0,'L.kn':0,'L.an':0,'R.hip.f':0,'R.an':0,'root.pitch':0},cap:'Step back to the middle.'}],
+  work:['vastLat','vastMed','gluteMax'],stab:['tibPost','abdHallucis','intOblique']},
+ quad:{name:'Standing quad stretch',src:'Running / dance',dur:7,dose:'2 × 30 s each leg',
+  base:{'anc.R':1,'R.sh.a':40},
+  keys:[{t:0,p:{},cap:'Stand on the right foot.'},
+   {t:.3,p:{'L.kn':140,'L.hip.f':-12,'L.sh.f':-40,'L.el':40,'L.an':-30},cap:'Hold the left foot behind you. The quads and hip flexor lengthen. The right glute medius and foot keep you balanced.'},
+   {t:.75,p:{},cap:'Hold. Tuck the pelvis a little.'},
+   {t:.92,p:{'L.kn':0,'L.hip.f':0,'L.sh.f':0,'L.el':0,'L.an':0},cap:'Release.'}],
+  work:['hamstrings','gluteMax'],stab:['gluteMed','peroneals','abdHallucis','tibPost','QL']},
+};
+const STRETCH=new Set(['crossbody','opener','fold','calf','quad']);
+const STRETCHES={crossbody:['deltPost','deltLat','infraspinatus','teresMinor','rhomboid','trapMid','supraspinatus'],opener:['pec','deltAnt','pecMinor','biceps','coracobrach','subscap'],fold:['hamstrings','gastroc','soleus','erector','gluteMax','semispinalis','multifidus'],calf:['gastroc','soleus','flexHalLong','flexDigBrev','abdHallucis'],quad:['rectFem','vastLat','vastMed','iliopsoas','tibAnt','extDigLong','sartorius'],triangle:['adductors','QL','oblique','intOblique','tfl','hamstrings','gracilis'],sky:['lats','QL','oblique','teresMajor','intOblique'],neck:['scm','scalenes','levScap','trapUpper','splenius','semispinalis'],warrior2:['adductors','iliopsoas','gracilis'],sidelunge:['adductors','gracilis'],climb:['lats','teresMajor'],kick:['hamstrings']};const SPORTY=/Karate|Boxing|Tennis|Climbing|Swimming|Kyudo|Muay|Tai chi|Ballet|Weightlifting|Skiing/;
+for(const k in MOVES){const m=MOVES[k];m.id='mv_'+k;m.key=k;m.anchor='ground';m.props=[];m.view=[35,10];m.icon='•';}
+
+/* =========================================================
+   PLAN GENERATOR
+   ========================================================= */
+const ROLECOL={target:'#ff4fd8',syn:'#2dd4bf',ant:'#60a5fa',stab:'#facc15',chain:'#7ef9ff'};
+const listNames=ids=>ids.map(i=>MDEFK[i].short.toLowerCase()).join(', ');
+const MCACHE={};
+function moveMetrics(mv,T){const key=mv.key+'|'+T;if(MCACHE[key])return MCACHE[key];prep(mv);let mn=9,mx=0;
+ for(let i=0;i<16;i++){const W=solve(mv,i/16);for(const S of['L','R']){const m=MUSK[T+S];const r=mLen(W,m)/m.L0;mn=Math.min(mn,r);mx=Math.max(mx,r);}}
+ return MCACHE[key]={mn,mx,rom:mx-mn};}
+function buildPlan(T,goal){
+ const R=rolesFor(T);const chainS=new Set(R.chain),antS=new Set(R.ant),synS=new Set(R.syn),stabS=new Set(R.stab);const tn=MDEFK[T].short.toLowerCase();
+ const FOOTM=new Set([...REGION.foot,'peroneals','tibPost','flexHalLong','extDigLong']);
+ const sc=Object.keys(MOVES).map(k=>{const m=MOVES[k];const met=moveMetrics(m,T);const all=[...m.work,...m.stab];
+  return{k,m,met,inT:m.work.includes(T),stT:m.stab.includes(T),ant:m.work.filter(x=>antS.has(x)).length,syn:m.work.filter(x=>synS.has(x)).length,stab:all.filter(x=>stabS.has(x)).length,
+   chainCov:all.filter(x=>chainS.has(x)).length,foot:all.filter(x=>FOOTM.has(x)).length,neck:all.filter(x=>REGION.neck.includes(x)).length};});
+ const used=new Set(),blocks=[];
+ const pick=(f,label,why,filter)=>{const c=sc.filter(x=>!used.has(x.k)&&(!filter||filter(x))).sort((a,b)=>f(b)-f(a))[0];if(!c)return;used.add(c.k);blocks.push(Object.assign({},c,{label,why:why(c)}));};
+ const lines2=R.lines.slice(0,2).map(l=>CHAINS[l].name.replace(/ \(.*\)/,'').toLowerCase()).join(' and ');
+ if(T!=='longusColli'&&!REGION.foot.includes(T))pick(x=>x.foot*1.5+x.chainCov+(x.inT?1:0),'Ground up',()=>'Start at the feet. The foot muscles set the base for the whole chain up to the neck.');
+ if(goal==='wake'){
+  pick(x=>(x.inT?6:0)+x.met.rom*20+x.syn*.6+x.stab*.4,'Wake up the '+tn,()=>`The ${tn} does the main work here. Move slowly, so the ${tn} — not its helpers — does the job.`,x=>x.inT);
+  pick(x=>x.ant*2+x.stab*.3-(STRETCH.has(x.k)?3:0),'Balance the opposing side',c=>`Works the opposing muscles (${listNames(R.ant.filter(a=>c.m.work.includes(a)).slice(0,3))||'the other side of the joint'}). Balance keeps the joint centered.`);
+  pick(x=>x.chainCov*1.2+x.stab*.5,'Connect the whole chain',()=>`Links the ${tn} to the trunk, hips and feet through the ${lines2||'body'}.`);
+  const s1=blocks[1]&&blocks[1].m.src;
+  pick(x=>(x.inT?4:0)+x.met.rom*10+x.chainCov*.4+(x.m.src!==s1?1.5:0)+(SPORTY.test(x.m.src)?2:0),'Sport flow',c=>`Uses the ${tn} in a real ${c.m.src.toLowerCase()} movement, together with the rest of the body.`,x=>x.inT||x.syn>0||x.stT);
+ }else{
+  pick(x=>x.ant*2.2+x.stab*.3,'Wake up the opposing muscles',()=>`Work the opposite muscles (${listNames(R.ant.slice(0,3))||'the other side of the joint'}). When they work, the nervous system lets the ${tn} relax (reciprocal inhibition).`);
+  pick(x=>(x.met.mx-1)*40+((STRETCHES[x.k]||[]).includes(T)?6:0)+(STRETCH.has(x.k)?1:0)+(x.inT?-1:0),'Lengthen the '+tn,c=>`The ${tn} gets long here (up to ${Math.round(c.met.mx*100)}% of its standing length in this model). Breathe slowly in the long position.`);
+  pick(x=>x.chainCov*1.2+x.stab*.5,'Connect the whole chain',()=>`Shares the work along the ${lines2||'body'}, so one muscle does not carry it alone.`);
+  pick(x=>x.stab+x.chainCov*.5+(x.inT?-2:0)+(SPORTY.test(x.m.src)?1.5:0),'Calm sport flow',c=>`A smooth ${c.m.src.toLowerCase()} pattern. The stabilizers work, so the ${tn} can stay quiet.`);
+ }
+ pick(x=>x.neck*2+x.stab*.2+(x.inT?2:0),'Head and neck reset',()=>'Finish with the head stacked over the feet. The deep neck flexors and the shoulder blade muscles reset your posture.');
+ const more=sc.filter(x=>x.inT||x.stT).sort((a,b)=>(b.inT-a.inT)||(b.met.rom-a.met.rom)).map(x=>x.k);
+ return{R,blocks,more,goal};}
+function buildPlanEx(T,plan,title){
+ const parts=plan.blocks;parts.forEach(b=>prep(b.m));const total=parts.reduce((s,b)=>s+b.m.dur,0);
+ const ks=new Set();parts.forEach(b=>b.m.keyList.forEach(k=>ks.add(k)));const KL=[...ks];
+ let off=0;const K=[],blocks=[];
+ parts.forEach((b,i)=>{const d=b.m.dur/total;for(const k of b.m.K){const P={};for(const kk of KL)P[kk]=k.P[kk]||0;
+  K.push({t:off+k.t*d,P,cap:(parts.length>1?`${i+1}/${parts.length} · ${b.label} — `:'')+`${b.m.name} (${b.m.src}). ${k.cap}`});}
+  blocks.push({t0:off,t1:off+d,ws:new Set(b.m.work),ss:new Set(b.m.stab.filter(x=>!b.m.work.includes(x))),i});off+=d;});
+ const work=[...new Set(parts.flatMap(b=>b.m.work))],stab=[...new Set(parts.flatMap(b=>b.m.stab))].filter(x=>!work.includes(x));
+ const z=REG2ZOOM[plan.R.reg]||'shoulder';
+ return{id:'coach',name:title,icon:'🎯',dur:total,anchor:'ground',view:[35,10],props:[],K,keyList:KL,work,stab,workSet:new Set(work),stabSet:new Set(stab),blocks,
+  focus:[z,...['shoulder','core','hip','foot','neck'].filter(r=>r!==z)],coach:plan.R};}
+function coachRole(id){const R=ex.coach;if(!R)return null;return id===R.T?'target':R.syn.includes(id)?'syn':R.ant.includes(id)?'ant':R.stab.includes(id)?'stab':R.chain.includes(id)?'chain':null;}
+function drawChainPath(W){const R=ex.coach;if(!R||!R.path.length)return;const S=Math.sin(cam.yaw*D)>=0?'L':'R';
+ const pts=R.path.map(id=>{const m=MUSK[id+S];const st=m.strands[0];const a=wp(W,st[0][0],st[0][1]),b=wp(W,st[1][0],st[1][1]);return{id,q:proj(mix(a,b,.5))};});
+ ctx.save();const g=ctx.createLinearGradient(pts[0].q[0],pts[0].q[1],pts[pts.length-1].q[0],pts[pts.length-1].q[1]);g.addColorStop(0,'#7ef9ff');g.addColorStop(1,'#ff4fd8');
+ ctx.strokeStyle=g;ctx.lineWidth=2.5;ctx.setLineDash([7,6]);ctx.lineDashOffset=-RT*40;ctx.shadowColor='#7ef9ff';ctx.shadowBlur=10;ctx.beginPath();
+ pts.forEach((p,i)=>{if(!i){ctx.moveTo(p.q[0],p.q[1]);return;}const pr=pts[i-1].q;const mx=(pr[0]+p.q[0])/2,my=(pr[1]+p.q[1])/2;ctx.quadraticCurveTo(pr[0],pr[1],mx,my);});
+ const L_=pts[pts.length-1].q;ctx.lineTo(L_[0],L_[1]);ctx.stroke();ctx.setLineDash([]);
+ for(const p of pts){const t=p.id===R.T;ctx.fillStyle=t?'#ff4fd8':'#e9fbff';ctx.beginPath();ctx.arc(p.q[0],p.q[1],t?5:2.8,0,7);ctx.fill();}ctx.restore();}
+
+/* =========================================================
+   COACH PANEL
+   ========================================================= */
+let cGoal='wake',cT=null,cPlan=null;
+function chip(id,role){const d=MDEFK[id];return`<span class="chip" data-id="${id}" style="border-color:${ROLECOL[role]};color:${role==='target'?ROLECOL.target:'var(--txt)'}">${d.short}</span>`;}
+function openCoach(T){cT=T||cT||'deltLat';$('coach').hidden=false;$('cMus').value=cT;renderCoach();}
+function renderCoach(){
+ const T=cT,d=MDEFK[T];cPlan=buildPlan(T,cGoal);const R=cPlan.R;
+ const tip=COMP[T]||`The muscles that share its job (${listNames(R.syn.slice(0,3))||'its helpers'}) can take over. Move slowly, so the ${d.short.toLowerCase()} does the work.`;
+ let h=`<div class="ctgt"><div class="cn" style="color:${ROLECOL.target}">${d.name}</div><div>${d.does}</div>
+  <div class="ctip"><b>${cGoal==='wake'?'If it is underactive':'If it is overactive'}:</b> ${cGoal==='wake'?tip:`It often stays tight to protect a weak neighbor. Strengthen the opposing muscles and the chain, then lengthen it with slow breathing.`}</div></div>`;
+ const sec=(t,ids,role,sub)=>ids.length?`<div class="csec"><div class="ch3"><span class="dot" style="background:${ROLECOL[role]}"></span>${t}</div>${sub?`<div class="csub">${sub}</div>`:''}<div>${ids.map(i=>chip(i,role)).join('')}</div></div>`:'';
+ h+=sec('Works with it',R.syn,'syn','Same main job (synergists).');
+ h+=sec('Opposes it',R.ant,'ant','Opposite job (antagonists). Balance them.');
+ h+=sec('Stabilizes it',R.stab,'stab','They hold the base still so it can work.');
+ h+=`<div class="csec"><div class="ch3"><span class="dot" style="background:${ROLECOL.chain}"></span>Connected chain, feet to head</div><div class="csub">Fascial lines after Myers. The dashed line on the body shows the path.</div>`;
+ for(const l of R.lines){const C=CHAINS[l];h+=`<div class="cline"><div><b>${C.name}</b> <span class="ev ev-${C.ev.startsWith('strong')?'s':C.ev.startsWith('partial')?'p':'n'}">${C.ev}</span></div><div class="cpath">${C.m.map(i=>i===T?chip(i,'target'):chip(i,'chain')).join('<span class="arr">›</span>')}</div></div>`;}
+ h+=`</div><div class="csec"><div class="ch3">Your movement plan — ${cGoal==='wake'?'wake it up':'calm it down'}</div>
+  <button class="b on cplay" id="cPlayAll">▶ Play the whole plan</button>`;
+ cPlan.blocks.forEach((b,i)=>{h+=`<div class="cblk"><div class="cbh"><span class="num">${i+1}</span><div><div class="cbl">${b.label}</div><div class="cbm">${b.m.name} <span class="src">${b.m.src}</span></div></div><button class="b cone" data-i="${i}">▶</button></div><div class="cbw">${b.why}</div><div class="cbd">Dose: ${b.m.dose}</div></div>`;});
+ const more=cPlan.more.filter(k=>!cPlan.blocks.some(b=>b.k===k));
+ if(more.length)h+=`<div class="ch3" style="margin-top:10px">More movements that use the ${d.short.toLowerCase()}</div><div>${more.map(k=>`<button class="b cmore" data-k="${k}">▶ ${MOVES[k].name} <span class="src">${MOVES[k].src}</span></button>`).join('')}</div>`;
+ h+=`</div><div class="cnote">Chain evidence: dissection studies support the superficial back line and the two functional lines strongly, and parts of the spiral and lateral lines (Wilke et al. 2016). Links from foot posture to the spine are still debated. This is education, not medical advice. If a movement hurts, stop and ask a physical therapist.</div>`;
+ $('cOut').innerHTML=h;
+ $('cOut').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{sel=c.dataset.id;});
+ $('cPlayAll').onclick=()=>playPlan(cPlan.blocks,`Coach plan: ${d.short}`);
+ $('cOut').querySelectorAll('.cone').forEach(b=>b.onclick=()=>playPlan([cPlan.blocks[+b.dataset.i]],cPlan.blocks[+b.dataset.i].m.name));
+ $('cOut').querySelectorAll('.cmore').forEach(b=>b.onclick=()=>{const m=MOVES[b.dataset.k];playPlan([{m,label:'',k:b.dataset.k}],m.name);});
+}
+function playPlan(blocks,title){const e=buildPlanEx(cT,{R:cPlan.R,blocks},title);selectEx(e);sel=cT;}
+function initCoach(){
+ const s=$('cMus');let h='';for(const r in REGION){h+=`<optgroup label="${REGNAME[r]}">`+REGION[r].map(id=>`<option value="${id}">${MDEFK[id].name}</option>`).join('')+'</optgroup>';}s.innerHTML=h;
+ s.onchange=()=>{cT=s.value;renderCoach();};
+ document.querySelectorAll('.cg').forEach(b=>b.onclick=()=>{cGoal=b.dataset.g;document.querySelectorAll('.cg').forEach(x=>x.classList.toggle('on',x===b));renderCoach();});
+ $('coachX').onclick=()=>{$('coach').hidden=true;};
+ const list=$('exList');const h2=document.createElement('h2');h2.className='gh';h2.textContent='Muscle coach';list.appendChild(h2);
+ const b=document.createElement('button');b.className='ex';b.innerHTML='<span class="i">🎯</span>Train one muscle';b.onclick=()=>openCoach(sel||cT);list.appendChild(b);
+}
+
+/* =========================================================
    STATE (which muscles shorten, lengthen, hold)
    ========================================================= */
 const MUSL={};MUS.forEach(m=>{if(m.S==='L')MUSL[m.d.id]=m;});
@@ -1035,6 +1415,7 @@ function classify(mu){const id=mu.d.id,th=.06;
  if(ex.stabSet.has(id))return'iso';
  if(mu.v>.12)return'str';return'idle';}
 function updateMuscles(W){
+ if(ex.blocks){const b=ex.blocks.find(b=>phase>=b.t0&&phase<b.t1)||ex.blocks[0];ex.workSet=b.ws;ex.stabSet=b.ss;}
  const e=.004;const Wm=solve(ex,(phase-e+1)%1),Wp=solve(ex,(phase+e)%1);
  for(const mu of MUS){mu.L=mLen(W,mu);mu.v=(mLen(Wp,mu)-mLen(Wm,mu))/(2*e)/mu.L0;mu.state=classify(mu);}
 }
@@ -1064,7 +1445,8 @@ function updateInfo(force){
  if(sel){const d=MDEFK[sel],mu=MUSL[sel];const pct=Math.round(mu.L/mu.L0*100);
   h=`<div class="h">${d.name}</div><div>${d.does}</div><div style="margin-top:6px;color:${STATECOL[mu.state]}">${STATELONG[mu.state]}</div><div style="margin-top:4px;color:var(--dim)">Length now: ${pct}% of its standing length.</div>`;}
  else h=`<div class="h">How to use</div><div>Click a muscle on the body or in the list. Drag to turn the body. Scroll or pinch to zoom.</div><div style="margin-top:6px;color:var(--dim)">Thicker muscle = shorter muscle. Compare "Raise arms to the sides" and "Arms in front of you": the same shoulder, but a different part of the deltoid does the work.</div>`;
- if(force||h!==lastInfo){$('info').innerHTML=h;lastInfo=h;}
+ if(sel)h+=`<button class="b" id="iCoach" style="margin-top:8px">🎯 Train this muscle</button>`;
+ if(force||h!==lastInfo){$('info').innerHTML=h;lastInfo=h;const b=$('iCoach');if(b)b.onclick=()=>openCoach(sel);}
 }
 function updateUI(){
  const cap=interp(ex,phase)._cap;if($('capC').textContent!==cap)$('capC').textContent=cap;
@@ -1093,6 +1475,7 @@ function init(){
  cv=$('c');ctx=cv.getContext('2d');
  const list=$('exList');
  let lastG='';for(const e of EX){if(e.group!==lastG){lastG=e.group;const h=document.createElement('h2');h.className='gh';h.textContent=e.group;list.appendChild(h);}const b=document.createElement('button');b.className='ex';b.dataset.id=e.id;b.innerHTML=`<span class="i">${e.icon}</span>${e.name}`;b.onclick=()=>selectEx(e);list.appendChild(b);}
+ initCoach();
  zcx=$('zc').getContext('2d');pcx=$('pc').getContext('2d');
  if(innerWidth<=1000){zOn=false;document.body.classList.add('zhide');$('tZoom').classList.remove('on');}
  addEventListener('resize',resize);resize();
@@ -1127,7 +1510,7 @@ function init(){
    const dx=e.clientX-down[0],dy=e.clientY-down[1];if(Math.abs(dx)+Math.abs(dy)>4)moved=true;
    if(moved){cam.yaw=down[2]-dx*.4;cam.pitch=clamp(down[3]+dy*.3,-15,75);orbit=false;$('orbit').classList.remove('on');}}
   else hover=pick(e.clientX,e.clientY);});
- const up=e=>{ptrs.delete(e.pointerId);cv.classList.remove('drag');if(!moved&&down){const id=pick(e.clientX,e.clientY);sel=id;if(id&&innerWidth<=1000){$('right').classList.add('show');$('tMus').classList.add('on');}}down=null;};
+ const up=e=>{ptrs.delete(e.pointerId);cv.classList.remove('drag');if(!moved&&down){const id=pick(e.clientX,e.clientY);sel=id;if(id&&!$('coach').hidden)openCoach(id);if(id&&innerWidth<=1000){$('right').classList.add('show');$('tMus').classList.add('on');}}down=null;};
  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
  cv.addEventListener('pointerleave',()=>{hover=null;mouse=null;});
  cv.addEventListener('wheel',e=>{e.preventDefault();cam.zoom=clamp(cam.zoom*Math.exp(-e.deltaY*.0012),.4,4);},{passive:false});
