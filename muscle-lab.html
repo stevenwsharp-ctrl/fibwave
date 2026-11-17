@@ -50,6 +50,13 @@ button.b.on{background:rgba(94,224,255,.18);border-color:rgba(94,224,255,.6)}
 #legend div{display:flex;align-items:center;gap:7px;margin:2px 0}
 #legend .dot{box-shadow:none}
 #tMus{display:none}
+#capX{display:none;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:6px;font-size:11.5px;color:var(--dim)}
+#capX span{padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.06)}#capX .rp{background:rgba(94,224,255,.18);color:var(--acc);font-weight:700}
+#capPW{display:none;height:4px;border-radius:2px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden}#capP{display:block;height:100%;width:0;background:linear-gradient(90deg,#5ee0ff,#ff4fd8)}
+body.follow #capX{display:flex}body.follow #capPW{display:block}body.follow #cap .c{font-size:18px;font-weight:600;line-height:1.35}
+.row{grid-template-columns:18px 1fr 74px}.dots{display:flex;gap:2px}.dots .dot{width:7px;height:10px;border-radius:3px;box-shadow:none}
+.sbs{display:flex;flex-direction:column;gap:3px}.sb{display:flex;align-items:center;gap:4px}.sb span{font-size:9px;color:var(--dim);width:7px}.sb .bar{flex:1}
+.cmrow{display:flex;gap:4px;align-items:stretch}.cmrow .cmore{flex:1}.cmshr{padding:4px 8px;margin:3px 0}
 body.shared #left{display:none}
 .sban{display:block;padding:8px 10px;margin-bottom:10px;border-radius:10px;background:rgba(94,224,255,.1);border:1px solid rgba(94,224,255,.35);font-size:12.5px}
 .cshare[hidden]{display:none}
@@ -104,6 +111,30 @@ body.zhide #zoom{display:none}
  #zoom{top:auto;left:14px;right:14px;width:auto;bottom:150px;height:64vh}
  body:not(.zhide) #right{display:none}
 }
+/* ---------- phone mode (set by script when a phone is detected) ---------- */
+.ph{display:none}
+body.phone{--sheet:46vh}body.phone.sheetMini{--sheet:56px}body.phone.noSheet{--sheet:0px}
+body.phone .ph{display:inline-block}
+body.phone #bot .pm{display:none}body.phone.showMore #bot .pm{display:flex}
+body.phone #bot button.pm{display:none}body.phone.showMore #bot button.pm{display:inline-block}
+body.phone #bot{left:6px;right:6px;width:auto;transform:none;bottom:calc(var(--sheet) + 6px);padding:6px 8px;gap:6px;border-radius:12px;padding-bottom:max(6px,env(safe-area-inset-bottom))}
+body.phone.noSheet #bot{bottom:max(6px,env(safe-area-inset-bottom))}
+body.phone #bot .lbl{display:none}body.phone button.b{padding:7px 9px}
+body.phone #tl{flex:1 1 90px;min-width:70px}
+body.phone #cap{top:max(6px,env(safe-area-inset-top));left:6px;right:6px;width:auto;transform:none;padding:6px 10px}
+body.phone #cap .c{font-size:13px;min-height:0}body.phone.follow #cap .c{font-size:15px}body.phone #capX{font-size:10.5px;margin-top:4px}
+body.phone #left{display:none}
+body.phone.movesOpen #left{display:block;left:0;right:0;top:auto;bottom:0;width:auto;max-height:62vh;border-radius:16px 16px 0 0;z-index:15;padding:10px 12px}
+body.phone.movesOpen #exList{display:block}body.phone.movesOpen .ex{width:100%;white-space:normal}body.phone.movesOpen #left .gh{display:block}
+body.phone #legend{display:none}
+body.phone #coach{left:0;right:0;top:auto;bottom:0;width:auto;height:var(--sheet);border-radius:16px 16px 0 0;padding:8px 12px;z-index:12}
+body.phone.sheetMini #coach{overflow:hidden}
+body.phone #right{display:none!important}
+body.phone.listOpen #right{display:block!important;left:0;right:0;top:auto;bottom:0;width:auto;max-height:55vh;border-radius:16px 16px 0 0;z-index:14}
+body.phone #zoom{display:none}
+body.phone.zoomOpen #zoom{display:flex;left:0;right:0;top:0;bottom:0;width:auto;height:auto;border-radius:0;z-index:40;transform:none}
+body.phone #zBig{display:none}
+#zTabs{flex-basis:100%;order:5}body.phone #zoom .zh{gap:6px}
 </style>
 </head>
 <body>
@@ -117,13 +148,13 @@ body.zhide #zoom{display:none}
 </div>
 
 <div id="coach" class="panel" hidden>
-  <div class="chd"><b>🎯 Muscle coach</b><button class="b" id="coachX" aria-label="Close">✕</button></div>
+  <div class="chd"><b>🎯 Muscle coach</b><span><button class="b ph" id="cMin" aria-label="Minimize">▾</button> <button class="b" id="coachX" aria-label="Close">✕</button></span></div>
   <div class="csub" style="margin-bottom:6px">Pick a muscle here, or click one on the body.</div>
   <select id="cMus" aria-label="Muscle"></select>
   <div class="grp" style="margin:8px 0;flex-wrap:wrap"><button class="b cg on" data-g="wake">Wake it up (underactive)</button><button class="b cg" data-g="calm">Calm it down (overactive)</button></div>
   <div id="cOut"></div>
 </div>
-<div id="cap" class="panel"><div class="t" id="capT"></div><div class="c" id="capC"></div></div>
+<div id="cap" class="panel"><div class="t" id="capT"></div><div class="c" id="capC"></div><div id="capX"></div><div class="prog" id="capPW"><i id="capP"></i></div></div>
 
 <div id="right" class="panel">
   <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Muscles in this movement</h2><button class="b" id="rZoom" style="font-size:11px;padding:3px 7px">⊕ Zoom</button></div>
@@ -132,7 +163,7 @@ body.zhide #zoom{display:none}
 </div>
 
 <div id="zoom" class="panel">
-  <div class="zh"><span class="zt">Zoom</span><div id="zTabs"></div><select id="zView" aria-label="Zoom view"><option value="side">Side</option><option value="auto">Live view</option><option value="front">Front</option><option value="back">Back</option></select><button class="b" id="zBig" title="Make the zoom big (Esc to close)">⤢</button><button class="b" id="zList" title="Show the muscle list">☰ List</button></div>
+  <div class="zh"><span class="zt">Zoom</span><div id="zTabs"></div><select id="zView" aria-label="Zoom view"><option value="side">Side</option><option value="auto">Live view</option><option value="front">Front</option><option value="back">Back</option></select><select id="zSideSel" aria-label="Zoom side"><option value="auto">Auto side</option><option value="L">Left</option><option value="R">Right</option></select><button class="b ph" id="zClose" aria-label="Close zoom">✕</button><button class="b" id="zBig" title="Make the zoom big (Esc to close)">⤢</button><button class="b" id="zList" title="Show the muscle list">☰ List</button></div>
   <canvas id="zc"></canvas><canvas id="pc"></canvas>
 </div>
 <div id="legend" class="panel">
@@ -145,16 +176,18 @@ body.zhide #zoom{display:none}
 
 <div id="bot" class="panel">
   <button class="b" id="play">❚❚ Pause</button>
-  <button class="b" id="step">Step ▸</button>
+  <button class="b ph" id="pMoves">☰ Moves</button><button class="b ph" id="pCoach">🎯 Coach</button>
+  <button class="b pm" id="step">Step ▸</button>
   <input type="range" id="tl" min="0" max="1000" value="0" aria-label="Timeline">
   <div class="grp"><span class="lbl">Speed</span>
     <button class="b sp" data-s="1">1×</button><button class="b sp" data-s="0.5">½×</button><button class="b sp on" data-s="0.25">¼×</button><button class="b sp" data-s="0.1">⅒×</button>
   </div>
   <div class="grp" id="surfG" style="display:none"><span class="lbl">Surface</span><button class="b sf on" data-s="road">Asphalt</button><button class="b sf" data-s="trail">Trail</button><button class="b sf" data-s="track">Track</button></div>
-  <div class="grp"><span class="lbl">View</span>
+  <div class="grp pm"><span class="lbl">View</span>
     <button class="b vw" data-y="0" data-p="8">Front</button><button class="b vw" data-y="90" data-p="8">Side</button><button class="b vw" data-y="180" data-p="8">Back</button><button class="b vw" data-y="38" data-p="16">¾</button><button class="b" id="orbit">Orbit</button>
   </div>
-  <div class="grp"><span class="lbl">Layer</span><button class="b ly" data-l="surface">Surface</button><button class="b ly" data-l="deep">Deep</button><button class="b ly on" data-l="all">All</button><button class="b" id="tAnat" title="Anatomy colors: real muscle color with an activity outline">Anatomy</button><button class="b on" id="tLab">Labels</button><button class="b on" id="tBody">Body</button><button class="b on" id="tZoom">Zoom</button><button class="b" id="tMus">Muscles</button></div>
+  <div class="grp pm"><span class="lbl">Layer</span><button class="b ly" data-l="surface">Surface</button><button class="b ly" data-l="deep">Deep</button><button class="b ly on" data-l="all">All</button><button class="b" id="tAnat" title="Anatomy colors: real muscle color with an activity outline">Anatomy</button><button class="b on" id="tLab">Labels</button><button class="b on" id="tBody">Body</button></div>
+  <div class="grp"><button class="b on" id="tZoom">Zoom</button><button class="b" id="tMus">Muscles</button><button class="b ph" id="pMore" aria-label="More controls">⋯</button></div>
 </div>
 
 <script>
@@ -509,10 +542,10 @@ function interp(ex,t){
  const a=K[i],b=K[(i+1)%n];const t1=(i+1<n)?b.t:1;
  if(ex.cr){const u=clamp((t-a.t)/((t1-a.t)||1),0,1);const k0=K[(i-1+n)%n].P,k1=a.P,k2=b.P,k3=K[(i+2)%n].P;const P={};
   for(const k of ex.keyList){const p0=k0[k]||0,p1=k1[k]||0,p2=k2[k]||0,p3=k3[k]||0;P[k]=.5*(2*p1+(-p0+p2)*u+(2*p0-5*p1+4*p2-p3)*u*u+(-p0+3*p1-3*p2+p3)*u*u*u);}
-  P._cap=a.cap;return P;}
+  P._cap=a.cap;P._cue=a.cue;P._rep=a.rep;P._bi=a.bi;return P;}
  let u=clamp((t-a.t)/((t1-a.t)||1),0,1);const e=u*u*(3-2*u);
  const P={};for(const k of ex.keyList){const va=a.P[k]||0,vb=b.P[k]||0;P[k]=va+(vb-va)*e;}
- P._cap=a.cap;return P;
+ P._cap=a.cap;P._cue=a.cue;P._rep=a.rep;P._bi=a.bi;return P;
 }
 // push-up: find body tilt so hands and toes both touch the floor; keep hands from sliding
 function pitchSolve(P){let lo=10,hi=89.5,W;
@@ -671,7 +704,7 @@ function fitCamera(){
  cam.box=[mx[0]-mn[0],mx[1]-mn[1],mx[2]-mn[2]];layoutCam();
 }
 function layoutCam(){
- const wide=VW>1000;const x0=wide?250:0,x1=wide?VW-(zOn?458:322):VW,y0=wide?96:120,y1=VH-(wide?84:150);
+ const B=document.body.classList;const wide=VW>1000;let x0=wide?250:0,x1=wide?VW-(zOn?458:322):VW,y0=wide?(B.contains('follow')?160:96):120,y1=VH-(wide?84:150);if(B.contains('phone')){const co=document.getElementById('coach');const sh=co&&!co.hidden?(B.contains('sheetMini')?56:VH*.46):0;x0=0;x1=VW;y0=B.contains('follow')?150:96;y1=VH-sh-(B.contains('showMore')?160:108);}
  cam.cx=(x0+x1)/2;cam.cy=(y0+y1)/2+8;
  const b=cam.box||[100,200,100];const horiz=Math.hypot(b[0],b[2]);
  cam.s=Math.min((y1-y0)*.9/b[1],(x1-x0)*.92/horiz);
@@ -780,17 +813,17 @@ function drawMuscle(it,labels){
  ctx.globalAlpha=1;
  if(Z){if(mu.S===zSide&&Math.hypot(mx-cam.cx,my-cam.cy)<ZR){const z=(A[2]+B[2])/2;if(!ZLAB[mu.d.id]||ZLAB[mu.d.id].z<z)ZLAB[mu.d.id]={x:mx,y:my,z,mu};}return;}
  hits.push({id:mu.d.id,S:mu.S,a,b,hw:Math.max(hw,4),z:(A[2]+B[2])/2});
- if(labels&&ex.workSet.has(mu.d.id)&&(layer==='deep'||!mu.d.deep)){const k=mu.d.id;const z=(A[2]+B[2])/2;if(!labels[k]||labels[k].z<z)labels[k]={z,x:mx,y:my,name:mu.d.short,col};}
+ if(labels&&ex.workSet.has(mu.d.id)&&(layer==='deep'||!mu.d.deep)){const k=mu.d.id;const z=(A[2]+B[2])/2;if(!labels[k]||labels[k].z<z)labels[k]={z,x:mx,y:my,name:mu.d.short,col,id:k};}
 }
 function drawLabels(labels){
  const placed=[];ctx.font='600 11px system-ui,sans-serif';ctx.textBaseline='middle';
- for(const k in labels){const L_=labels[k];const side=L_.x>=cam.cx?1:-1;const tw=ctx.measureText(L_.name).width+10;
+ for(const k in labels){const L_=labels[k];const side=L_.x>=cam.cx?1:-1;const tw=ctx.measureText(L_.name).width+24;
   let x=L_.x+side*26,y=L_.y;let ok=false;
   for(let i=0;i<8&&!ok;i++){const yy=y+((i%2)?1:-1)*Math.ceil(i/2)*15;const r=[side>0?x:x-tw,yy-8,tw,16];
    if(!placed.some(p=>r[0]<p[0]+p[2]&&r[0]+r[2]>p[0]&&r[1]<p[1]+p[3]&&r[1]+r[3]>p[1])){placed.push(r);ok=true;
     ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(L_.x,L_.y);ctx.lineTo(side>0?r[0]:r[0]+r[2],yy);ctx.stroke();
     ctx.fillStyle='rgba(5,10,20,.72)';ctx.fillRect(r[0],r[1],r[2],r[3]);ctx.fillStyle=L_.col;ctx.fillRect(side>0?r[0]:r[0]+r[2]-2,r[1],2,r[3]);
-    ctx.fillStyle='#e6eef8';ctx.fillText(L_.name,r[0]+5,yy);}}}
+    ctx.fillStyle='#e6eef8';ctx.fillText(L_.name,r[0]+5,yy);for(const[j,S]of[[0,'L'],[1,'R']]){ctx.fillStyle=STATECOL[MUSK[L_.id+S].state];ctx.beginPath();ctx.arc(r[0]+r[2]-13+j*7,yy,2.6,0,7);ctx.fill();}}}}
 }
 
 function render(W){
@@ -816,7 +849,7 @@ function render(W){
  if(svM){cam.M=svM;cam.target=svT;}
  if(labels)drawLabels(labels);
  // hover tip
- if(hover&&mouse){const d=MDEFK[hover];const mu=MUSL[hover];const txt=d.name+' — '+STATETXT[mu.state];ctx.font='600 12px system-ui,sans-serif';const tw=ctx.measureText(txt).width+14;
+ if(hover&&mouse){const d=MDEFK[hover];const mu=MUSL[hover];const txt=d.name+' — L: '+STATETXT[MUSK[hover+'L'].state]+' · R: '+STATETXT[MUSK[hover+'R'].state];ctx.font='600 12px system-ui,sans-serif';const tw=ctx.measureText(txt).width+14;
   ctx.fillStyle='rgba(5,10,20,.9)';ctx.fillRect(mouse[0]+14,mouse[1]+10,tw,22);ctx.fillStyle=STATECOL[mu.state];ctx.fillRect(mouse[0]+14,mouse[1]+10,3,22);ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.fillText(txt,mouse[0]+21,mouse[1]+21);}
 }
 
@@ -836,7 +869,7 @@ function FPas(sl){return sl<2.8?0:Math.min(1.3,.06*(Math.exp(2.6*(sl-2.8))-1));}
 const SURF={road:{name:'Asphalt road',ip:1.95},trail:{name:'Dirt trail',ip:1.45},track:{name:'Running track',ip:1.7}};
 function grfAt(u,ip){return Math.max(0,(ip-.55)*Math.exp(-Math.pow((u-.12)/.055,2))+2.6*Math.pow(Math.sin(Math.PI*u),1.5));}
 function stanceU(t,S){const d=((t-(S==='L'?0:.5))%1+1)%1;return d<.3?d/.3:-1;}
-let ZR=1e9,RT=0,runSurf='road',zOn=true,zBig=false,zReg=null,zView='side',zSide='L',ZMODE=false,ZLAB={},LASTITEMS=null,zTick=0;
+let zSidePref='auto',ZR=1e9,RT=0,runSurf='road',zOn=true,zBig=false,zReg=null,zView='side',zSide='L',ZMODE=false,ZLAB={},LASTITEMS=null,zTick=0;
 const TRK={L:[],R:[]},TRACE={ids:[],data:{}};
 
 (function(){
@@ -989,7 +1022,7 @@ let zcx=null,pcx=null;
 function renderZoom(W,items){
  const zc=$('zc');const sz=fitCanvas(zc,zcx);if(!sz)return;const[w,h]=sz;
  const reg=REG[zReg];const yawV=zView==='auto'?cam.yaw:zView==='front'?0:zView==='back'?180:(Math.sin(cam.yaw*D)>=0?90:-90);
- zSide=Math.sin(yawV*D)>=-.01?'L':'R';if(zView==='front'||zView==='back')zSide='L';
+ zSide=Math.sin(yawV*D)>=-.01?'L':'R';if(zView==='front'||zView==='back')zSide='L';if(zSidePref!=='auto')zSide=zSidePref;
  const C=reg.c(W,zSide);
  const sv={ctx,M:cam.M,target:cam.target,s:cam.s,zoom:cam.zoom,cx:cam.cx,cy:cam.cy,Dp:cam.Dp};
  ctx=zcx;cam.M=zView==='auto'?cam.M:mm(rx(6*D),ry(-yawV*D));cam.target=C;cam.s=Math.min(w*.3,h*.46)/reg.r;ZR=reg.r*cam.s*1.08;cam.zoom=1;cam.cx=w/2;cam.cy=h/2+8;cam.Dp=2400;
@@ -1024,7 +1057,7 @@ function focusMuscle(){const ids=Object.keys(ZLAB);if(sel&&ids.includes(sel))ret
  let best=null,bv=-1;for(const id of ids){const m=MUSK[id+zSide];if(!m)continue;const v=(ex.workSet.has(id)?1:0)+ACT(m);if(v>bv){bv=v;best=m;}}return best;}
 function updateTrace(){const ids=Object.keys(ZLAB).filter(id=>ex.workSet.has(id)).sort((a,b)=>ACT(MUSK[b+zSide])-ACT(MUSK[a+zSide]));
  if(!TRACE.ids.length||TRACE.reg!==zReg||TRACE.ex!==ex.id){TRACE.ids=ids.slice(0,3);TRACE.reg=zReg;TRACE.ex=ex.id;TRACE.data={};}
- for(const id of TRACE.ids){const m=MUSK[id+zSide];if(!m)continue;const a=TRACE.data[id]||(TRACE.data[id]=[]);a.push(ACT(m));if(a.length>260)a.shift();}}
+ for(const id of TRACE.ids){const o=TRACE.data[id]||(TRACE.data[id]={L:[],R:[]});for(const S of['L','R']){const a=o[S];a.push(ACT(MUSK[id+S]));if(a.length>260)a.shift();}}}
 function renderPhys(W){
  const pc=$('pc');const sz=fitCanvas(pc,pcx);if(!sz)return;const[w,h]=sz;const c=pcx;
  c.fillStyle='#050a14';c.fillRect(0,0,w,h);
@@ -1071,9 +1104,9 @@ function renderPhys(W){
   parts.forEach(([n,k],i)=>{const y=by0+24+i*Math.max(14,(by1-by0-58)/5);const v=clamp(V.a/1.2,0,1)*k;c.font='600 10px Inter,system-ui,sans-serif';c.fillStyle='#cfe3ff';c.fillText(n,bx0,y);
    c.fillStyle='rgba(255,255,255,.07)';c.fillRect(bx0+90,y-4,bw2,8);const g=c.createLinearGradient(bx0+90,0,bx0+90+bw2,0);g.addColorStop(0,'#5fb4ff');g.addColorStop(1,'#ff4d4d');c.fillStyle=g;c.fillRect(bx0+90,y-4,bw2*v*(.85+.15*Math.sin(RT*clamp(V.f*speed,.6,7)*6.28+i)),8);});
   c.font='600 9.5px Inter,system-ui,sans-serif';c.fillStyle='rgba(160,175,200,.85)';c.fillText('Leg muscles damp best at 4–20 Hz (Mester).',bx0,by1-12);c.fillText('Higher frequencies go to the ski, boot and soft tissue.',bx0,by1);}
- else{c.fillStyle='#7ef9ff';c.fillText('ACTIVATION · EMG-STYLE ESTIMATE',bx0,by0+6);const gy0=by0+16,gy1=by1-4;const cols=['#ff4d4d','#ffd84d','#5fb4ff'];
+ else{c.fillStyle='#7ef9ff';c.fillText('ACTIVATION · EMG-STYLE ESTIMATE  (solid = left, dashed = right)',bx0,by0+6);const gy0=by0+16,gy1=by1-4;const cols=['#ff4d4d','#ffd84d','#5fb4ff'];
   c.strokeStyle='rgba(255,255,255,.1)';c.beginPath();c.moveTo(bx0,gy1);c.lineTo(bx1,gy1);c.moveTo(bx0,gy0);c.lineTo(bx1,gy0);c.stroke();
-  TRACE.ids.forEach((id,i)=>{const a=TRACE.data[id]||[];c.strokeStyle=cols[i];c.lineWidth=1.6;c.beginPath();a.forEach((v,j)=>{const x=bx0+(bx1-bx0)*j/259,y=gy1-v*(gy1-gy0);j?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();
+  TRACE.ids.forEach((id,i)=>{const o=TRACE.data[id]||{L:[],R:[]};for(const S of['L','R']){c.setLineDash(S==='R'?[4,3]:[]);c.strokeStyle=cols[i];c.lineWidth=S==='L'?1.7:1.3;c.beginPath();o[S].forEach((v,j)=>{const x=bx0+(bx1-bx0)*j/259,y=gy1-v*(gy1-gy0);j?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();}c.setLineDash([]);
    c.font='600 10px Inter,system-ui,sans-serif';c.fillStyle=cols[i];c.fillText(MDEFK[id].short,bx1-90,gy0+10+i*13);});}
 }
 
@@ -1367,16 +1400,19 @@ function buildPlan(T,goal){
  pick(x=>x.neck*2+x.stab*.2+(x.inT?2:0),'Head and neck reset',()=>'Finish with the head stacked over the feet. The deep neck flexors and the shoulder blade muscles reset your posture.');
  const more=sc.filter(x=>x.inT||x.stT).sort((a,b)=>(b.inT-a.inT)||(b.met.rom-a.met.rom)).map(x=>x.k);
  return{R,blocks,more,goal};}
+const REPS=2,READY=1.8;
 function buildPlanEx(T,plan,title){
- const parts=plan.blocks;parts.forEach(b=>prep(b.m));const total=parts.reduce((s,b)=>s+b.m.dur,0);
- const ks=new Set();parts.forEach(b=>b.m.keyList.forEach(k=>ks.add(k)));const KL=[...ks];
+ const parts=plan.blocks;parts.forEach(b=>prep(b.m));const bd=parts.map(b=>READY+REPS*b.m.dur);const total=bd.reduce((a,b)=>a+b,0);
+ const ks=new Set();parts.forEach(b=>b.m.keyList.forEach(k=>ks.add(k)));const KL=[...ks];const full=P0=>{const P={};for(const kk of KL)P[kk]=P0[kk]||0;return P;};
  let off=0;const K=[],blocks=[];
- parts.forEach((b,i)=>{const d=b.m.dur/total;for(const k of b.m.K){const P={};for(const kk of KL)P[kk]=k.P[kk]||0;
-  K.push({t:off+k.t*d,P,cap:(parts.length>1?`${i+1}/${parts.length} · ${b.label} — `:'')+`${b.m.name} (${b.m.src}). ${k.cap}`});}
-  blocks.push({t0:off,t1:off+d,ws:new Set(b.m.work),ss:new Set(b.m.stab.filter(x=>!b.m.work.includes(x))),i});off+=d;});
+ parts.forEach((b,i)=>{const m=b.m;const pre=(parts.length>1?`${i+1}/${parts.length} · ${b.label} — `:'')+`${m.name} (${m.src}). `;
+  K.push({t:off,P:full(m.K[0].P),cap:pre+'Get ready.',cue:'Get ready: '+m.name,rep:0,bi:i});
+  for(let r=0;r<REPS;r++){const base=off+(READY+r*m.dur)/total;for(const k of m.K)K.push({t:base+k.t*m.dur/total,P:full(k.P),cap:pre+k.cap,cue:k.cap,rep:r+1,bi:i});}
+  blocks.push({t0:off,t1:off+bd[i]/total,r1:off+READY/total,ws:new Set(m.work),ss:new Set(m.stab.filter(x=>!m.work.includes(x))),i,name:m.name,src:m.src,dose:m.dose,label:b.label});off+=bd[i]/total;});
+ blocks.forEach((b,i)=>b.next=blocks[i+1]?blocks[i+1].name:null);
  const work=[...new Set(parts.flatMap(b=>b.m.work))],stab=[...new Set(parts.flatMap(b=>b.m.stab))].filter(x=>!work.includes(x));
  const z=REG2ZOOM[plan.R.reg]||'shoulder';
- return{id:'coach',name:title,icon:'🎯',dur:total,anchor:'ground',view:[35,10],props:[],K,keyList:KL,work,stab,workSet:new Set(work),stabSet:new Set(stab),blocks,
+ return{id:'coach',name:title,icon:'🎯',dur:total,anchor:'ground',view:[22,8],props:[],K,keyList:KL,work,stab,workSet:new Set(work),stabSet:new Set(stab),blocks,
   focus:[z,...['shoulder','core','hip','foot','neck'].filter(r=>r!==z)],coach:plan.R};}
 function coachRole(id){const R=ex.coach;if(!R)return null;return id===R.T?'target':R.syn.includes(id)?'syn':R.ant.includes(id)?'ant':R.stab.includes(id)?'stab':R.chain.includes(id)?'chain':null;}
 function drawChainPath(W){const R=ex.coach;if(!R||!R.path.length)return;const S=Math.sin(cam.yaw*D)>=0?'L':'R';
@@ -1392,9 +1428,14 @@ function drawChainPath(W){const R=ex.coach;if(!R||!R.path.length)return;const S=
    ========================================================= */
 let cGoal='wake',cT=null,cPlan=null;
 function chip(id,role){const d=MDEFK[id];return`<span class="chip" data-id="${id}" style="border-color:${ROLECOL[role]};color:${role==='target'?ROLECOL.target:'var(--txt)'}">${d.short}</span>`;}
-function openCoach(T){cT=T||cT||'deltLat';$('coach').hidden=false;$('cMus').value=cT;renderCoach();}
+function openCoach(T){cT=T||cT||'deltLat';$('coach').hidden=false;$('cMus').value=cT;renderCoach();syncSheet();}
+function detectPhone(){const coarse=matchMedia('(pointer:coarse)').matches;const small=Math.min(screen.width,screen.height)<=820;
+ const ua=/iPhone|iPod|Android.+Mobile|Windows Phone/i.test(navigator.userAgent);return(coarse&&small)||ua||innerWidth<=640;}
+function syncSheet(){document.body.classList.toggle('noSheet',$('coach').hidden);layoutCam();}
+function applyPhone(){const ph=detectPhone();const was=document.body.classList.contains('phone');document.body.classList.toggle('phone',ph);
+ if(ph&&!was){zOn=false;document.body.classList.add('zhide');document.body.classList.remove('zoomOpen');$('tZoom').classList.remove('on');}syncSheet();}
 function renderCoach(){
- const T=cT,d=MDEFK[T];cPlan=buildPlan(T,cGoal);const R=cPlan.R;
+ const T=cT,d=MDEFK[T];cPlan=buildPlan(T,cGoal);if($('cMus').value!==T)$('cMus').value=T;const R=cPlan.R;
  const tip=COMP[T]||`The muscles that share its job (${listNames(R.syn.slice(0,3))||'its helpers'}) can take over. Move slowly, so the ${d.short.toLowerCase()} does the work.`;
  let h=(document.body.classList.contains('shared')?`<div class="sban"><div><b>Shared movement plan</b><div class="csub" style="margin:0">The plan plays once. Then coach mode opens: click any muscle.</div></div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px"><button class="b" id="replayShare">▶ Replay plan</button><button class="b" id="exploreShare">🎯 Coach mode</button><button class="b" id="exitShare">Full Muscle Lab</button></div></div>`:'')+`<div class="ctgt"><div class="cn" style="color:${ROLECOL.target}">${d.name}</div><div>${d.does}</div>
   <div class="ctip"><b>${cGoal==='wake'?'If it is underactive':'If it is overactive'}:</b> ${cGoal==='wake'?tip:`It often stays tight to protect a weak neighbor. Strengthen the opposing muscles and the chain, then lengthen it with slow breathing.`}</div></div>`;
@@ -1409,12 +1450,12 @@ function renderCoach(){
   <div id="cShare" class="cshare" hidden><div class="csub">Send this link. It opens straight to this plan, playing.</div><input readonly aria-label="Share link"><button class="b" id="cCopy">Copy</button></div>`;
  cPlan.blocks.forEach((b,i)=>{h+=`<div class="cblk"><div class="cbh"><span class="num">${i+1}</span><div><div class="cbl">${b.label}</div><div class="cbm">${b.m.name} <span class="src">${b.m.src}</span></div></div><button class="b cone" data-i="${i}" title="Play this block">▶</button><button class="b cshr" data-i="${i}" title="Share this block">🔗</button></div><div class="cbw">${b.why}</div><div class="cbd">Dose: ${b.m.dose}</div></div>`;});
  const more=cPlan.more.filter(k=>!cPlan.blocks.some(b=>b.k===k));
- if(more.length)h+=`<div class="ch3" style="margin-top:10px">More movements that use the ${d.short.toLowerCase()}</div><div>${more.map(k=>`<button class="b cmore" data-k="${k}">▶ ${MOVES[k].name} <span class="src">${MOVES[k].src}</span></button>`).join('')}</div>`;
+ if(more.length)h+=`<div class="ch3" style="margin-top:10px">More movements that use the ${d.short.toLowerCase()}</div><div>${more.map(k=>`<div class="cmrow"><button class="b cmore" data-k="${k}">▶ ${MOVES[k].name} <span class="src">${MOVES[k].src}</span></button><button class="b cmshr" data-k="${k}" title="Share this exercise for the ${d.short.toLowerCase()}">🔗</button></div>`).join('')}</div>`;
  h+=`</div><div class="cnote">Chain evidence: dissection studies support the superficial back line and the two functional lines strongly, and parts of the spiral and lateral lines (Wilke et al. 2016). Links from foot posture to the spine are still debated. This is education, not medical advice. If a movement hurts, stop and ask a physical therapist.</div>`;
  $('cOut').innerHTML=h;
  if(document.body.classList.contains('shared')){const ps=$('cPlanSec'),tg=$('cOut').querySelector('.ctgt');if(ps&&tg)tg.after(ps);$('coach').scrollTop=0;}
  if(ex.explore){ex.coach=cPlan.R;const zr=REG2ZOOM[cPlan.R.reg];if(zr&&zr!==zReg){zReg=zr;TRACE.ids=[];buildZTabs();}}
- const rp=$('replayShare');if(rp)rp.onclick=()=>{try{history.replaceState(null,'',planHash(cT,cGoal));}catch(_){}readHash();};
+ const rp=$('replayShare');if(rp)rp.onclick=()=>{if(!/^#(plan|move)-/.test(location.hash))try{history.replaceState(null,'',planHash(cT,cGoal));}catch(_){}readHash();};
  const eb=$('exploreShare');if(eb)eb.onclick=()=>enterExplore();
  const xs=$('exitShare');if(xs)xs.onclick=()=>{document.body.classList.remove('shared');try{history.replaceState(null,'',location.pathname);}catch(_){}renderCoach();};
  $('cOut').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{sel=c.dataset.id;});
@@ -1422,25 +1463,36 @@ function renderCoach(){
  $('cShareBtn').onclick=()=>sharePlan(null);$('cExplore').onclick=()=>enterExplore();
  $('cCopy').onclick=async()=>{const inp=$('cShare').querySelector('input');try{await navigator.clipboard.writeText(inp.value);toast('Link copied');}catch(e){inp.select();toast('Select the link and copy it');}};
  $('cOut').querySelectorAll('.cshr').forEach(b=>b.onclick=()=>sharePlan(+b.dataset.i));
- $('cOut').querySelectorAll('.cone').forEach(b=>b.onclick=()=>playPlan([cPlan.blocks[+b.dataset.i]],cPlan.blocks[+b.dataset.i].m.name,planHash(T,cGoal,+b.dataset.i)));
- $('cOut').querySelectorAll('.cmore').forEach(b=>b.onclick=()=>{const m=MOVES[b.dataset.k];playPlan([{m,label:'',k:b.dataset.k}],m.name);});
+ $('cOut').querySelectorAll('.cmshr').forEach(b=>b.onclick=()=>shareMove(b.dataset.k));
+ $('cOut').querySelectorAll('.cone').forEach(b=>b.onclick=()=>{const bl=cPlan.blocks[+b.dataset.i];playPlan([bl],bl.m.name,'#move-'+T+'-'+bl.k);});
+ $('cOut').querySelectorAll('.cmore').forEach(b=>b.onclick=()=>{const m=MOVES[b.dataset.k];playPlan([{m,label:'For the '+d.short.toLowerCase(),k:b.dataset.k}],m.name,'#move-'+T+'-'+b.dataset.k);});
 }
 function playPlan(blocks,title,hash){const e=buildPlanEx(cT,{R:cPlan.R,blocks},title);selectEx(e);sel=cT;
+ if(document.body.classList.contains('phone')){document.body.classList.add('sheetMini');$('cMin').textContent='▴';$('coach').scrollTop=0;syncSheet();fitCamera();}
  if(hash)try{history.replaceState(null,'',hash);}catch(_){}}
 const EXPLORE={id:'explore',name:'Muscle coach — click any muscle',icon:'🎯',dur:6,anchor:'ground',view:[20,6],props:[],explore:true,
  base:{'B.sh.a':24,'B.el':10,'B.hip.a':4,'B.sh.r':-10},
  keys:[{t:0,p:{},cap:'Coach mode: click any muscle on the body. The coach shows what works with it, what opposes it, its chain from the feet to the head, and a plan.'},{t:.5,p:{'chest.f':-2,'B.clav.e':2},cap:''}],work:[],stab:[]};
-function enterExplore(){EXPLORE.focus=[REG2ZOOM[regionOf(cT)]||'shoulder','core','foot','neck','shoulder','hip','knee','leg'].filter((v,i,a)=>a.indexOf(v)===i);
- prep(EXPLORE);selectEx(EXPLORE);EXPLORE.coach=(cPlan&&cPlan.R.T===cT)?cPlan.R:rolesFor(cT);sel=cT;anat=true;$('tAnat').classList.add('on');$('coach').hidden=false;renderCoach();}
+function enterExplore(){if(document.body.classList.contains('phone')){document.body.classList.remove('sheetMini');$('cMin').textContent='▾';}
+ EXPLORE.focus=[REG2ZOOM[regionOf(cT)]||'shoulder','core','foot','neck','shoulder','hip','knee','leg'].filter((v,i,a)=>a.indexOf(v)===i);
+ prep(EXPLORE);selectEx(EXPLORE);EXPLORE.coach=(cPlan&&cPlan.R.T===cT)?cPlan.R:rolesFor(cT);sel=cT;anat=true;$('tAnat').classList.add('on');$('coach').hidden=false;renderCoach();syncSheet();}
 const planHash=(T,g,i)=>'#plan-'+T+'-'+g+(i!=null?'-'+(i+1):'');
 const shareURL=(T,g,i)=>location.href.split('#')[0]+planHash(T,g,i);
 function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>el.classList.remove('on'),2200);}
-async function sharePlan(i){const url=shareURL(cT,cGoal,i);const d=MDEFK[cT];
+async function sharePlan(i){if(i!=null&&cPlan.blocks[i])return shareMove(cPlan.blocks[i].k);const url=shareURL(cT,cGoal,i);const d=MDEFK[cT];
  const text=(i!=null?`${cPlan.blocks[i].m.name} — `:'')+`my ${cGoal==='wake'?'wake-up':'calm-down'} plan for the ${d.name.toLowerCase()} (Fibwave Muscle Lab)`;
  const box=$('cShare');box.hidden=false;const inp=box.querySelector('input');inp.value=url;
  try{if(navigator.share){await navigator.share({title:'Fibwave Muscle Lab',text,url});toast('Shared');return;}}catch(e){if(e&&e.name==='AbortError')return;}
  try{await navigator.clipboard.writeText(url);toast('Link copied — paste it in a text or email');}catch(e){inp.select();toast('Copy the link below');}}
-function readHash(){const m=location.hash.match(/^#plan-([A-Za-z]+)-(wake|calm)(?:-(\d+))?$/);if(!m||!MDEFK[m[1]]||!ACTS[m[1]])return false;
+async function shareMove(k){const m=MOVES[k];const url=location.href.split('#')[0]+'#move-'+cT+'-'+k;const text=`${m.name} (${m.src}) — for the ${MDEFK[cT].name.toLowerCase()} · Fibwave Muscle Lab`;
+ const box=$('cShare');box.hidden=false;const inp=box.querySelector('input');inp.value=url;
+ try{if(navigator.share){await navigator.share({title:'Fibwave Muscle Lab',text,url});toast('Shared');return;}}catch(e){if(e&&e.name==='AbortError')return;}
+ try{await navigator.clipboard.writeText(url);toast('Link copied — paste it in a text or email');}catch(e){inp.select();toast('Copy the link below');}}
+function readHash(){
+ const mv=location.hash.match(/^#move-([A-Za-z]+)-([A-Za-z0-9]+)$/);
+ if(mv&&MDEFK[mv[1]]&&ACTS[mv[1]]&&MOVES[mv[2]]){cT=mv[1];document.body.classList.add('shared');openCoach(cT);const m=MOVES[mv[2]];
+  playPlan([{m,label:'For the '+MDEFK[cT].short.toLowerCase(),k:mv[2]}],m.name);ex.playOnce=true;anat=true;$('tAnat').classList.add('on');
+  speed=.5;document.querySelectorAll('.sp').forEach(x=>x.classList.toggle('on',x.dataset.s==='0.5'));playing=true;return true;}const m=location.hash.match(/^#plan-([A-Za-z]+)-(wake|calm)(?:-(\d+))?$/);if(!m||!MDEFK[m[1]]||!ACTS[m[1]])return false;
  cT=m[1];cGoal=m[2];document.querySelectorAll('.cg').forEach(x=>x.classList.toggle('on',x.dataset.g===cGoal));
  document.body.classList.add('shared');openCoach(cT);
  const i=m[3]?(+m[3]-1):null;if(i!=null&&cPlan.blocks[i])playPlan([cPlan.blocks[i]],cPlan.blocks[i].m.name);else playPlan(cPlan.blocks,`Plan: ${MDEFK[cT].short} — ${cGoal==='wake'?'wake it up':'calm it down'}`);
@@ -1450,7 +1502,8 @@ function initCoach(){
  const s=$('cMus');let h='';for(const r in REGION){h+=`<optgroup label="${REGNAME[r]}">`+REGION[r].map(id=>`<option value="${id}">${MDEFK[id].name}</option>`).join('')+'</optgroup>';}s.innerHTML=h;
  s.onchange=()=>{cT=s.value;renderCoach();};
  document.querySelectorAll('.cg').forEach(b=>b.onclick=()=>{cGoal=b.dataset.g;document.querySelectorAll('.cg').forEach(x=>x.classList.toggle('on',x===b));renderCoach();});
- $('coachX').onclick=()=>{$('coach').hidden=true;};
+ $('coachX').onclick=()=>{$('coach').hidden=true;syncSheet();};
+ $('cMin').onclick=()=>{const m=document.body.classList.toggle('sheetMini');$('coach').scrollTop=0;$('cMin').textContent=m?'▴':'▾';syncSheet();};
  const list=$('exList');const h2=document.createElement('h2');h2.className='gh';h2.textContent='Muscle coach';list.appendChild(h2);
  const b=document.createElement('button');b.className='ex';b.innerHTML='<span class="i">🎯</span>Train one muscle';b.onclick=()=>openCoach(sel||cT);list.appendChild(b);
 }
@@ -1545,32 +1598,40 @@ function buildZTabs(){const t=$('zTabs');t.innerHTML='';const ord=[...ex.focus,.
  for(const r of ord){const b=document.createElement('button');b.className='b'+(r===zReg?' on':'');b.textContent=REG[r].name;b.onclick=()=>{zReg=r;TRACE.ids=[];buildZTabs();};t.appendChild(b);}}
 const $=id=>document.getElementById(id);
 function selectEx(e){
- ex=e;prep(ex);phase=0;sel=null;hover=null;
+ ex=e;prep(ex);phase=0;sel=null;hover=null;document.body.classList.remove('movesOpen');
  document.querySelectorAll('.ex').forEach(b=>b.classList.toggle('on',b.dataset.id===ex.id));
  cam.yaw=ex.view[0];cam.pitch=ex.view[1];cam.zoom=1;fitCamera();
  zReg=ex.focus[0];buildZTabs();TRK.L=[];TRK.R=[];TRACE.ids=[];$('surfG').style.display=ex.id==='run'?'flex':'none';
  $('capT').textContent=ex.name;
  const ml=$('mList');ml.innerHTML='';rows=[];
  for(const id of[...ex.work,...(ex.stab||[])]){const d=MDEFK[id];const r=document.createElement('div');r.className='row';
-  r.innerHTML=`<span class="dot"></span><div style="min-width:0"><div class="nm">${d.name}${d.deep?' <span style="color:var(--dim);font-size:10px">deep</span>':''}</div><div class="st"></div></div><div class="bar"><i></i><b></b></div>`;
-  r.onclick=()=>{sel=sel===id?null:id;};ml.appendChild(r);rows.push({id,r,dot:r.querySelector('.dot'),st:r.querySelector('.st'),bar:r.querySelector('.bar i')});}
+  r.innerHTML=`<span class="dots"><i class="dot"></i><i class="dot"></i></span><div style="min-width:0"><div class="nm">${d.name}${d.deep?' <span style="color:var(--dim);font-size:10px">deep</span>':''}</div><div class="st"></div></div><div class="sbs"><div class="sb"><span>L</span><div class="bar"><i></i><b></b></div></div><div class="sb"><span>R</span><div class="bar"><i></i><b></b></div></div></div>`;
+  r.onclick=()=>{sel=sel===id?null:id;};ml.appendChild(r);const ds=r.querySelectorAll('.dot'),bs=r.querySelectorAll('.bar i');rows.push({id,r,dL:ds[0],dR:ds[1],st:r.querySelector('.st'),bL:bs[0],bR:bs[1]});}
  updateInfo(true);
 }
 let lastInfo='';
 function updateInfo(force){
  let h;
- if(sel){const d=MDEFK[sel],mu=MUSL[sel];const pct=Math.round(mu.L/mu.L0*100);
-  h=`<div class="h">${d.name}</div><div>${d.does}</div><div style="margin-top:6px;color:${STATECOL[mu.state]}">${STATELONG[mu.state]}</div><div style="margin-top:4px;color:var(--dim)">Length now: ${pct}% of its standing length.</div>`;}
+ if(sel){const d=MDEFK[sel];const sd=S=>{const m=MUSK[sel+S];return`<div style="margin-top:6px"><b style="color:${STATECOL[m.state]}">${S==='L'?'Left':'Right'}: ${STATETXT[m.state]}</b> · ${Math.round(m.L/m.L0*100)}% length<div style="color:var(--dim)">${STATELONG[m.state]}</div></div>`;};
+  h=`<div class="h">${d.name}</div><div>${d.does}</div>${sd('L')}${sd('R')}`;}
  else h=`<div class="h">How to use</div><div>Click a muscle on the body or in the list. Drag to turn the body. Scroll or pinch to zoom.</div><div style="margin-top:6px;color:var(--dim)">Thicker muscle = shorter muscle. Compare "Raise arms to the sides" and "Arms in front of you": the same shoulder, but a different part of the deltoid does the work.</div>`;
  if(sel)h+=`<button class="b" id="iCoach" style="margin-top:8px">🎯 Train this muscle</button>`;
  if(force||h!==lastInfo){$('info').innerHTML=h;lastInfo=h;const b=$('iCoach');if(b)b.onclick=()=>openCoach(sel);}
 }
 function updateUI(){
- const cap=interp(ex,phase)._cap;if($('capC').textContent!==cap)$('capC').textContent=cap;
+ const IP=interp(ex,phase);
+ if(ex.blocks){const b=ex.blocks[IP._bi!=null?IP._bi:0]||ex.blocks[0];const n=ex.blocks.length;
+  const t=(n>1?`Block ${b.i+1} of ${n} · ${b.label} · `:'')+b.name;if($('capT').textContent!==t)$('capT').textContent=t;
+  let cue=IP._cue||'';if(!IP._rep){const s_=Math.max(1,Math.ceil((b.r1-phase)*ex.dur/Math.max(speed,.01)));cue='Get ready: '+b.name+' … '+s_;}
+  if($('capC').textContent!==cue)$('capC').textContent=cue;
+  const x=`<span class="rp">${IP._rep?'Rep '+IP._rep+' of '+REPS:'Get ready'}</span><span>${b.src}</span><span>Dose: ${b.dose}</span>${b.next?`<span>Next: ${b.next}</span>`:''}`;
+  if($('capX').innerHTML!==x)$('capX').innerHTML=x;$('capP').style.width=clamp((phase-b.t0)/(b.t1-b.t0),0,1)*100+'%';if(!document.body.classList.contains('follow')){document.body.classList.add('follow');layoutCam();}}
+ else{if(document.body.classList.contains('follow')){document.body.classList.remove('follow');layoutCam();}const cap=IP._cap;if($('capC').textContent!==cap)$('capC').textContent=cap;if($('capT').textContent!==ex.name)$('capT').textContent=ex.name;}
  if(!scrubbing)$('tl').value=Math.round(phase*1000);
  if(++uiTick%3)return;
- for(const r of rows){const mu=MUSL[r.id];const c=STATECOL[mu.state];r.dot.style.background=c;r.dot.style.color=c;r.st.textContent=STATETXT[mu.state]+' · '+Math.round(mu.L/mu.L0*100)+'%';
-  r.bar.style.width=clamp((mu.L/mu.L0-.6)/.8,0,1)*100+'%';r.bar.style.background=c;r.r.classList.toggle('sel',sel===r.id);}
+ for(const r of rows){const a=MUSK[r.id+'L'],b=MUSK[r.id+'R'];const ca=STATECOL[a.state],cb=STATECOL[b.state];r.dL.style.background=ca;r.dR.style.background=cb;
+  const pa=Math.round(a.L/a.L0*100),pb=Math.round(b.L/b.L0*100);r.st.textContent=a.state===b.state?`${STATETXT[a.state]} · L ${pa}% · R ${pb}%`:`L ${STATETXT[a.state]} · R ${STATETXT[b.state]}`;
+  r.bL.style.width=clamp((a.L/a.L0-.6)/.8,0,1)*100+'%';r.bL.style.background=ca;r.bR.style.width=clamp((b.L/b.L0-.6)/.8,0,1)*100+'%';r.bR.style.background=cb;r.r.classList.toggle('sel',sel===r.id);}
  updateInfo();
 }
 let scrubbing=false;
@@ -1594,11 +1655,11 @@ function init(){
  const list=$('exList');
  let lastG='';for(const e of EX){if(e.group!==lastG){lastG=e.group;const h=document.createElement('h2');h.className='gh';h.textContent=e.group;list.appendChild(h);}const b=document.createElement('button');b.className='ex';b.dataset.id=e.id;b.innerHTML=`<span class="i">${e.icon}</span>${e.name}`;b.onclick=()=>selectEx(e);list.appendChild(b);}
  initCoach();
- zcx=$('zc').getContext('2d');pcx=$('pc').getContext('2d');
+ zcx=$('zc').getContext('2d');pcx=$('pc').getContext('2d');applyPhone();addEventListener('resize',applyPhone);
  if(innerWidth<=1000){zOn=false;document.body.classList.add('zhide');$('tZoom').classList.remove('on');}
  addEventListener('resize',resize);resize();
  selectEx(EX[3]);
- readHash();addEventListener('hashchange',readHash);
+ if(!readHash()){cT='deltLat';enterExplore();}addEventListener('hashchange',readHash);
  const setPlay=v=>{playing=v;$('play').textContent=v?'❚❚ Pause':'▶ Play';};
  $('play').onclick=()=>setPlay(!playing);
  $('step').onclick=()=>{setPlay(false);phase=(phase+.01)%1;};
@@ -1611,13 +1672,16 @@ function init(){
  document.querySelectorAll('.ly').forEach(b=>b.onclick=()=>{layer=b.dataset.l;document.querySelectorAll('.ly').forEach(x=>x.classList.toggle('on',x===b));});
  $('tAnat').onclick=()=>{anat=!anat;$('tAnat').classList.toggle('on',anat);};
  $('tBody').onclick=()=>{showBody=!showBody;$('tBody').classList.toggle('on',showBody);};
- $('zView').onchange=e=>{zView=e.target.value;};
+ $('zView').onchange=e=>{zView=e.target.value;};$('zSideSel').onchange=e=>{zSidePref=e.target.value;TRACE.ids=[];};$('zClose').onclick=()=>{document.body.classList.remove('zoomOpen');zOn=false;$('tZoom').classList.remove('on');};
  $('zBig').onclick=()=>{zBig=!zBig;$('zoom').classList.toggle('big',zBig);$('zBig').classList.toggle('on',zBig);};
- const setZ=v=>{zOn=v;document.body.classList.toggle('zhide',!zOn);$('tZoom').classList.toggle('on',zOn);layoutCam();};
+ const setZ=v=>{zOn=v;document.body.classList.toggle('zhide',!zOn);document.body.classList.toggle('zoomOpen',zOn&&document.body.classList.contains('phone'));$('tZoom').classList.toggle('on',zOn);layoutCam();};
  $('tZoom').onclick=()=>setZ(!zOn);$('zList').onclick=()=>setZ(false);$('rZoom').onclick=()=>setZ(true);
  document.querySelectorAll('.sf').forEach(b=>b.onclick=()=>{runSurf=b.dataset.s;document.querySelectorAll('.sf').forEach(x=>x.classList.toggle('on',x===b));});
  addEventListener('keydown',e=>{if(e.code==='Escape'&&zBig)$('zBig').click();});
- $('tMus').onclick=()=>{$('right').classList.toggle('show');$('tMus').classList.toggle('on');};
+ $('pMoves').onclick=()=>{document.body.classList.toggle('movesOpen');document.body.classList.remove('listOpen');};
+ $('pCoach').onclick=()=>{document.body.classList.remove('movesOpen','listOpen');enterExplore();};
+ $('pMore').onclick=()=>{document.body.classList.toggle('showMore');};
+ $('tMus').onclick=()=>{if(document.body.classList.contains('phone')){document.body.classList.toggle('listOpen');document.body.classList.remove('movesOpen');return;}$('right').classList.toggle('show');$('tMus').classList.toggle('on');};
  addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();setPlay(!playing);}if(e.code==='ArrowRight'){setPlay(false);phase=(phase+.01)%1;}if(e.code==='ArrowLeft'){setPlay(false);phase=(phase+.99)%1;}});
  // drag to rotate, click to pick, pinch / wheel to zoom
  const ptrs=new Map();let down=null,moved=false,pinch0=0,zoom0=1;
