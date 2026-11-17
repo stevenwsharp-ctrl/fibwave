@@ -46,7 +46,7 @@ button.b.on{background:rgba(94,224,255,.18);border-color:rgba(94,224,255,.6)}
 #tMus{display:none}
 @media (max-width:1000px){
  #left{width:auto;right:14px;max-height:none;display:flex;gap:4px;overflow-x:auto;padding:6px}
- #left h1,#left .sub,#left h2{display:none}
+ #left h1,#left .sub,#left h2,#left .gh{display:none}
  #exList{display:flex;gap:4px}
  .ex{white-space:nowrap;width:auto}
  #right{display:none;top:auto;bottom:150px;left:14px;right:14px;width:auto;max-height:45%}
@@ -63,8 +63,7 @@ button.b.on{background:rgba(94,224,255,.18);border-color:rgba(94,224,255,.6)}
 <div id="left" class="panel">
   <a href="index.html" style="color:var(--dim);font-size:11.5px;text-decoration:none;display:block;margin-bottom:6px">◀ Back to Fibwave</a><h1>Muscle Lab</h1>
   <div class="sub">Fibwave Health Laboratory</div>
-  <h2>Movements</h2>
-  <div id="exList"></div>
+    <div id="exList"></div>
 </div>
 
 <div id="cap" class="panel"><div class="t" id="capT"></div><div class="c" id="capC"></div></div>
@@ -93,7 +92,7 @@ button.b.on{background:rgba(94,224,255,.18);border-color:rgba(94,224,255,.6)}
   <div class="grp"><span class="lbl">View</span>
     <button class="b vw" data-y="0" data-p="8">Front</button><button class="b vw" data-y="90" data-p="8">Side</button><button class="b vw" data-y="180" data-p="8">Back</button><button class="b vw" data-y="38" data-p="16">¾</button><button class="b" id="orbit">Orbit</button>
   </div>
-  <div class="grp"><button class="b on" id="tLab">Labels</button><button class="b on" id="tBody">Body</button><button class="b" id="tMus">Muscles</button></div>
+  <div class="grp"><span class="lbl">Layer</span><button class="b ly" data-l="surface">Surface</button><button class="b ly" data-l="deep">Deep</button><button class="b ly on" data-l="all">All</button><button class="b" id="tAnat" title="Anatomy colors: real muscle color with an activity outline">Anatomy</button><button class="b on" id="tLab">Labels</button><button class="b on" id="tBody">Body</button><button class="b" id="tMus">Muscles</button></div>
 </div>
 
 <script>
@@ -130,8 +129,8 @@ const BONES=[
 for(const S of['L','R']){const m=S==='L'?1:-1;
  BONES.push([S+'clav','chest',[2*m,26,3]],[S+'upper',S+'clav',[15*m,1,-4]],[S+'fore',S+'upper',[0,-30,0]],[S+'hand',S+'fore',[0,-26,0]]);}
 for(const S of['L','R']){const m=S==='L'?1:-1;
- BONES.push([S+'thigh','pelvis',[9*m,-4,0]],[S+'shin',S+'thigh',[0,-44,0]],[S+'foot',S+'shin',[0,-42,0]]);}
-const SIDED=new Set(['clav','upper','fore','hand','thigh','shin','foot']);
+ BONES.push([S+'thigh','pelvis',[9*m,-4,0]],[S+'shin',S+'thigh',[0,-44,0]],[S+'foot',S+'shin',[0,-42,0]],[S+'toes',S+'foot',[0,-7.5,11]]);}
+const SIDED=new Set(['clav','upper','fore','hand','thigh','shin','foot','toes']);
 
 // Anatomical angles -> local rotation
 function jointRot(n,g){
@@ -146,6 +145,7 @@ function jointRot(n,g){
   else if(b==='thigh'){x=-g(S+'.hip.f');z=m*g(S+'.hip.a');y=-m*g(S+'.hip.r');}
   else if(b==='shin'){x=g(S+'.kn');}
   else if(b==='foot'){x=-g(S+'.an');}
+  else if(b==='toes'){x=-g(S+'.toe');}
  }
  if(!x&&!y&&!z)return I3;
  return mm(rz(z*D),mm(rx(x*D),ry(y*D)));
@@ -162,7 +162,7 @@ function fk(P){
 }
 const wp=(W,b,p)=>add(W[b].p,ap(W[b].R,p));
 function shiftW(W,d){for(const k in W)W[k].p=add(W[k].p,d);}
-const CP={heel:['foot',[0,-8,-5]],toe:['foot',[0,-8,16]],palm:['hand',[0,-5,0]],grip:['hand',[0,-5,0]]};
+const CP={heel:['foot',[0,-8,-5]],ball:['foot',[0,-8,11]],toe:['toes',[0,-.5,5]],palm:['hand',[0,-5,0]],grip:['hand',[0,-5,0]]};
 const cpt=(W,S,k)=>wp(W,S+CP[k][0],CP[k][1]);
 
 /* =========================================================
@@ -201,6 +201,38 @@ const MDEF=[
  {id:'gastroc',name:'Gastrocnemius (calf)',short:'Calf',w:3.8,s:[[['thigh',-2.5,-40,-3.5],['shin',-1.5,-20,-5],['foot',0,-6,-6.5]],[['thigh',2.5,-40,-3.5],['shin',1.5,-20,-5],['foot',0,-6,-6.5]]],does:'Points the foot down. Crosses the knee and the ankle. Power for jumps.'},
  {id:'soleus',name:'Soleus (deep calf)',short:'Soleus',w:3.6,s:[[['shin',0,-12,-3.5],['shin',0,-33,-4],['foot',0,-6,-6.5]]],does:'Points the foot down. Works for balance and endurance.'},
  {id:'tibAnt',name:'Tibialis anterior',short:'Tib. ant.',w:2.4,s:[[['shin',1.5,-6,2.8],['shin',.5,-34,2.5],['foot',-1,-4,7]]],does:'Lifts the foot and toes. Controls the landing.'},
+ // ----- shoulder: rotator cuff and deep shoulder
+ {id:'supraspinatus',deep:1,name:'Supraspinatus (rotator cuff)',short:'Supraspinatus',w:2.4,s:[[['clav',6,.5,-9],['upper',1.2,1.5,-.5]]],does:'Starts lifting the arm out to the side. Holds the ball of the shoulder in its socket.'},
+ {id:'infraspinatus',deep:1,name:'Infraspinatus (rotator cuff)',short:'Infraspinatus',w:3,s:[[['clav',6,-8,-11],['upper',1.5,-.5,-2]],[['clav',4.5,-12,-11],['upper',1.4,-1,-2]]],does:'Turns the arm out. Pulls the shoulder ball down and back into the socket.'},
+ {id:'teresMinor',deep:1,name:'Teres minor (rotator cuff)',short:'Teres minor',w:2,s:[[['clav',9,-12,-10.5],['upper',1.2,-1.5,-2.2]]],does:'Turns the arm out. Stabilizes the back of the shoulder.'},
+ {id:'subscap',deep:1,name:'Subscapularis (rotator cuff)',short:'Subscapularis',w:3,s:[[['clav',6,-8,-8.5],['upper',-1.2,-1.5,1.5]],[['clav',6,-13,-9],['upper',-1.2,-2,1.3]]],does:'Turns the arm in. Protects the front of the shoulder joint.'},
+ {id:'teresMajor',name:'Teres major',short:'Teres major',w:2.8,s:[[['clav',8,-15,-10.5],['upper',-.8,-6.5,.6]]],does:'Pulls the arm down and back. The "little helper" of the lats.'},
+ {id:'pecMinor',deep:1,name:'Pectoralis minor',short:'Pec minor',w:2.6,s:[[['chest',7.5,15,9.5],['clav',12,-2,1]],[['chest',8,10,9.5],['clav',12,-2,1]]],does:'Pulls the shoulder blade forward and down. Helps lift the ribs to breathe.'},
+ {id:'coracobrach',deep:1,name:'Coracobrachialis',short:'Coracobrach.',w:1.8,s:[[['clav',12,-2.2,1.2],['upper',-1,-15,1]]],does:'Pulls the arm forward and in toward the body.'},
+ // ----- neck
+ {id:'splenius',name:'Splenius capitis',short:'Splenius',w:2.6,s:[[['chest',1.5,28,-7],['head',4.5,7,-5]]],does:'Lifts and turns the head. Holds the head up when you lean forward.'},
+ {id:'levScap',name:'Levator scapulae',short:'Levator scap.',w:2.2,s:[[['neck',3,5,-1.5],['clav',5,-1,-10]]],does:'Lifts the shoulder blade. Side-bends the neck.'},
+ {id:'scalenes',deep:1,name:'Scalenes',short:'Scalenes',w:2,s:[[['neck',2.5,3,1],['chest',6,27,3]],[['neck',2.5,6,0],['chest',7,26.5,1]]],does:'Bend the neck to the side. Lift the top ribs when you breathe hard.'},
+ {id:'longusColli',deep:1,name:'Deep neck flexors (longus colli)',short:'Deep neck flex.',w:1.6,s:[[['chest',1,27,2],['neck',1,8,2]]],does:'Tuck the chin and keep the neck straight. Key for good posture.'},
+ {id:'semispinalis',deep:1,name:'Semispinalis capitis',short:'Semispinalis',w:2,s:[[['chest',1,22,-8],['head',1.5,4,-7]]],does:'Pulls the head back. Holds the head against gravity.'},
+ // ----- deep core and hip
+ {id:'intOblique',deep:1,name:'Internal oblique',short:'Int. oblique',w:3.5,s:[[['pelvis',11,8,3],['chest',8,4,9]]],does:'Turns the trunk to the same side. Works with the opposite external oblique.'},
+ {id:'QL',deep:1,name:'Quadratus lumborum',short:'QL',w:2.6,s:[[['pelvis',6,8,-3],['chest',5,1,-4]]],does:'Side-bends the low back. Holds the pelvis level when one leg is off the ground.'},
+ {id:'multifidus',deep:1,name:'Multifidus',short:'Multifidus',w:2,s:[[['pelvis',1.8,2,-7],['spine',1.8,14,-6]]],does:'Small deep muscles that stiffen each joint of the spine.'},
+ {id:'tfl',name:'Tensor fasciae latae + IT band',short:'TFL / IT band',w:3,s:[[['pelvis',11,6,4],['thigh',5.5,-12,1.5],['shin',3.5,-3,.5]]],does:'Lifts the leg forward and out. Tightens the IT band on the side of the thigh.'},
+ {id:'sartorius',name:'Sartorius',short:'Sartorius',w:2.4,s:[[['pelvis',10,6,7],['thigh',-3,-36,1],['shin',-2.5,-6,2]]],does:'The longest muscle. Lifts and turns the thigh out and bends the knee (cross-legged sitting).'},
+ {id:'gracilis',name:'Gracilis',short:'Gracilis',w:2.2,s:[[['pelvis',1.5,-7,4],['thigh',-3.5,-40,-1],['shin',-2.5,-6,1]]],does:'Pulls the leg in and helps bend the knee.'},
+ {id:'gluteMin',deep:1,name:'Gluteus minimus',short:'Glute min',w:3,s:[[['pelvis',9,6,1],['thigh',5,-1,1.5]]],does:'Holds the pelvis level and turns the thigh in.'},
+ {id:'piriformis',deep:1,name:'Piriformis (deep hip rotator)',short:'Piriformis',w:2,s:[[['pelvis',2.5,0,-7.5],['thigh',5,-1,-1]]],does:'Turns the thigh out. Stabilizes the hip.'},
+ // ----- lower leg and foot
+ {id:'peroneals',name:'Fibularis (peroneus) longus + brevis',short:'Peroneals',w:2.6,s:[[['shin',3.2,-6,0],['shin',3,-38,-2],['foot',3,-6,3]]],does:'Turn the sole out and point the foot. Protect the ankle from a roll.'},
+ {id:'tibPost',deep:1,name:'Tibialis posterior',short:'Tib. post.',w:2.2,s:[[['shin',0,-10,-2],['shin',-1.8,-39,-2.5],['foot',-2.2,-5,7]]],does:'Holds up the arch of the foot. Turns the sole in.'},
+ {id:'extDigLong',name:'Toe extensors (EDL + EHL)',short:'Toe ext.',w:2.2,s:[[['shin',2.2,-8,2.4],['shin',1,-37,3.2],['toes',0,0,3]]],does:'Lift the toes and the foot. Clear the toes when the leg swings.'},
+ {id:'flexHalLong',deep:1,name:'Long toe flexors (FHL + FDL)',short:'Toe flex.',w:2.4,s:[[['shin',-.5,-22,-3],['shin',-1.8,-40,-3],['toes',-1.5,-1.4,2.5]]],does:'Curl the toes and push the big toe into the ground at push-off.'},
+ {id:'flexDigBrev',name:'Flexor digitorum brevis (sole)',short:'Sole flexor',w:2.2,s:[[['foot',0,-9.2,-3],['toes',0,-1.6,1.5]]],does:'Curls the toes. Supports the arch from below.'},
+ {id:'abdHallucis',name:'Abductor hallucis',short:'Abd. hallucis',w:2,s:[[['foot',-2.8,-8.4,-3],['toes',-2.6,-1.2,.8]]],does:'Moves the big toe out. Supports the inner arch.'},
+ {id:'abdDigMin',name:'Abductor digiti minimi',short:'Abd. dig. min.',w:1.6,s:[[['foot',2.8,-8.6,-3],['toes',2.6,-1.3,.5]]],does:'Supports the outer edge of the foot.'},
+ {id:'extDigBrev',name:'Extensor digitorum brevis',short:'Short toe ext.',w:1.8,s:[[['foot',2.2,-5.5,3],['toes',1,-.2,1.5]]],does:'Lifts the toes from the top of the foot.'},
 ];
 const MDEFK={};MDEF.forEach(d=>MDEFK[d.id]=d);
 const MUS=[];
@@ -260,7 +292,7 @@ const EX=[
   {t:.9,p:{'B.sh.a':165,'B.el':5,'spine.f':0,'neck.f':0,'B.clav.p':-3},cap:'Release: the shoulders rise back to a dead hang.'}]},
 
 {id:'push',name:'Push-up',icon:'▱',dur:6,anchor:'pushup',view:[75,14],props:[],
- base:{'B.sh.f':65,'B.sh.a':12,'B.sh.r':20,'B.el':5,'B.wr':80,'B.an':10,'B.clav.p':6,'root.pitch':65},
+ base:{'B.sh.f':65,'B.sh.a':12,'B.sh.r':20,'B.el':5,'B.wr':80,'B.an':10,'B.toe':60,'B.clav.p':6,'root.pitch':65},
  work:['pec','deltAnt','triceps','serratus'],stab:['rectusAbd','oblique','gluteMax','rectFem','vastLat','vastMed','erector'],
  keys:[
   {t:0,p:{},cap:'Top: arms straight. The abs, glutes, and quads hold the body straight like a plank (isometric).'},
@@ -284,12 +316,12 @@ const EX=[
  work:['gastroc','soleus','vastLat','vastMed','rectFem','gluteMax','tibAnt','forearmFlex','forearmExt'],stab:['deltLat','biceps','rectusAbd','erector'],
  keys:[
   {t:0,p:{'B.kn':22,'B.hip.f':12,'B.an':18,'root.pitch':4,'root.y':0},cap:'Land: the calves get longer under load (eccentric). They work like springs. The knees bend a little to absorb the impact.'},
-  {t:.18,p:{'B.kn':6,'B.hip.f':4,'B.an':-35,'root.y':1.5},cap:'Push off: the calves (gastrocnemius and soleus) shorten fast (concentric). The quads and glutes help.'},
-  {t:.5,p:{'B.kn':10,'B.an':-28,'root.y':13},cap:'In the air: the rope passes under the feet. The wrists turn the rope, not the shoulders.'},
+  {t:.18,p:{'B.kn':6,'B.hip.f':4,'B.an':-35,'B.toe':35,'root.y':1.5},cap:'Push off: the calves (gastrocnemius and soleus) shorten fast (concentric). The quads and glutes help.'},
+  {t:.5,p:{'B.kn':10,'B.an':-28,'B.toe':0,'root.y':13},cap:'In the air: the rope passes under the feet. The wrists turn the rope, not the shoulders.'},
   {t:.78,p:{'B.kn':8,'B.an':-30,'root.y':4},cap:'Get ready to land: the toes point down to meet the floor.'}]},
 
 {id:'box',name:'Boxing: jab + cross',icon:'🥊',dur:3.4,anchor:'ground',view:[58,12],props:['gloves','bag'],ballistic:true,
- base:Object.assign({'root.yaw':-25,'L.hip.f':18,'R.hip.f':-12,'L.hip.a':4,'R.hip.a':6,'B.kn':18,'L.an':8,'R.an':-12,'neck.f':10,'neck.t':20,'spine.f':6},GUARD),
+ base:Object.assign({'root.yaw':-25,'L.hip.f':18,'R.hip.f':-12,'L.hip.a':4,'R.hip.a':6,'B.kn':18,'L.an':8,'R.an':-12,'R.toe':25,'neck.f':10,'neck.t':20,'spine.f':6},GUARD),
  work:['deltAnt','triceps','pec','serratus','oblique','gluteMax','gastroc','soleus','vastLat','vastMed','biceps','deltPost','rectusAbd','lats'],stab:['erector','scm','forearmFlex'],
  keys:[
   {t:0,p:{},cap:'Guard: hands protect the chin. The deltoids and biceps hold (isometric).'},
@@ -297,19 +329,32 @@ const EX=[
   {t:.22,p:{'L.sh.f':88,'L.sh.a':4,'L.sh.r':75,'L.el':4,'L.clav.p':10,'chest.t':13,'spine.t':5},cap:'Return: pull the hand back to the chin fast. The biceps and rear deltoid bring it back.'},
   {t:.36,p:Object.assign({},GUARD),cap:'Load: the weight moves to the back foot.'},
   {t:.46,p:{'root.yaw':-32,'spine.t':-4},cap:'Cross: power starts at the floor. The calf pushes, the glute turns the hip, the obliques turn the trunk, then the chest and triceps drive the arm.'},
-  {t:.6,p:{'R.sh.f':88,'R.sh.a':4,'R.sh.r':75,'R.el':4,'R.clav.p':12,'root.yaw':0,'spine.t':3,'chest.t':4,'R.an':-30,'R.kn':12,'R.hip.r':25},cap:'Return to guard: the rear deltoid and biceps pull the hand back.'},
+  {t:.6,p:{'R.sh.f':88,'R.sh.a':4,'R.sh.r':75,'R.el':4,'R.clav.p':12,'root.yaw':0,'spine.t':3,'chest.t':4,'R.an':-30,'R.toe':40,'R.kn':12,'R.hip.r':25},cap:'Return to guard: the rear deltoid and biceps pull the hand back.'},
   {t:.76,p:Object.assign({'root.yaw':-25,'R.an':-12,'R.kn':18,'R.hip.r':0},GUARD),cap:'Guard: breathe and stay loose. Muscles that only stretch show blue.'}]},
 
-{id:'ski',name:'Skiing turns',icon:'⛷',dur:4.4,anchor:'ground',view:[24,14],props:['skis','poles','snow'],
+{id:'ski',group:'Skiing',name:'Groomers: carving',icon:'⛷',dur:4.4,anchor:'ground',view:[24,14],props:['skis','poles','snow'],skiLen:[-70,95],
  base:{'root.pitch':18,'B.hip.f':40,'B.kn':55,'B.an':33,'spine.f':8,'B.sh.f':40,'B.sh.a':22,'B.el':70,'B.sh.r':10,'root.y':2.8,'B.pole':-30},
  work:['vastLat','vastMed','rectFem','gluteMax','gluteMed','adductors','hamstrings','oblique','tibAnt','soleus','gastroc','lats','triceps'],stab:['erector','rectusAbd','forearmFlex'],
  keys:[
   {t:0,p:{'B.kn':45,'B.hip.f':35,'B.an':28},cap:'Transition: the legs extend a little. The weight moves to the new edges.'},
-  {t:.1,p:{'L.sh.f':62,'L.el':55,'L.pole':25},cap:'Pole plant: the arm reaches forward. The lats and triceps set the pole. This times the turn.'},
-  {t:.3,p:{'root.roll':16,'root.yaw':10,'spine.s':-14,'L.kn':72,'L.hip.f':52,'L.an':36,'R.kn':52,'R.hip.f':38,'R.an':30,'L.hip.a':-6,'R.hip.a':8,'L.sh.f':40,'L.el':70,'L.pole':-30},cap:'Left turn: the outside (right) leg carries the load. The quads and glutes hold the bend. The glute medius and adductors control the knees. The obliques angle the trunk.'},
+  {t:.1,p:{'L.sh.f':62,'L.el':55,'L.pole':25},cap:'Pole touch: the arm reaches forward. The lats and triceps set the pole. This times the turn.'},
+  {t:.3,p:{'root.roll':22,'root.yaw':10,'spine.s':-18,'L.kn':82,'L.hip.f':58,'L.an':38,'R.kn':55,'R.hip.f':40,'R.an':31,'L.hip.a':-8,'R.hip.a':10,'L.sh.f':40,'L.el':70,'L.pole':-30},cap:'Left carve: high edge angle. The outside (right) leg carries the load. The quads and glutes hold the bend. The glute medius, adductors, and peroneals hold the edge. The obliques angle the trunk.'},
   {t:.5,p:{'root.roll':0,'root.yaw':0,'spine.s':0,'B.kn':45,'B.hip.f':35,'B.an':28,'B.hip.a':0},cap:'Transition: flatten the skis, extend the legs, and move the body across.'},
-  {t:.6,p:{'R.sh.f':62,'R.el':55,'R.pole':25},cap:'Pole plant: right arm. The lats and triceps set the pole.'},
-  {t:.8,p:{'root.roll':-16,'root.yaw':-10,'spine.s':14,'R.kn':72,'R.hip.f':52,'R.an':36,'L.kn':52,'L.hip.f':38,'L.an':30,'R.hip.a':-6,'L.hip.a':8,'R.sh.f':40,'R.el':70,'R.pole':-30},cap:'Right turn: now the left leg is the outside leg. It carries the load.'}]},
+  {t:.6,p:{'R.sh.f':62,'R.el':55,'R.pole':25},cap:'Pole touch: right arm.'},
+  {t:.8,p:{'root.roll':-22,'root.yaw':-10,'spine.s':18,'R.kn':82,'R.hip.f':58,'R.an':38,'L.kn':55,'L.hip.f':40,'L.an':31,'R.hip.a':-8,'L.hip.a':10,'R.sh.f':40,'R.el':70,'R.pole':-30},cap:'Right carve: now the left leg is the outside leg. It carries the load.'}]},
+
+{id:'jump',group:'Skiing',name:'Ski jumping',icon:'⟋',dur:6,anchor:'ground',view:[78,8],props:['skis','snow'],skiLen:[-100,150],scroll:900,
+ drop:t=>t>.4&&t<.8?150*Math.sin(Math.PI*(t-.4)/.4):0,
+ base:{'root.pitch':70,'B.hip.f':125,'B.kn':110,'B.an':55,'B.sh.f':-10,'B.sh.a':8,'B.el':5,'spine.f':5,'neck.f':-25,'root.y':2.8},
+ work:['vastLat','vastMed','rectFem','gluteMax','hamstrings','gastroc','soleus','tibAnt','adductors','gluteMed','erector','rectusAbd'],stab:['oblique','lats','deltPost','trapMid'],
+ keys:[
+  {t:0,p:{},cap:'Inrun: a deep tuck to cut air drag. The quads, glutes, and calves hold the crouch (isometric). The erectors keep the back flat.'},
+  {t:.3,p:{},cap:'Takeoff: an explosive jump at the edge of the table. The quads straighten the knees and the glutes straighten the hips (concentric) in about 0.3 seconds.'},
+  {t:.4,p:{'root.pitch':45,'B.hip.f':40,'B.kn':15,'B.an':25,'B.sh.f':-5,'neck.f':-10},cap:'Early flight: the skis open into a V. The hip rotators and adductors set the V. The body leans forward over the skis.'},
+  {t:.5,p:{'root.pitch':55,'B.hip.f':10,'B.kn':5,'B.an':65,'B.hip.a':12,'B.hip.r':-22,'B.sh.f':-15,'B.sh.a':18,'neck.f':-20},cap:'Flight: the body is a wing. The core, hip, and calf muscles hold this shape (isometric) against the air.'},
+  {t:.72,p:{'root.pitch':48},cap:'Get ready to land: the legs come together and forward.'},
+  {t:.8,p:{'root.pitch':15,'L.hip.f':45,'L.kn':75,'L.an':35,'R.hip.f':-5,'R.kn':70,'R.an':10,'R.toe':30,'B.hip.a':0,'B.hip.r':0,'B.sh.a':60,'B.sh.f':30,'B.el':15,'neck.f':0},cap:'Telemark landing: one foot forward, knees bent. The quads and glutes get longer under load (eccentric) to absorb the impact.'},
+  {t:.88,p:{'root.pitch':10,'B.hip.f':25,'B.kn':35,'B.an':20,'R.toe':0,'B.sh.a':30,'B.sh.f':20},cap:'Outrun: stand up, slow down, and get ready for the next jump.'}]},
 ];
 
 // RUNNING: one cycle = left step + right step. Leg table: [u, hip flexion, knee bend, ankle]
@@ -327,12 +372,73 @@ const EX=[
   .8125:'Flight: the arms swing opposite to the legs for balance. The obliques control the turn of the trunk.'};
  const keys=[];const N=16;
  for(let i=0;i<N;i++){const t=i/N;const L_=leg(t),R_=leg(t+.5);
-  keys.push({t,cap:CAP[t]||'',p:{'L.hip.f':L_[0],'L.kn':L_[1],'L.an':L_[2],'R.hip.f':R_[0],'R.kn':R_[1],'R.an':R_[2],
+  const tL=40*Math.exp(-Math.pow((((t-.27)%1+1)%1-0)/.08,2)),tR=40*Math.exp(-Math.pow((((t-.77)%1+1)%1-0)/.08,2));
+  keys.push({t,cap:CAP[t]||'',p:{'L.toe':tL,'R.toe':tR,'L.hip.f':L_[0],'L.kn':L_[1],'L.an':L_[2],'R.hip.f':R_[0],'R.kn':R_[1],'R.an':R_[2],
    'L.sh.f':.8*R_[0]-12,'R.sh.f':.8*L_[0]-12,'root.y':fly(t),'root.yaw':-.12*(L_[0]-R_[0]),'chest.t':.25*(L_[0]-R_[0])}});}
  EX.splice(6,0,{id:'run',name:'Running',icon:'»',dur:.85,anchor:'run',view:[90,6],props:['track'],scroll:300,cr:true,
   base:{'root.pitch':8,'B.el':85,'B.sh.a':8,'B.sh.r':10,'spine.f':2,'neck.f':-6,'B.hip.a':2},
   work:['gluteMax','hamstrings','vastLat','vastMed','rectFem','iliopsoas','gastroc','soleus','tibAnt','gluteMed','adductors','oblique','deltAnt','deltPost'],
   stab:['rectusAbd','erector','biceps'],keys});
+})();
+
+// MOGULS + POWDER: built from smooth formulas, 16 keys per cycle
+(function(){
+ const N=16;
+ const mog=[];const bump=t=>.5-.5*Math.cos(4*Math.PI*t);
+ const MCAP={0:'Trough: the legs extend to keep the skis on the snow. The quads and glutes push (concentric).',
+  .1875:'Up the bump: the knees and hips fold (eccentric quads and glutes). The legs act like shock absorbers, so the head stays level.',
+  .25:'Crest: pole touch and pivot. The skis turn under a quiet upper body. The obliques twist the trunk against the legs.',
+  .375:'Down the back: the legs extend again into the next trough. The tibialis and hamstrings keep the weight forward.',
+  .5:'Next trough: the same pattern to the other side.',
+  .75:'Crest: right pole touch. The upper body still faces down the hill.'};
+ for(let i=0;i<N;i++){const t=i/N,b=bump(t),y=25*Math.sin(2*Math.PI*t);
+  const pl=Math.exp(-Math.pow((t-.22)/.06,2)),pr=Math.exp(-Math.pow((t-.72)/.06,2));
+  mog.push({t,cap:MCAP[t]||'',p:{'B.kn':35+65*b,'B.hip.f':30+50*b,'B.an':30+12*b,'root.pitch':15+15*b,'root.yaw':y,'root.roll':.35*y,'spine.t':-.8*y,'chest.t':-.2*y,
+   'L.sh.f':40+28*pl,'L.el':70-15*pl,'L.pole':-30+55*pl,'R.sh.f':40+28*pr,'R.el':70-15*pr,'R.pole':-30+55*pr}});}
+ const terrM=(x,z,t)=>24*(.5-.5*Math.cos(2*Math.PI*(z/150+2*t)+.03*x));
+ EX.push({id:'mogul',group:'Skiing',name:'Moguls',icon:'∩',dur:2.6,anchor:'ground',view:[30,14],props:['skis','poles','snow'],skiLen:[-60,85],cr:true,
+  terr:terrM,lift:t=>terrM(0,0,t),flow:t=>300*t,
+  base:{'spine.f':6,'B.sh.a':22,'B.sh.r':10,'B.hip.a':0,'root.y':2.8},
+  work:['vastLat','vastMed','rectFem','gluteMax','hamstrings','oblique','tibAnt','soleus','gastroc','adductors','gluteMed','lats','triceps','iliopsoas'],stab:['erector','rectusAbd','forearmFlex','deltAnt'],keys:mog});
+ const pow=[];
+ const PCAP={0:'Transition: both skis rise toward the surface. The legs extend (concentric quads and glutes). Weight on both feet, like a platform.',
+  .125:'Sink into the turn: the skis bend and dive. The legs fold under load (eccentric).',
+  .25:'Bottom of the turn: deepest point. The quads, glutes, and calves hold (isometric). Snow sprays from the outside of the turn.',
+  .375:'Rebound: the snow pushes the skis up. Ride it into the next turn.',
+  .5:'Transition to the other side: pole touch, extend, and float.'};
+ for(let i=0;i<N;i++){const t=i/N,sn=Math.sin(2*Math.PI*t),s2=sn*sn;
+  const pl=Math.exp(-Math.pow((t-.02)/.06,2))+Math.exp(-Math.pow((t-1.02)/.06,2)),pr=Math.exp(-Math.pow((t-.52)/.06,2));
+  pow.push({t,cap:PCAP[t]||'',p:{'B.kn':40+32*s2,'B.hip.f':35+28*s2,'B.an':28+9*s2,'root.pitch':12+10*s2,'root.roll':12*sn,'root.yaw':14*sn,'spine.s':-4*sn,'spine.t':-8*sn,
+   'L.sh.f':40+25*pl,'L.pole':-30+50*pl,'R.sh.f':40+25*pr,'R.pole':-30+50*pr}});}
+ EX.push({id:'powder',group:'Skiing',name:'Powder',icon:'❄',dur:3.4,anchor:'ground',view:[22,12],props:['skis','poles','spray'],skiLen:[-75,105],cr:true,scroll:160,
+  powder:t=>16+10*Math.pow(Math.sin(2*Math.PI*t),2),
+  base:{'spine.f':6,'B.sh.a':22,'B.sh.r':10,'B.el':70,'root.y':2.8,'B.hip.a':0},
+  work:['vastLat','vastMed','rectFem','gluteMax','hamstrings','gastroc','soleus','tibAnt','oblique','adductors','gluteMed','lats','triceps'],stab:['erector','rectusAbd','forearmFlex'],keys:pow});
+})();
+
+// ===== Extra muscles in every movement (rotator cuff, neck, deep core, hip, foot) =====
+(function(){
+ const RC=['supraspinatus','infraspinatus','teresMinor','subscap'],NECK=['scm','splenius','levScap','scalenes','longusColli','semispinalis'],
+  CORE=['intOblique','QL','multifidus'],FOOT=['peroneals','tibPost','extDigLong','flexHalLong','flexDigBrev','abdHallucis','abdDigMin','extDigBrev'],
+  HIP=['tfl','sartorius','gracilis','gluteMin','piriformis'];
+ const SKI={work:['peroneals','tibPost','flexHalLong','extDigLong','gluteMin','tfl','gracilis','sartorius','intOblique'],stab:[...RC,...NECK,...CORE,'piriformis','flexDigBrev','abdHallucis','abdDigMin']};
+ const A={
+  lat:{work:['supraspinatus','levScap'],stab:[...RC,...NECK,...CORE]},
+  front:{work:['coracobrach','subscap'],stab:[...RC,...NECK,...CORE,'pecMinor']},
+  over:{work:['supraspinatus'],stab:[...RC,...NECK,...CORE]},
+  pull:{work:['teresMajor','infraspinatus','pecMinor'],stab:[...RC,...NECK,...CORE]},
+  push:{work:['pecMinor','coracobrach'],stab:[...RC,...NECK,...CORE,'gluteMin','flexHalLong','flexDigBrev','extDigLong']},
+  squat:{work:['gluteMin','gracilis','piriformis'],stab:[...CORE,...FOOT,'tfl','sartorius','splenius','semispinalis']},
+  run:{work:[...FOOT,...HIP],stab:[...CORE,...RC,'splenius','scm','semispinalis','longusColli']},
+  rope:{work:[...FOOT,'gluteMin'],stab:[...CORE,...RC,...NECK,'tfl']},
+  box:{work:['intOblique','subscap','infraspinatus','teresMajor','piriformis','peroneals','flexHalLong'],stab:[...RC,...NECK,...CORE,...FOOT,'gluteMin']},
+  ski:SKI,mogul:SKI,powder:SKI,
+  jump:{work:['flexHalLong','tibPost','peroneals','gluteMin','piriformis','gracilis','extDigLong'],stab:[...CORE,...NECK,'teresMajor',...RC,'flexDigBrev','abdHallucis']}};
+ for(const e of EX){const a=A[e.id];if(!a)continue;const w=new Set([...e.work,...a.work]);e.work=[...w];e.stab=[...new Set([...(e.stab||[]),...a.stab])].filter(x=>!w.has(x));}
+ const G={lat:'Arms and shoulders',front:'Arms and shoulders',over:'Arms and shoulders',pull:'Strength',push:'Strength',squat:'Strength',run:'Cardio and sport',rope:'Cardio and sport',box:'Cardio and sport'};
+ for(const e of EX)if(!e.group)e.group=G[e.id];
+ const ORDER=['lat','front','over','pull','push','squat','run','rope','box','ski','mogul','powder','jump'];
+ EX.sort((a,b)=>ORDER.indexOf(a.id)-ORDER.indexOf(b.id));
 })();
 
 function expand(p){const o={};for(const k in p)if(k.startsWith('B.')){o['L.'+k.slice(2)]=p[k];o['R.'+k.slice(2)]=p[k];}for(const k in p)if(!k.startsWith('B.'))o[k]=p[k];return o;}
@@ -363,12 +469,12 @@ function solvePush(ex,P){
  }
  return W;}
 function solve(ex,t){
- const P=interp(ex,t);
+const P=interp(ex,t);if(ex.lift)P['root.y']=(P['root.y']||0)+ex.lift(t);
  const W=ex.anchor==='pushup'?solvePush(ex,P):fk(P);
  let d;
  if(ex.anchor==='bar'){const a=mix(cpt(W,'L','grip'),cpt(W,'R','grip'),.5);d=sub(ex.bar,a);}
  else{
-  const C=ex.anchor==='pushup'?[['L','toe'],['R','toe'],['L','palm'],['R','palm']]:[['L','heel'],['L','toe'],['R','heel'],['R','toe']];
+  const C=ex.anchor==='pushup'?[['L','toe'],['R','toe'],['L','ball'],['R','ball'],['L','palm'],['R','palm']]:[['L','heel'],['L','ball'],['L','toe'],['R','heel'],['R','ball'],['R','toe']];
   let mn=1e9;for(const[s,k]of C){const y=cpt(W,s,k)[1];if(y<mn)mn=y;}
   const A=ex.anchor==='pushup'?mix(cpt(W,'L','palm'),cpt(W,'R','palm'),.5):ex.anchor==='run'?W.pelvis.p:mix(cpt(W,'L','heel'),cpt(W,'R','heel'),.5);
   d=[-A[0],-mn+(P['root.y']||0),-A[2]];
@@ -405,7 +511,7 @@ function buildScene(ex,W,t,simT,opt){
   cap(p('neck'),p('head'),9);cap(p('Lupper'),p('Rupper'),11);
   for(const S of['L','R']){
    cap(p(S+'upper'),p(S+'fore'),10);cap(p(S+'fore'),p(S+'hand'),7.5);cap(p(S+'hand'),p(S+'hand',[0,-8,0]),5.5);
-   cap(p(S+'thigh'),p(S+'shin'),15.5);cap(p(S+'shin'),p(S+'foot'),10.5);cap(p(S+'foot',[0,-5,-3]),p(S+'foot',[0,-6,14]),7);
+   cap(p(S+'thigh'),p(S+'shin'),15.5);cap(p(S+'shin'),p(S+'foot'),10.5);cap(p(S+'foot',[0,-5,-3]),p(S+'toes'),7);cap(p(S+'toes'),p(S+'toes',[0,0,4]),6);
   }
  }
  // skeleton
@@ -420,15 +526,15 @@ function buildScene(ex,W,t,simT,opt){
   items.push(L(p('chest',[0,26,3]),p(S+'clav'),bw*.7,BONECOL));
   items.push(L(p(S+'clav'),p(S+'upper'),bw,BONECOL),L(p(S+'upper'),p(S+'fore'),bw,BONECOL),L(p(S+'fore'),p(S+'hand'),bw*.9,BONECOL),L(p(S+'hand'),p(S+'hand',[0,-8,0]),bw*1.3,BONECOL));
   items.push(L(p(S+'thigh'),p(S+'shin'),bw*1.2,BONECOL),L(p(S+'shin'),p(S+'foot'),bw,BONECOL));
-  const ank=p(S+'foot'),heel=p(S+'foot',[0,-8,-5]),toe=p(S+'foot',[0,-8,16]);
-  items.push(L(ank,heel,bw,BONECOL),L(heel,toe,bw,BONECOL),L(toe,ank,bw*.8,BONECOL));
+  const ank=p(S+'foot'),heel=p(S+'foot',[0,-8,-5]),ball=p(S+'toes'),toe=p(S+'toes',[0,-.5,5]);
+  items.push(L(ank,heel,bw,BONECOL),L(heel,ball,bw,BONECOL),L(ball,ank,bw*.8,BONECOL),L(ball,toe,bw*.9,BONECOL));
   items.push({k:'ball',c:p(S+'fore'),r:1.8,col:BONECOL},{k:'ball',c:p(S+'shin'),r:2.4,col:BONECOL});
   // scapula outline (moves with the shoulder girdle)
   const sc=[[4,-2,-11],[13,0,-8],[8,-16,-11]];for(let i=0;i<3;i++)items.push(L(p(S+'clav',[sc[i][0]*(S==='L'?1:-1),sc[i][1],sc[i][2]]),p(S+'clav',[sc[(i+1)%3][0]*(S==='L'?1:-1),sc[(i+1)%3][1],sc[(i+1)%3][2]]),.8,BONECOL,{alpha:.55}));
  }
  items.push({k:'head',W});
  // muscles
- for(const mu of MUS)for(const st of mu.strands)items.push({k:'mus',mu,pts:strandPts(W,st)});
+ for(const mu of MUS){if(layer==='surface'&&mu.d.deep)continue;if(layer==='deep'&&!mu.d.deep)continue;for(const st of mu.strands)items.push({k:'mus',mu,pts:strandPts(W,st)});}
  // props
  const pr=ex.props;
  if(pr.includes('dumbbells'))for(const S of['L','R']){const h=W[S+'hand'];const c=add(h.p,ap(h.R,[0,-5,0]));const ax=ap(h.R,[0,0,1]);
@@ -446,10 +552,14 @@ function buildScene(ex,W,t,simT,opt){
  if(pr.includes('bag')){let off=0;for(const[ti,amp]of ex.hits){const d=((t-ti)%1+1)%1;off+=amp*Math.exp(-d*4)*Math.sin(d*2*Math.PI*2.2);}
   const [bx,,bz]=ex.bag;items.push(L([bx,198,bz],[bx,94,bz+off],ex.bagR*2,'#6d1a26',{cap:'butt',shade:true}));items.push(L([bx,198,bz],[bx,275,bz],.7,'#9aa4b2'));}
  if(pr.includes('skis'))for(const S of['L','R']){const q=v=>wp(W,S+'foot',v);
-  items.push(L(q([0,-9,-36]),q([0,-9,46]),3.5,'#ff3d71',{cap:'butt'}),L(q([0,-9,46]),q([0,-6,54]),3.2,'#ff3d71'),L(q([0,-8,-6]),q([0,-8,10]),5,'#1d222c',{cap:'butt'}));}
+  const sl=ex.skiLen||[-70,95];items.push(L(q([0,-9,sl[0]]),q([0,-9,sl[1]]),3.5,'#ff3d71',{cap:'butt'}),L(q([0,-9,sl[1]]),q([0,-5,sl[1]+9]),3.2,'#ff3d71'),L(q([0,-8,-6]),q([0,-8,10]),5,'#1d222c',{cap:'butt'}));}
  if(pr.includes('poles'))for(const S of['L','R']){const c=wp(W,S+'hand',[0,-5,0]);const a=(P[S+'.pole']||0)*D,yw=(P['root.yaw']||0)*D,m=S==='L'?1:-1;
   const dir=norm(ap(ry(yw),[m*.12,-Math.cos(a),Math.sin(a)]));let Ln=118;if(c[1]+dir[1]*Ln<0)Ln=c[1]/-dir[1];const tip=add(c,mulS(dir,Ln));
   items.push(L(c,tip,1.3,'#cfd6df'),{k:'ball',c:add(c,mulS(dir,Ln-9)),r:3,col:'#3a3f4a'});}
+ if(pr.includes('spray')){const hs=ex.powder(t);
+  for(let i=0;i<110;i++){const a=((simT*1.3+i/110)%1+1)%1;const te=t-a*.25;const se=Math.sin(2*Math.PI*te);const side=se>0?-1:1;const k=Math.abs(se);
+   if(k<.25)continue;const j=(i*37%11)/11-.5;
+   items.push({k:'ball',c:[side*(18+90*a)+j*24,hs+110*a*k-80*a*a+j*8,-15-200*a+j*30],r:3.5+11*a,col:'#f4f8ff',alpha:(1-a)*.85*k});}}
  return{items,skin};
 }
 
@@ -464,7 +574,7 @@ function shade(h,f,a){const[r,g,b]=hexRGB(h);const t=f<1?[r*f,g*f,b*f]:[r+(255-r
 
 let cv,ctx,dpr=1,VW=0,VH=0;
 const cam={yaw:0,pitch:8,zoom:1,s:2,target:[0,100,0],M:I3,Dp:700,cx:0,cy:0};
-let ex=EX[3],phase=0,simT=0,playing=true,speed=.25,orbit=false,showLabels=true,showBody=true,sel=null,hover=null,hits=[],mouse=null;
+let ex=EX[3],phase=0,simT=0,playing=true,speed=.25,orbit=false,showLabels=true,showBody=true,layer='all',anat=false,sel=null,hover=null,hits=[],mouse=null;
 
 function proj(p){const q=ap(cam.M,sub(p,cam.target));const k=cam.Dp/(cam.Dp-q[2]);const s=cam.s*cam.zoom*k;return[cam.cx+q[0]*s,cam.cy-q[1]*s,q[2],s];}
 
@@ -485,19 +595,39 @@ function layoutCam(){
 function resize(){dpr=Math.min(window.devicePixelRatio||1,2);VW=innerWidth;VH=innerHeight;cv.width=VW*dpr;cv.height=VH*dpr;layoutCam();}
 
 function drawGrid(){
- const ski=ex.props.includes('snow');const step=20,R=180;const off=ex.scroll?(simT*ex.scroll)%step:ski?(simT*140)%step:0;
- if(ski){const c=[[-R,0,-R],[R,0,-R],[R,0,R],[-R,0,R]].map(proj);ctx.fillStyle='rgba(225,238,255,.07)';ctx.beginPath();c.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.fill();}
- ctx.lineWidth=1;
+ if(ex.powder)return;
+ const snow=ex.props.includes('snow');const step=20,R=180;
+ const y0=ex.drop?-ex.drop(phase):0;
+ const off=ex.flow?((ex.flow(phase)%step)+step)%step:ex.scroll?(simT*ex.scroll)%step:snow?(simT*140)%step:0;
+ const H=(x,z)=>y0+(ex.terr?ex.terr(x,z,phase):0);
+ if(snow){const c=[[-R,y0,-R],[R,y0,-R],[R,y0,R],[-R,y0,R]].map(proj);ctx.fillStyle='rgba(225,238,255,.07)';ctx.beginPath();c.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.fill();}
+ ctx.lineWidth=1;const col=al=>snow?`rgba(230,240,255,${al*1.5})`:`rgba(94,224,255,${al})`;
+ const poly=pts=>{ctx.beginPath();pts.forEach((p,i)=>{const q=proj(p);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);});ctx.stroke();};
+ const sx=ex.terr?15:2*R;
  for(let v=-R;v<=R;v+=step){
-  const z=v-off;const a=proj([-R,0,z]),b=proj([R,0,z]);if(ex.scroll&&v===-R)continue;const al=.12*(1-Math.abs(v)/R*.8);
-  ctx.strokeStyle=ski?`rgba(230,240,255,${al*1.4})`:`rgba(94,224,255,${al})`;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
-  const c=proj([v,0,-R]),d=proj([v,0,R]);ctx.strokeStyle=ski?`rgba(230,240,255,${al*1.4})`:`rgba(94,224,255,${al})`;ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(d[0],d[1]);ctx.stroke();
+  const z=v-off;const al=.12*(1-Math.abs(v)/R*.8);ctx.strokeStyle=col(al);
+  if(z>=-R){const pts=[];for(let x=-R;x<=R;x+=sx)pts.push([x,H(x,z),z]);poly(pts);}
+  const pts=[];for(let zz=-R;zz<=R;zz+=ex.terr?10:2*R)pts.push([v,H(v,zz),zz]);poly(pts);
  }
- if(ex.props.includes('track')){ctx.strokeStyle='rgba(255,140,90,.55)';ctx.lineWidth=2;for(const x of[-40,40]){const a=proj([x,0,-R]),b=proj([x,0,R]);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}}
- if(ski){ctx.fillStyle='rgba(255,255,255,.55)';for(let i=0;i<90;i++){const x=((i*73.13)%360)-180,z=((((i*41.7)%360)-180-simT*140)%360+540)%360-180;const q=proj([x,.2,z]);ctx.fillRect(q[0],q[1],1.6,1.6);}}
+ if(ex.props.includes('track')){ctx.strokeStyle='rgba(255,140,90,.55)';ctx.lineWidth=2;for(const x of[-40,40])poly([[x,0,-R],[x,0,R]]);}
+ if(snow){const sp=ex.scroll||140;ctx.fillStyle='rgba(255,255,255,.55)';for(let i=0;i<90;i++){const x=((i*73.13)%360)-180;const z=ex.flow?((((i*41.7)%360)-180-ex.flow(phase))%360+540)%360-180:((((i*41.7)%360)-180-simT*sp)%360+540)%360-180;const q=proj([x,H(x,z)+.2,z]);ctx.fillRect(q[0],q[1],1.6,1.6);}}
 }
-function drawShadow(W){const c=W.pelvis.p;const h=Math.max(0,c[1]);const a=clamp(.38-h/600,.08,.38);ctx.fillStyle=`rgba(0,0,0,${a})`;ctx.beginPath();
- for(let i=0;i<=24;i++){const t=i/24*2*Math.PI;const q=proj([c[0]+Math.cos(t)*34,0,c[2]+Math.sin(t)*22]);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);}ctx.fill();}
+// powder: the snow surface is split into far and near tiles so it covers the skis and boots
+function drawPowder(near){
+ const hs=ex.powder(phase),R=200;
+ const cz=p=>ap(cam.M,sub(p,cam.target))[2];
+ // clip the snow plane by the vertical plane through the skier (camera depth 0)
+ const poly=[[-R,hs,-R],[R,hs,-R],[R,hs,R],[-R,hs,R]],out=[];
+ for(let i=0;i<4;i++){const a=poly[i],b=poly[(i+1)%4],da=near?cz(a):-cz(a),db=near?cz(b):-cz(b);
+  if(da>=0)out.push(a);if((da>=0)!==(db>=0))out.push(mix(a,b,da/(da-db)));}
+ if(out.length>2){const q=out.map(proj);const g=ctx.createLinearGradient(0,Math.min(...q.map(p=>p[1])),0,Math.max(...q.map(p=>p[1])));
+  g.addColorStop(0,`rgba(235,244,255,${near?.55:.12})`);g.addColorStop(1,`rgba(250,252,255,${near?.78:.2})`);
+  ctx.fillStyle=g;ctx.beginPath();q.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fill();}
+ ctx.fillStyle='rgba(255,255,255,.85)';for(let i=0;i<140;i++){const x=((i*73.13)%400)-200,z=((((i*41.7)%400)-200-simT*(ex.scroll||0))%400+600)%400-200;
+  const p=[x,hs+.3,z];if((cz(p)>=0)!==near)continue;const q=proj(p);ctx.fillRect(q[0],q[1],1.5,1.5);}
+}
+function drawShadow(W){if(ex.powder)return;const c=W.pelvis.p;const g0=ex.drop?-ex.drop(phase):ex.terr?ex.terr(0,0,phase):0;const h=Math.max(0,c[1]-g0);const a=clamp(.38-h/600,.08,.38);ctx.fillStyle=`rgba(0,0,0,${a})`;ctx.beginPath();
+ for(let i=0;i<=24;i++){const t=i/24*2*Math.PI;const q=proj([c[0]+Math.cos(t)*34,g0,c[2]+Math.sin(t)*22]);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);}ctx.fill();}
 
 function drawLine(it){
  const a=proj(it.a),b=proj(it.b);const w=Math.max(.8,it.w*(a[3]+b[3])/2);
@@ -511,7 +641,7 @@ function drawLine(it){
 }
 function drawBall(it){const c=proj(it.c);const r=it.r*c[3];
  if(it.shade){const g=ctx.createRadialGradient(c[0]-r*.35,c[1]-r*.35,r*.1,c[0],c[1],r);g.addColorStop(0,shade(it.col,1.4));g.addColorStop(1,shade(it.col,.45));ctx.fillStyle=g;}else ctx.fillStyle=it.col;
- ctx.beginPath();ctx.arc(c[0],c[1],r,0,7);ctx.fill();}
+ ctx.globalAlpha=it.alpha==null?1:it.alpha;ctx.beginPath();ctx.arc(c[0],c[1],r,0,7);ctx.fill();ctx.globalAlpha=1;}
 function drawHead(W){
  const c=proj(wp(W,'head',[0,10,1.5]));const r=10.5*c[3];
  const g=ctx.createRadialGradient(c[0]-r*.3,c[1]-r*.35,r*.1,c[0],c[1],r);g.addColorStop(0,'rgba(220,232,246,.55)');g.addColorStop(1,'rgba(90,110,140,.35)');
@@ -519,7 +649,7 @@ function drawHead(W){
  const fz=proj(wp(W,'head',[0,10,12]));if(fz[2]>c[2]){ctx.fillStyle='rgba(94,224,255,.85)';for(const x of[-3.6,3.6]){const e=proj(wp(W,'head',[x,11.5,9.4]));ctx.beginPath();ctx.arc(e[0],e[1],1.2*e[3],0,7);ctx.fill();}}
 }
 function drawMuscle(it,labels){
- const mu=it.mu,st=mu.state,col=STATECOL[st];
+ const mu=it.mu,st=mu.state,scol=STATECOL[st];const col=anat?(mu.d.deep?'#9a2c37':'#bf3a45'):scol;
  const sp=it.pts.map(proj);const A=sp[0],B=sp[1];
  const s=(A[3]+B[3])/2;const bulge=clamp(Math.pow(mu.L0/mu.L,1.1),.6,1.85);
  const hw=mu.d.w*.5*s*bulge;
@@ -533,8 +663,8 @@ function drawMuscle(it,labels){
  if(sp[2]){ctx.moveTo(B[0],B[1]);ctx.lineTo(sp[2][0],sp[2][1]);}ctx.stroke();
  const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;
  const isSel=sel===mu.d.id,isHov=hover===mu.d.id;
- ctx.globalAlpha=active?.96:.55;
- if(st==='con'||st==='ecc'){ctx.shadowColor=col;ctx.shadowBlur=10*clamp(Math.abs(mu.v)*4,.3,1.2);}
+ ctx.globalAlpha=anat?(mu.d.deep&&layer==='all'?.8:.97):(active?.96:.55);
+ if(st==='con'||st==='ecc'){ctx.shadowColor=scol;ctx.shadowBlur=(anat?14:10)*clamp(Math.abs(mu.v)*4,.3,1.2);}
  const g=ctx.createLinearGradient(mx-nx*hw,my-ny*hw,mx+nx*hw,my+ny*hw);
  g.addColorStop(0,shade(col,.4));g.addColorStop(.42,col);g.addColorStop(.6,shade(col,1.3));g.addColorStop(1,shade(col,.4));
  ctx.fillStyle=g;
@@ -545,13 +675,13 @@ function drawMuscle(it,labels){
   ctx.bezierCurveTo(a[0]+dx*u+nx*k,a[1]+dy*u+ny*k,b[0]-dx*u+nx*k,b[1]-dy*u+ny*k,b[0],b[1]);
   ctx.bezierCurveTo(b[0]-dx*u-nx*k,b[1]-dy*u-ny*k,a[0]+dx*u-nx*k,a[1]+dy*u-ny*k,a[0],a[1]);}
  ctx.fill();ctx.shadowBlur=0;
- ctx.lineWidth=isSel||isHov?2:.7;ctx.strokeStyle=isSel||isHov?'#ffffff':'rgba(0,0,0,.35)';ctx.stroke();
+ if(anat&&active&&!(isSel||isHov)){ctx.lineWidth=1.8;ctx.strokeStyle=scol;}else{ctx.lineWidth=isSel||isHov?2:.7;ctx.strokeStyle=isSel||isHov?'#ffffff':'rgba(0,0,0,.35)';}ctx.stroke();
  // fibers
- if(bl>=hw*1.1&&hw>2.2){ctx.strokeStyle=shade(col,.55,.45);ctx.lineWidth=.7;const u=bl/3;
-  for(const f of[-.5,0,.5]){const k=1.33*hw*f;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.bezierCurveTo(a[0]+dx*u+nx*k,a[1]+dy*u+ny*k,b[0]-dx*u+nx*k,b[1]-dy*u+ny*k,b[0],b[1]);ctx.stroke();}}
+ if(bl>=hw*1.1&&hw>1.6){ctx.lineWidth=.6;const u=bl/3;let n_=0;
+  for(const f of[-.72,-.48,-.24,0,.24,.48,.72]){ctx.strokeStyle=(n_++%2)?shade(col,1.35,.28):shade(col,.5,.4);const k=1.33*hw*f;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.bezierCurveTo(a[0]+dx*u+nx*k,a[1]+dy*u+ny*k,b[0]-dx*u+nx*k,b[1]-dy*u+ny*k,b[0],b[1]);ctx.stroke();}}
  ctx.globalAlpha=1;
  hits.push({id:mu.d.id,S:mu.S,a,b,hw:Math.max(hw,4),z:(A[2]+B[2])/2});
- if(labels&&(ex.workSet.has(mu.d.id))){const k=mu.d.id;const z=(A[2]+B[2])/2;if(!labels[k]||labels[k].z<z)labels[k]={z,x:mx,y:my,name:mu.d.short,col};}
+ if(labels&&ex.workSet.has(mu.d.id)&&(layer==='deep'||!mu.d.deep)){const k=mu.d.id;const z=(A[2]+B[2])/2;if(!labels[k]||labels[k].z<z)labels[k]={z,x:mx,y:my,name:mu.d.short,col};}
 }
 function drawLabels(labels){
  const placed=[];ctx.font='600 11px system-ui,sans-serif';ctx.textBaseline='middle';
@@ -569,7 +699,7 @@ function render(W){
  const bg=ctx.createRadialGradient(cam.cx,cam.cy-60,40,cam.cx,cam.cy,Math.max(VW,VH)*.75);bg.addColorStop(0,'#0f1a2e');bg.addColorStop(1,'#03050a');
  ctx.fillStyle=bg;ctx.fillRect(0,0,VW,VH);
  cam.M=mm(rx(cam.pitch*D),ry(-cam.yaw*D));
- drawGrid();drawShadow(W);
+ drawGrid();drawShadow(W);if(ex.powder)drawPowder(false);
  const{items,skin}=buildScene(ex,W,phase,simT,{body:showBody});
  // ghost body
  ctx.lineCap='round';
@@ -578,12 +708,13 @@ function render(W){
  for(const it of items){let z;
   if(it.k==='line')z=(ap(cam.M,sub(it.a,cam.target))[2]+ap(cam.M,sub(it.b,cam.target))[2])/2;
   else if(it.k==='ball')z=ap(cam.M,sub(it.c,cam.target))[2];
-  else if(it.k==='mus')z=(ap(cam.M,sub(it.pts[0],cam.target))[2]+ap(cam.M,sub(it.pts[1],cam.target))[2])/2+1.5;
+  else if(it.k==='mus')z=(ap(cam.M,sub(it.pts[0],cam.target))[2]+ap(cam.M,sub(it.pts[1],cam.target))[2])/2+(it.mu.d.deep?-2.5:1.5);
   else z=ap(cam.M,sub(wp(W,'head',[0,10,1.5]),cam.target))[2];
   it.z=z;}
  items.sort((a,b)=>a.z-b.z);
  hits=[];const labels=showLabels?{}:null;
  for(const it of items){if(it.k==='line')drawLine(it);else if(it.k==='ball')drawBall(it);else if(it.k==='mus')drawMuscle(it,labels);else drawHead(W);}
+ if(ex.powder)drawPowder(true);
  if(labels)drawLabels(labels);
  // hover tip
  if(hover&&mouse){const d=MDEFK[hover];const mu=MUSL[hover];const txt=d.name+' — '+STATETXT[mu.state];ctx.font='600 12px system-ui,sans-serif';const tw=ctx.measureText(txt).width+14;
@@ -615,7 +746,7 @@ function selectEx(e){
  $('capT').textContent=ex.name;
  const ml=$('mList');ml.innerHTML='';rows=[];
  for(const id of[...ex.work,...(ex.stab||[])]){const d=MDEFK[id];const r=document.createElement('div');r.className='row';
-  r.innerHTML=`<span class="dot"></span><div style="min-width:0"><div class="nm">${d.name}</div><div class="st"></div></div><div class="bar"><i></i><b></b></div>`;
+  r.innerHTML=`<span class="dot"></span><div style="min-width:0"><div class="nm">${d.name}${d.deep?' <span style="color:var(--dim);font-size:10px">deep</span>':''}</div><div class="st"></div></div><div class="bar"><i></i><b></b></div>`;
   r.onclick=()=>{sel=sel===id?null:id;};ml.appendChild(r);rows.push({id,r,dot:r.querySelector('.dot'),st:r.querySelector('.st'),bar:r.querySelector('.bar i')});}
  updateInfo(true);
 }
@@ -651,7 +782,7 @@ function pick(x,y){let best=null;
 function init(){
  cv=$('c');ctx=cv.getContext('2d');
  const list=$('exList');
- for(const e of EX){const b=document.createElement('button');b.className='ex';b.dataset.id=e.id;b.innerHTML=`<span class="i">${e.icon}</span>${e.name}`;b.onclick=()=>selectEx(e);list.appendChild(b);}
+ let lastG='';for(const e of EX){if(e.group!==lastG){lastG=e.group;const h=document.createElement('h2');h.className='gh';h.textContent=e.group;list.appendChild(h);}const b=document.createElement('button');b.className='ex';b.dataset.id=e.id;b.innerHTML=`<span class="i">${e.icon}</span>${e.name}`;b.onclick=()=>selectEx(e);list.appendChild(b);}
  addEventListener('resize',resize);resize();
  selectEx(EX[3]);
  const setPlay=v=>{playing=v;$('play').textContent=v?'❚❚ Pause':'▶ Play';};
@@ -663,6 +794,8 @@ function init(){
  document.querySelectorAll('.vw').forEach(b=>b.onclick=()=>{cam.yaw=+b.dataset.y;cam.pitch=+b.dataset.p;orbit=false;$('orbit').classList.remove('on');});
  $('orbit').onclick=()=>{orbit=!orbit;$('orbit').classList.toggle('on',orbit);};
  $('tLab').onclick=()=>{showLabels=!showLabels;$('tLab').classList.toggle('on',showLabels);};
+ document.querySelectorAll('.ly').forEach(b=>b.onclick=()=>{layer=b.dataset.l;document.querySelectorAll('.ly').forEach(x=>x.classList.toggle('on',x===b));});
+ $('tAnat').onclick=()=>{anat=!anat;$('tAnat').classList.toggle('on',anat);};
  $('tBody').onclick=()=>{showBody=!showBody;$('tBody').classList.toggle('on',showBody);};
  $('tMus').onclick=()=>{$('right').classList.toggle('show');$('tMus').classList.toggle('on');};
  addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();setPlay(!playing);}if(e.code==='ArrowRight'){setPlay(false);phase=(phase+.01)%1;}if(e.code==='ArrowLeft'){setPlay(false);phase=(phase+.99)%1;}});
