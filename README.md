@@ -297,6 +297,7 @@ A graphics card with WebGL 2 is needed for the 3D scenes. Fibwave lowers its res
 |---|---|
 | `index.html` | The website (the same as `fibwave.html`). |
 | `fibwave.html` | The full app in one file. You can open it directly from your computer. |
+| `muscle-lab.html` | Muscle Lab: 3D muscles in slow motion for 9 exercises (open it from the Health Lab panel). |
 | `README.md` | This file. |
 
 **To update the website:** in the GitHub repository, click **Add file → Upload files**, drop in the new `index.html` and `fibwave.html`, and click **Commit changes**. GitHub Pages updates the site in about one minute. In Chrome, reload with **Cmd + Shift + R** to get the new version.
